@@ -181,7 +181,7 @@ function criarEstadoInicial() {
 
         race: "Humano",
 
-        class: "Saber",
+        class: "Guerreiro",
 
         affinity: null,
 
@@ -2854,48 +2854,63 @@ function definirTexto(
 
 function iniciar() {
 
-    configurarNavegacao();
+    /* =================================================
+       CONFIGURAÇÕES BÁSICAS — SEMPRE EXECUTAM
+    ================================================= */
+    try {
+        configurarNavegacao();
+    } catch (erro) {
+        console.error("❌ Erro ao configurar navegação:", erro);
+    }
 
-
-    configurarModoMestre();
-
-
-    CharacterModule.configurarEditor();
-
-
-    configurarConfirmacaoPersonagem();
-
-
-    StatusModule.iniciar();
-
-
-    configurarXP();
-
-
-    configurarReset();
-
-
-    if (
-        typeof CombatModule !==
-        "undefined"
-    ) {
-
-        CombatModule.iniciar();
-
+    try {
+        configurarModoMestre();
+    } catch (erro) {
+        console.error("❌ Erro ao configurar modo mestre:", erro);
     }
 
 
-    if (
-        typeof InventoryModule !==
-        "undefined"
-    ) {
+    /* =================================================
+       DEMAIS CONFIGURAÇÕES — COM PROTEÇÃO
+    ================================================= */
+    try {
 
-        InventoryModule.iniciar();
-
-    }
+        CharacterModule.configurarEditor();
 
 
-    atualizarInterface();
+        configurarConfirmacaoPersonagem();
+
+
+        StatusModule.iniciar();
+
+
+        configurarXP();
+
+
+        configurarReset();
+
+
+        if (
+            typeof CombatModule !==
+            "undefined"
+        ) {
+
+            CombatModule.iniciar();
+
+        }
+
+
+        if (
+            typeof InventoryModule !==
+            "undefined"
+        ) {
+
+            InventoryModule.iniciar();
+
+        }
+
+
+        atualizarInterface();
 
 
     console.log(
@@ -3072,6 +3087,11 @@ function iniciar() {
             },
             250
         );
+
+    } catch (erro) {
+        console.error("❌ Erro durante inicialização:", erro);
+        alert("Houve um erro ao carregar o sistema. Verifique o console para detalhes.");
+    }
 
 }
 
