@@ -966,6 +966,14 @@ const CharacterModule = (() => {
        ATUALIZAR IMAGEM
     ===================================================== */
 
+
+    function escaparHTML(texto) {
+        const div = document.createElement("div");
+        div.textContent = texto || "";
+        return div.innerHTML;
+    }
+
+
     function atualizarImagem() {
 
         const container =
@@ -987,7 +995,7 @@ const CharacterModule = (() => {
 
             container.innerHTML = `
                 <img
-                    src="${escaparHTML(character.imageURL)}"
+                    src="${character.imageURL}"
                     alt="Imagem do personagem"
                     class="character-image-display"
                     onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
