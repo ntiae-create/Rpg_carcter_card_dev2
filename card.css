@@ -1,0 +1,944 @@
+/* =========================================================
+   RPG CHARACTER CARD
+   CARD.CSS
+   IDENTIDADE VISUAL DOS CARDS POR AFINIDADE
+
+   A cor principal continua responsável pela aura.
+   As cores secundárias entram principalmente em bordas,
+   reflexos e pequenos detalhes.
+========================================================= */
+
+
+/* =========================================================
+   BASE
+========================================================= */
+
+.dimension {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 22px;
+
+    --secondary-a: #6f3aa8;
+    --secondary-b: #c084fc;
+    --secondary-soft: rgba(124, 58, 237, 0.10);
+
+    transition:
+        border-color 0.5s ease,
+        box-shadow 0.5s ease,
+        background 0.5s ease;
+}
+
+
+/*
+   Fundo elemental.
+   Continua atrás de todo o conteúdo.
+*/
+
+.dimension::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0;
+
+    transition:
+        opacity 0.6s ease,
+        background 0.6s ease;
+}
+
+
+/*
+   Aura elemental.
+   A cor principal continua dominando esta camada.
+*/
+
+.dimension::after {
+    content: "";
+    position: absolute;
+
+    width: 150%;
+    height: 150%;
+    left: -25%;
+    top: -25%;
+
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    border-radius: 50%;
+
+    transition: opacity 0.6s ease;
+
+    animation:
+        affinityPulse 4s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   DETALHES INTERNOS
+
+   A cor secundária aparece discretamente em títulos,
+   separadores e pequenos destaques.
+========================================================= */
+
+.dimension .stats-title,
+.dimension .badges h3,
+.dimension .attribute-points h3,
+.dimension .badge-xp-header strong {
+    color: var(--secondary-b, #c084fc);
+    transition: color 0.5s ease;
+}
+
+.dimension .attribute-points,
+.dimension .badge-xp-section {
+    border-color: color-mix(
+        in srgb,
+        var(--secondary-a) 55%,
+        transparent
+    );
+}
+
+
+/* =========================================================
+   AFINIDADE NÃO DEFINIDA
+========================================================= */
+
+.dimension:not(
+    .affinity-agua,
+    .affinity-luz,
+    .affinity-terra,
+    .affinity-trevas,
+    .affinity-vento,
+    .affinity-fogo,
+    .affinity-fisico,
+    .affinity-magico
+) {
+    border-color: rgba(111, 58, 168, 0.7);
+}
+
+
+/* =========================================================
+   💧 ÁGUA
+   Principal: azul
+   Secundária: azul profundo + violeta
+========================================================= */
+
+.dimension.affinity-agua {
+    --secondary-a: #2563eb;
+    --secondary-b: #8b5cf6;
+    --secondary-soft: rgba(139, 92, 246, 0.10);
+
+    border-color: #60a5fa;
+
+    box-shadow:
+        0 0 18px rgba(56, 189, 248, 0.35),
+        0 0 45px rgba(14, 165, 233, 0.18),
+        0 0 10px rgba(139, 92, 246, 0.20),
+        inset 0 0 35px rgba(56, 189, 248, 0.08);
+}
+
+.dimension.affinity-agua::before {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle at 20% 20%,
+            rgba(56, 189, 248, 0.18),
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 80% 80%,
+            rgba(139, 92, 246, 0.12),
+            transparent 50%
+        );
+}
+
+.dimension.affinity-agua::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(56, 189, 248, 0.14),
+            transparent 65%
+        );
+}
+
+
+/* =========================================================
+   ☀️ LUZ
+   Principal: branco luminoso
+   Secundária: prata
+========================================================= */
+
+.dimension.affinity-luz {
+    --secondary-a: #cbd5e1;
+    --secondary-b: #f8fafc;
+    --secondary-soft: rgba(226, 232, 240, 0.10);
+
+    border-color: #e2e8f0;
+
+    box-shadow:
+        0 0 20px rgba(250, 204, 21, 0.32),
+        0 0 50px rgba(253, 224, 71, 0.16),
+        0 0 12px rgba(226, 232, 240, 0.28),
+        inset 0 0 38px rgba(253, 224, 71, 0.08);
+}
+
+.dimension.affinity-luz::before {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(255, 255, 255, 0.20),
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 50% 100%,
+            rgba(203, 213, 225, 0.12),
+            transparent 55%
+        );
+}
+
+.dimension.affinity-luz::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(253, 224, 71, 0.16),
+            transparent 65%
+        );
+}
+
+
+/* =========================================================
+   🪨 TERRA
+   Principal: terra/verde profundo
+   Secundária: marrom + carvão
+========================================================= */
+
+.dimension.affinity-terra {
+    --secondary-a: #78350f;
+    --secondary-b: #292524;
+    --secondary-soft: rgba(120, 53, 15, 0.10);
+
+    border-color: #92400e;
+
+    box-shadow:
+        0 0 20px rgba(180, 83, 9, 0.32),
+        0 0 45px rgba(41, 37, 36, 0.28),
+        0 0 10px rgba(120, 53, 15, 0.20),
+        inset 0 0 38px rgba(180, 83, 9, 0.08);
+}
+
+.dimension.affinity-terra::before {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle at 20% 80%,
+            rgba(180, 83, 9, 0.20),
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 80% 20%,
+            rgba(41, 37, 36, 0.22),
+            transparent 50%
+        );
+}
+
+.dimension.affinity-terra::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(180, 83, 9, 0.12),
+            transparent 65%
+        );
+}
+
+
+/* =========================================================
+   🌑 TREVAS
+   Principal: roxo sombrio
+   Secundária: obsidiana + dourado antigo
+========================================================= */
+
+.dimension.affinity-trevas {
+    --secondary-a: #17130b;
+    --secondary-b: #d4a72c;
+    --secondary-soft: rgba(212, 167, 44, 0.07);
+
+    border-color: #8b6b20;
+
+    box-shadow:
+        0 0 22px rgba(124, 58, 237, 0.42),
+        0 0 55px rgba(76, 29, 149, 0.22),
+        0 0 12px rgba(212, 167, 44, 0.22),
+        inset 0 0 42px rgba(23, 19, 11, 0.30);
+}
+
+.dimension.affinity-trevas::before {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle at 20% 30%,
+            rgba(124, 58, 237, 0.20),
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 80% 70%,
+            rgba(212, 167, 44, 0.08),
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 50% 50%,
+            rgba(0, 0, 0, 0.20),
+            transparent 70%
+        );
+}
+
+.dimension.affinity-trevas::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(88, 28, 135, 0.18),
+            transparent 65%
+        );
+}
+
+
+/* =========================================================
+   🌪️ VENTO
+   Principal: ciano
+   Secundária: verde esmeralda + azul
+========================================================= */
+
+.dimension.affinity-vento {
+    --secondary-a: #10b981;
+    --secondary-b: #2563eb;
+    --secondary-soft: rgba(16, 185, 129, 0.09);
+
+    border-color: #34d399;
+
+    box-shadow:
+        0 0 20px rgba(103, 232, 249, 0.34),
+        0 0 48px rgba(45, 212, 191, 0.18),
+        0 0 12px rgba(16, 185, 129, 0.20),
+        inset 0 0 38px rgba(45, 212, 191, 0.08);
+}
+
+.dimension.affinity-vento::before {
+    opacity: 1;
+
+    background:
+        linear-gradient(
+            110deg,
+            rgba(16, 185, 129, 0.13),
+            transparent 35%,
+            rgba(37, 99, 235, 0.13)
+        );
+}
+
+.dimension.affinity-vento::after {
+    opacity: 1;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(103, 232, 249, 0.16),
+            transparent
+        );
+
+    animation:
+        windCardEffect 3s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   🔥 FOGO
+   Principal: vermelho/laranja
+   Secundária: âmbar + azul elétrico
+========================================================= */
+
+.dimension.affinity-fogo {
+    --secondary-a: #f59e0b;
+    --secondary-b: #38bdf8;
+    --secondary-soft: rgba(56, 189, 248, 0.07);
+
+    border-color: #f59e0b;
+
+    box-shadow:
+        0 0 22px rgba(249, 115, 22, 0.40),
+        0 0 55px rgba(239, 68, 68, 0.20),
+        0 0 12px rgba(56, 189, 248, 0.18),
+        inset 0 0 42px rgba(239, 68, 68, 0.10);
+}
+
+.dimension.affinity-fogo::before {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            ellipse at 50% 100%,
+            rgba(249, 115, 22, 0.24),
+            transparent 55%
+        ),
+        radial-gradient(
+            circle at 30% 70%,
+            rgba(239, 68, 68, 0.16),
+            transparent 45%
+        ),
+        linear-gradient(
+            180deg,
+            transparent 75%,
+            rgba(56, 189, 248, 0.06)
+        );
+}
+
+.dimension.affinity-fogo::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            ellipse at 50% 100%,
+            rgba(249, 115, 22, 0.18),
+            transparent 65%
+        );
+
+    animation:
+        fireCardEffect 2.2s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   💪 FÍSICO
+   Principal: energia clara
+   Secundária: iridescência/arco-íris metálico
+========================================================= */
+
+.dimension.affinity-fisico {
+    --secondary-a: #e5e7eb;
+    --secondary-b: #a78bfa;
+    --secondary-soft: rgba(229, 231, 235, 0.08);
+
+    border-color: #d1d5db;
+
+    box-shadow:
+        0 0 20px rgba(209, 213, 219, 0.28),
+        0 0 45px rgba(156, 163, 175, 0.14),
+        0 0 10px rgba(167, 139, 250, 0.18),
+        inset 0 0 38px rgba(156, 163, 175, 0.08);
+}
+
+.dimension.affinity-fisico::before {
+    opacity: 1;
+
+    background:
+        linear-gradient(
+            115deg,
+            rgba(239, 68, 68, 0.07),
+            rgba(250, 204, 21, 0.06),
+            rgba(34, 197, 94, 0.06),
+            rgba(59, 130, 246, 0.07),
+            rgba(168, 85, 247, 0.08)
+        );
+}
+
+.dimension.affinity-fisico::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(229, 231, 235, 0.12),
+            transparent 65%
+        );
+}
+
+
+/* =========================================================
+   ✨ MÁGICO
+   Principal: violeta/azul
+   Secundária: aurora arcana
+========================================================= */
+
+.dimension.affinity-magico {
+    --secondary-a: #67e8f9;
+    --secondary-b: #f0abfc;
+    --secondary-soft: rgba(103, 232, 249, 0.08);
+
+    border-color: #c084fc;
+
+    box-shadow:
+        0 0 22px rgba(192, 132, 252, 0.42),
+        0 0 55px rgba(168, 85, 247, 0.20),
+        0 0 10px rgba(103, 232, 249, 0.20),
+        0 0 14px rgba(240, 171, 252, 0.14),
+        inset 0 0 42px rgba(168, 85, 247, 0.10);
+}
+
+.dimension.affinity-magico::before {
+    opacity: 1;
+
+    background:
+        linear-gradient(
+            125deg,
+            rgba(103, 232, 249, 0.10),
+            rgba(192, 132, 252, 0.12),
+            rgba(240, 171, 252, 0.09),
+            rgba(52, 211, 153, 0.07)
+        );
+
+    background-size: 250% 250%;
+
+    animation:
+        auroraCardEffect 7s ease-in-out infinite;
+}
+
+.dimension.affinity-magico::after {
+    opacity: 1;
+
+    background:
+        radial-gradient(
+            circle at 30% 30%,
+            rgba(192, 132, 252, 0.15),
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 70% 70%,
+            rgba(103, 232, 249, 0.10),
+            transparent 50%
+        );
+}
+
+
+/* =========================================================
+   PASSIVA DE CLASSE
+========================================================= */
+
+.class-passive-section {
+    margin-top: 22px;
+}
+
+
+/*
+   Card especial da passiva de classe.
+
+   Ele usa as variáveis de afinidade já existentes,
+   portanto acompanha automaticamente o tema elemental
+   do personagem.
+*/
+
+.class-passive-card {
+    position: relative;
+
+    padding: 16px;
+
+    border-radius: 16px;
+
+    border: 1px solid color-mix(
+        in srgb,
+        var(--secondary-a) 70%,
+        transparent
+    );
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.055),
+            var(--secondary-soft),
+            rgba(0, 0, 0, 0.20)
+        );
+
+    box-shadow:
+        0 0 18px color-mix(
+            in srgb,
+            var(--secondary-a) 18%,
+            transparent
+        ),
+        inset 0 0 20px color-mix(
+            in srgb,
+            var(--secondary-b) 7%,
+            transparent
+        );
+
+    overflow: hidden;
+
+    transition:
+        border-color 0.5s ease,
+        box-shadow 0.5s ease,
+        transform 0.3s ease;
+}
+
+
+/*
+   Reflexo superior da passiva.
+*/
+
+.class-passive-card::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--secondary-b),
+            transparent
+        );
+
+    opacity: 0.75;
+
+    transition:
+        background 0.5s ease,
+        opacity 0.5s ease;
+}
+
+
+/*
+   Pequena aura interna.
+*/
+
+.class-passive-card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    right: -100px;
+    bottom: -110px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            color-mix(
+                in srgb,
+                var(--secondary-b) 15%,
+                transparent
+            ),
+            transparent 70%
+        );
+
+    pointer-events: none;
+
+    animation:
+        classPassivePulse 4s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   CABEÇALHO DA PASSIVA DE CLASSE
+========================================================= */
+
+.class-passive-card .ability-header {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 14px;
+
+    padding-bottom: 10px;
+
+    border-bottom: 1px solid color-mix(
+        in srgb,
+        var(--secondary-a) 35%,
+        transparent
+    );
+}
+
+.class-passive-card .ability-header span:first-child {
+    color: var(--secondary-b);
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 1.5px;
+}
+
+.class-passive-card .ability-header span:last-child {
+    padding: 4px 7px;
+
+    border-radius: 6px;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--secondary-a) 15%,
+            transparent
+        );
+
+    color: var(--secondary-b);
+
+    font-size: 8px;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   IDENTIFICAÇÃO DA CLASSE
+========================================================= */
+
+.class-passive-class,
+.class-passive-content,
+.class-passive-description {
+    position: relative;
+    z-index: 1;
+}
+
+
+/*
+   Bloco da classe.
+*/
+
+.class-passive-class {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 12px;
+
+    padding: 9px 11px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(0, 0, 0, 0.18);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.06);
+}
+
+.class-passive-class small,
+.class-passive-content small,
+.class-passive-description small {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #8f839d;
+
+    font-size: 8px;
+
+    letter-spacing: 1.2px;
+}
+
+.class-passive-class small {
+    margin: 0;
+}
+
+.class-passive-class strong {
+    color: #f5f0ff;
+
+    font-size: 14px;
+
+    letter-spacing: 0.5px;
+}
+
+
+/* =========================================================
+   NOME DA PASSIVA
+========================================================= */
+
+.class-passive-content {
+    margin-bottom: 12px;
+
+    padding: 10px 11px;
+
+    border-left: 2px solid var(--secondary-b);
+
+    border-radius: 0 9px 9px 0;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--secondary-a) 7%,
+            transparent
+        );
+}
+
+.class-passive-content strong {
+    display: block;
+
+    color: var(--secondary-b);
+
+    font-size: 16px;
+
+    line-height: 1.25;
+
+    letter-spacing: 0.3px;
+
+    transition:
+        color 0.5s ease;
+}
+
+
+/* =========================================================
+   DESCRIÇÃO
+========================================================= */
+
+.class-passive-description {
+    padding: 11px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(0, 0, 0, 0.16);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.05);
+}
+
+.class-passive-description p {
+    margin: 0;
+
+    color: #c9bdd5;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}
+
+
+/* =========================================================
+   ANIMAÇÃO DA PASSIVA DE CLASSE
+========================================================= */
+
+@keyframes classPassivePulse {
+
+    0%,
+    100% {
+        transform: scale(0.9);
+        opacity: 0.55;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
+
+}
+
+
+/* =========================================================
+   ANIMAÇÃO GERAL
+========================================================= */
+
+@keyframes affinityPulse {
+    0%,
+    100% {
+        transform: scale(0.96);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+}
+
+
+/* =========================================================
+   VENTO
+========================================================= */
+
+@keyframes windCardEffect {
+    0% {
+        transform:
+            translateX(-15%)
+            scaleX(0.9);
+    }
+
+    50% {
+        transform:
+            translateX(15%)
+            scaleX(1.1);
+    }
+
+    100% {
+        transform:
+            translateX(-15%)
+            scaleX(0.9);
+    }
+}
+
+
+/* =========================================================
+   FOGO
+========================================================= */
+
+@keyframes fireCardEffect {
+    0%,
+    100% {
+        transform:
+            translateY(3%)
+            scale(0.96);
+    }
+
+    50% {
+        transform:
+            translateY(-3%)
+            scale(1.05);
+    }
+}
+
+
+/* =========================================================
+   AURORA
+========================================================= */
+
+@keyframes auroraCardEffect {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+
+/* =========================================================
+   REDUÇÃO DE MOVIMENTO
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .dimension::after,
+    .dimension.affinity-magico::before,
+    .class-passive-card::after {
+        animation: none;
+    }
+
+}

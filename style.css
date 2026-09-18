@@ -1,0 +1,2040 @@
+/* =========================================================
+   RPG CHARACTER CARD
+   ESTILO CARD / FICHA DE RPG
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+
+    font-family: Arial, sans-serif;
+
+    color: #f5f0ff;
+
+    background:
+        radial-gradient(
+            circle at top,
+            #321454 0%,
+            #130a20 38%,
+            #06040a 100%
+        );
+}
+
+body {
+    min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app {
+    width: 100%;
+    max-width: 540px;
+
+    margin: 0 auto;
+
+    padding: 20px 12px 40px;
+}
+
+
+/* =========================================================
+   CABEÇALHO
+========================================================= */
+
+.app-header {
+    text-align: center;
+
+    margin-bottom: 16px;
+}
+
+.app-header h1 {
+    margin: 0;
+
+    font-size: 25px;
+
+    letter-spacing: 3px;
+
+    text-shadow:
+        0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+.app-header p {
+    margin: 7px 0 0;
+
+    color: #91849d;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   NAVEGAÇÃO
+========================================================= */
+
+.dimension-nav {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 6px;
+
+    padding: 7px;
+
+    margin-bottom: 10px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.25);
+
+    border-radius: 17px;
+
+    background:
+        rgba(8, 5, 13, 0.9);
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.dimension-button {
+    min-height: 48px;
+
+    padding: 7px 3px;
+
+    border: 1px solid transparent;
+
+    border-radius: 11px;
+
+    background: transparent;
+
+    color: #776b83;
+
+    font-size: 9px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        0.2s ease;
+}
+
+.dimension-button:hover {
+    color: #d8b4fe;
+
+    background:
+        rgba(124, 58, 237, 0.08);
+}
+
+.dimension-button.active {
+    color: #f2e7ff;
+
+    border-color:
+        rgba(168, 85, 247, 0.55);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(124, 58, 237, 0.28),
+            rgba(88, 28, 135, 0.13)
+        );
+
+    box-shadow:
+        0 0 15px rgba(124, 58, 237, 0.18);
+}
+
+
+/* =========================================================
+   CARD PRINCIPAL
+========================================================= */
+
+.character-card {
+    width: 100%;
+
+    position: relative;
+
+    overflow: hidden;
+
+    border-radius: 25px;
+
+    border:
+        1px solid #713bb0;
+
+    background:
+        linear-gradient(
+            145deg,
+            #19111f,
+            #0d0813 55%,
+            #08050c
+        );
+
+    box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.5),
+        0 0 35px rgba(124, 58, 237, 0.13),
+        inset 0 0 50px rgba(124, 58, 237, 0.035);
+}
+
+
+/* =========================================================
+   DIMENSÕES
+   IMPORTANTE:
+   O HTML usa .dimension
+========================================================= */
+
+.dimension {
+    display: none;
+
+    width: 100%;
+
+    animation:
+        dimensionIn 0.25s ease;
+}
+
+.dimension.active {
+    display: block;
+}
+
+@keyframes dimensionIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(7px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* =========================================================
+   CARD — PERSONAGEM
+========================================================= */
+
+.character-dimension {
+    padding-bottom: 22px;
+}
+
+
+/* =========================================================
+   CABEÇALHO DO CARD
+========================================================= */
+
+.card-front {
+    width: 100%;
+}
+
+.card-header {
+    min-height: 78px;
+
+    display: grid;
+
+    grid-template-columns:
+        1fr 70px 1fr;
+
+    align-items: center;
+
+    padding: 9px 17px;
+
+    border-bottom:
+        1px solid rgba(255, 255, 255, 0.06);
+
+    background:
+        rgba(0, 0, 0, 0.16);
+}
+
+
+/* =========================================================
+   RARIDADE
+========================================================= */
+
+.rarity {
+    color: #d8b4fe;
+
+    font-size: 10px;
+
+    font-weight: bold;
+
+    letter-spacing: 2px;
+}
+
+
+/* =========================================================
+   BRASÃO
+========================================================= */
+
+.character-crest {
+    width: 56px;
+    height: 56px;
+
+    margin: auto;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    border:
+        1px solid #a855f7;
+
+    background:
+        radial-gradient(
+            circle,
+            #422469,
+            #120a1c 72%
+        );
+
+    box-shadow:
+        0 0 22px rgba(168, 85, 247, 0.45),
+        inset 0 0 14px rgba(255, 255, 255, 0.05);
+
+    transition:
+        0.3s ease;
+}
+
+.character-crest:hover {
+    transform: scale(1.07);
+}
+
+#crest-symbol {
+    font-size: 25px;
+}
+
+
+/* =========================================================
+   NÍVEL
+========================================================= */
+
+.level {
+    text-align: right;
+
+    color: #eadcff;
+
+    font-size: 20px;
+
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   IMAGEM
+========================================================= */
+
+.character-image {
+    position: relative;
+
+    height: 360px;
+
+    margin: 15px;
+
+    overflow: hidden;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 19px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.42);
+
+    background:
+        radial-gradient(
+            circle at center,
+            #412466 0%,
+            #1c1029 43%,
+            #08050d 100%
+        );
+
+    box-shadow:
+        inset 0 0 55px rgba(124, 58, 237, 0.16),
+        0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.character-image::before {
+    content: "";
+
+    position: absolute;
+
+    width: 240px;
+    height: 240px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(192, 132, 252, 0.13),
+            transparent 70%
+        );
+}
+
+.character-image img {
+    position: relative;
+
+    z-index: 2;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+}
+
+.image-placeholder {
+    position: relative;
+
+    z-index: 1;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 9px;
+
+    text-align: center;
+
+    color: #80738d;
+
+    font-size: 10px;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   INFORMAÇÕES
+========================================================= */
+
+.character-info {
+    padding:
+        0 17px;
+}
+
+.character-info h2 {
+    margin:
+        0 0 14px;
+
+    font-size: 26px;
+
+    letter-spacing: 0.5px;
+}
+
+.title {
+    display: none;
+}
+
+
+/* =========================================================
+   IDENTIDADE
+========================================================= */
+
+.identity {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 8px;
+}
+
+.identity > div {
+    min-height: 61px;
+
+    padding:
+        10px 11px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    border-radius: 12px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.065);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.045),
+            rgba(255, 255, 255, 0.015)
+        );
+}
+
+.identity span {
+    display: block;
+
+    color: #75687f;
+
+    font-size: 8px;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 5px;
+}
+
+.identity strong {
+    color: #ded2e8;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   XP
+========================================================= */
+
+.xp-section {
+    margin-top: 14px;
+
+    padding: 13px;
+
+    border-radius: 13px;
+
+    border:
+        1px solid rgba(111, 58, 168, 0.5);
+
+    background:
+        rgba(124, 58, 237, 0.05);
+}
+
+.xp-info {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 7px;
+
+    color: #887c94;
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+#character-xp-text {
+    color: #cdbed8;
+
+    letter-spacing: 0;
+}
+
+.xp-bar,
+.badge-xp-bar {
+    width: 100%;
+
+    overflow: hidden;
+
+    border-radius: 20px;
+
+    background: #211a29;
+}
+
+.xp-bar {
+    height: 8px;
+}
+
+.badge-xp-bar {
+    height: 7px;
+}
+
+.xp-progress,
+.badge-xp-progress {
+    width: 0%;
+
+    height: 100%;
+
+    border-radius: 20px;
+
+    transition:
+        width 0.4s ease;
+}
+
+.xp-progress {
+    background:
+        linear-gradient(
+            90deg,
+            #6d28d9,
+            #c084fc
+        );
+
+    box-shadow:
+        0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+.badge-xp-progress {
+    background:
+        linear-gradient(
+            90deg,
+            #581c87,
+            #c084fc
+        );
+}
+
+
+/* =========================================================
+   XP BRASÃO
+========================================================= */
+
+.badge-xp-section {
+    margin-top: 9px;
+
+    padding: 12px 13px;
+
+    border-radius: 13px;
+
+    border:
+        1px solid rgba(104, 64, 138, 0.45);
+
+    background:
+        rgba(0, 0, 0, 0.17);
+}
+
+.badge-xp-header {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 7px;
+}
+
+.badge-xp-header strong {
+    color: #c084fc;
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+.badge-xp-header span {
+    color: #91849d;
+
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   EDITOR
+========================================================= */
+
+.character-editor {
+    margin:
+        17px;
+
+    padding: 17px;
+
+    border-radius: 17px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.28);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(124, 58, 237, 0.08),
+            rgba(0, 0, 0, 0.2)
+        );
+}
+
+.character-editor h3 {
+    margin:
+        0 0 16px;
+
+    color: #c084fc;
+
+    font-size: 12px;
+
+    letter-spacing: 2px;
+}
+
+.editor-field {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    margin-bottom: 12px;
+}
+
+.editor-field label {
+    color: #82758e;
+
+    font-size: 8px;
+
+    letter-spacing: 1px;
+}
+
+.editor-field input,
+.editor-field select {
+    width: 100%;
+
+    padding:
+        10px 11px;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 9px;
+
+    outline: none;
+
+    background:
+        #0e0915;
+
+    color: #f5f0ff;
+
+    font-size: 12px;
+}
+
+.editor-field input:focus,
+.editor-field select:focus {
+    border-color: #a855f7;
+
+    box-shadow:
+        0 0 10px rgba(168, 85, 247, 0.15);
+}
+
+
+/* =========================================================
+   BOTÕES DO EDITOR
+========================================================= */
+
+.editor-buttons {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 8px;
+}
+
+.editor-buttons button {
+    min-height: 37px;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 9px;
+
+    background:
+        #1b1424;
+
+    color: #d8c7e8;
+
+    font-size: 10px;
+
+    cursor: pointer;
+}
+
+.editor-buttons button:hover {
+    border-color: #a855f7;
+
+    background:
+        #251535;
+}
+
+
+/* =========================================================
+   MODO MESTRE
+========================================================= */
+
+.master-button {
+    width: 100%;
+
+    margin-top: 13px;
+
+    padding: 12px;
+
+    border:
+        1px solid #70419a;
+
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #21142d,
+            #120b19
+        );
+
+    color: #d8c7e8;
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    cursor: pointer;
+}
+
+.master-button:hover {
+    border-color: #a855f7;
+
+    background:
+        #29183a;
+}
+
+.master-controls {
+    display: none;
+
+    margin-top: 12px;
+
+    padding: 14px;
+
+    border-radius: 14px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.25);
+
+    background:
+        rgba(0, 0, 0, 0.28);
+}
+
+.master-controls.active {
+    display: block;
+}
+
+.master-controls h3 {
+    margin:
+        0 0 13px;
+
+    color: #c084fc;
+
+    font-size: 12px;
+}
+
+.control {
+    margin-bottom: 10px;
+
+    padding: 8px;
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 7px;
+
+    align-items: center;
+
+    border-radius: 9px;
+
+    background:
+        rgba(255, 255, 255, 0.025);
+}
+
+.control label {
+    width: 100%;
+
+    color: #a99db7;
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+.control input {
+    flex: 1;
+
+    min-width: 80px;
+
+    padding: 9px;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 8px;
+
+    background:
+        #0e0915;
+
+    color: white;
+
+    outline: none;
+}
+
+.control button {
+    min-width: 75px;
+
+    padding: 9px;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 8px;
+
+    background:
+        #1b1424;
+
+    color: #ddd;
+
+    cursor: pointer;
+}
+
+#reset-character {
+    width: 100%;
+
+    padding: 10px;
+
+    border:
+        1px solid #6b2f45;
+
+    border-radius: 9px;
+
+    background:
+        rgba(100, 20, 40, 0.18);
+
+    color: #dbaebe;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.status-dimension,
+.combat-dimension,
+.inventory-dimension {
+    padding: 20px;
+}
+
+.status-section > h2,
+.combat-dimension > h2,
+.inventory-dimension > h2 {
+    margin:
+        0 0 18px;
+
+    font-size: 24px;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   TÍTULOS INTERNOS
+========================================================= */
+
+.stats-title {
+    margin:
+        18px 0 11px;
+
+    color: #b9a9c8;
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+}
+
+.element-description {
+    margin:
+        -4px 0 12px;
+
+    color: #75687f;
+
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   STATUS / ATRIBUTOS
+========================================================= */
+
+.stats-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 9px;
+}
+
+.stat {
+    position: relative;
+
+    min-height: 85px;
+
+    padding: 12px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    border-radius: 15px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.07);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.045),
+            rgba(255, 255, 255, 0.015)
+        );
+
+    transition:
+        0.2s ease;
+}
+
+.stat:hover {
+    border-color:
+        rgba(168, 85, 247, 0.3);
+
+    transform: translateY(-1px);
+}
+
+.stat span {
+    font-size: 22px;
+
+    margin-bottom: 5px;
+}
+
+.stat strong {
+    color: #eee5f5;
+
+    font-size: 19px;
+}
+
+.stat small {
+    margin-top: 4px;
+
+    color: #75687f;
+
+    font-size: 8px;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   BOTÃO +
+========================================================= */
+
+.attribute-plus {
+    position: absolute;
+
+    top: 7px;
+    right: 7px;
+
+    width: 23px;
+    height: 23px;
+
+    padding: 0;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 50%;
+
+    background:
+        #1b1424;
+
+    color: #d8b4fe;
+
+    cursor: pointer;
+
+    opacity: 0.6;
+}
+
+.attribute-plus:hover {
+    opacity: 1;
+
+    border-color: #a855f7;
+
+    transform: scale(1.07);
+}
+
+
+/* =========================================================
+   PONTOS DE ATRIBUTO
+========================================================= */
+
+.attribute-points {
+    margin:
+        16px -20px;
+
+    padding:
+        15px 20px;
+
+    text-align: center;
+
+    border-top:
+        1px solid rgba(168, 85, 247, 0.2);
+
+    border-bottom:
+        1px solid rgba(168, 85, 247, 0.2);
+
+    background:
+        rgba(124, 58, 237, 0.08);
+}
+
+.attribute-points h3 {
+    margin:
+        0 0 5px;
+
+    color: #c084fc;
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.attribute-points strong {
+    display: block;
+
+    color: #f0ddff;
+
+    font-size: 28px;
+}
+
+.attribute-points span {
+    color: #75687f;
+
+    font-size: 8px;
+}
+
+
+/* =========================================================
+   ELEMENTOS — CARDS
+========================================================= */
+
+.element-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 9px;
+}
+
+.element-option {
+    min-height: 100px;
+
+    padding: 13px 7px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.08);
+
+    border-radius: 15px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.045),
+            rgba(255, 255, 255, 0.015)
+        );
+
+    color: #bcaec7;
+
+    cursor: pointer;
+
+    transition:
+        0.2s ease;
+}
+
+.element-option:hover {
+    transform: translateY(-2px);
+
+    border-color:
+        rgba(168, 85, 247, 0.45);
+}
+
+.element-option.selected {
+    border-color:
+        #a855f7;
+
+    color: #f0ddff;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(124, 58, 237, 0.28),
+            rgba(124, 58, 237, 0.08)
+        );
+
+    box-shadow:
+        0 0 18px rgba(124, 58, 237, 0.2);
+}
+
+.element-option span {
+    font-size: 28px;
+}
+
+.element-option small {
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   CONFIRMAR ELEMENTO
+========================================================= */
+
+#confirm-element {
+    width: 100%;
+
+    margin-top: 10px;
+
+    padding: 12px;
+
+    border:
+        1px solid #70419a;
+
+    border-radius: 11px;
+
+    background:
+        #1b1424;
+
+    color: #d8c7e8;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+#confirm-element:not(:disabled):hover {
+    border-color: #c084fc;
+
+    background:
+        #29183a;
+}
+
+#confirm-element:disabled {
+    opacity: 0.4;
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   BRASÕES
+========================================================= */
+
+.badges {
+    margin-top: 22px;
+
+    padding-top: 17px;
+
+    border-top:
+        1px solid rgba(255, 255, 255, 0.06);
+}
+
+.badges h3 {
+    margin:
+        0 0 11px;
+
+    color: #b9a9c8;
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+}
+
+.badge-list {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 8px;
+}
+
+.badge {
+    height: 55px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 13px;
+
+    border:
+        1px solid #68408a;
+
+    background:
+        #17101f;
+
+    font-size: 22px;
+}
+
+.badge.locked {
+    color: #51475a;
+
+    border-color: #302735;
+}
+
+
+/* =========================================================
+   COMBATE
+========================================================= */
+
+.combat-dimension > p {
+    margin:
+        -10px 0 18px;
+
+    color: #75687f;
+
+    font-size: 10px;
+}
+
+.combat-resources {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 9px;
+
+    margin-bottom: 18px;
+}
+
+.combat-resource {
+    padding: 14px;
+
+    text-align: center;
+
+    border-radius: 14px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.2);
+
+    background:
+        rgba(124, 58, 237, 0.06);
+}
+
+.combat-resource strong {
+    color: #eee5f5;
+
+    font-size: 20px;
+}
+
+.combat-resource small {
+    display: block;
+
+    margin-top: 4px;
+
+    color: #75687f;
+
+    font-size: 8px;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   AÇÕES DE COMBATE
+========================================================= */
+
+.combat-action {
+    margin-bottom: 10px;
+
+    padding: 15px;
+
+    border-radius: 16px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.07);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.045),
+            rgba(255, 255, 255, 0.015)
+        );
+}
+
+.combat-action h3 {
+    margin:
+        0 0 7px;
+
+    color: #eee5f5;
+
+    font-size: 15px;
+}
+
+.combat-action p {
+    margin:
+        0 0 11px;
+
+    color: #8f839d;
+
+    font-size: 10px;
+}
+
+.combat-use-button {
+    padding:
+        9px 14px;
+
+    border:
+        1px solid #70419a;
+
+    border-radius: 9px;
+
+    background:
+        #1b1424;
+
+    color: #d8c7e8;
+
+    font-size: 9px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.combat-use-button:hover {
+    border-color: #a855f7;
+
+    background:
+        #29183a;
+}
+
+
+/* =========================================================
+   HABILIDADES
+========================================================= */
+
+.abilities-section {
+    margin-top: 20px;
+}
+
+.abilities-section > h3 {
+    margin:
+        0 0 11px;
+
+    color: #b9a9c8;
+
+    font-size: 12px;
+
+    letter-spacing: 2px;
+}
+
+.ability-card {
+    margin-bottom: 10px;
+
+    padding: 15px;
+
+    border-radius: 16px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.2);
+
+    background:
+        linear-gradient(
+            145deg,
+            #19121f,
+            #0e0914
+        );
+}
+
+.ability-card input,
+.ability-card select,
+.ability-card textarea {
+    width: 100%;
+
+    padding:
+        9px 10px;
+
+    margin-bottom: 8px;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 8px;
+
+    background:
+        #0d0813;
+
+    color: #f5f0ff;
+
+    outline: none;
+
+    font-size: 10px;
+}
+
+.ability-card textarea {
+    min-height: 60px;
+
+    resize: vertical;
+}
+
+.ability-card input:focus,
+.ability-card select:focus,
+.ability-card textarea:focus {
+    border-color: #a855f7;
+}
+
+
+/* =========================================================
+   PASSIVA
+========================================================= */
+
+.passive-card {
+    margin-top: 20px;
+
+    padding: 16px;
+
+    border-radius: 17px;
+
+    border:
+        1px solid rgba(192, 132, 252, 0.3);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(124, 58, 237, 0.1),
+            rgba(0, 0, 0, 0.18)
+        );
+}
+
+.passive-card h3 {
+    margin:
+        0 0 12px;
+
+    color: #c084fc;
+
+    font-size: 12px;
+
+    letter-spacing: 2px;
+}
+
+.passive-card input,
+.passive-card textarea {
+    width: 100%;
+
+    padding: 10px;
+
+    border:
+        1px solid #68408a;
+
+    border-radius: 9px;
+
+    background:
+        #0d0813;
+
+    color: #f5f0ff;
+
+    outline: none;
+
+    font-size: 10px;
+}
+
+.passive-card textarea {
+    min-height: 70px;
+
+    margin-top: 8px;
+
+    resize: vertical;
+}
+
+
+/* =========================================================
+   LOG DE COMBATE
+========================================================= */
+
+#combat-log {
+    min-height: 50px;
+
+    max-height: 160px;
+
+    overflow-y: auto;
+
+    margin-top: 15px;
+
+    padding: 11px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.05);
+
+    background:
+        rgba(0, 0, 0, 0.28);
+
+    color: #81758d;
+
+    font-size: 9px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   INVENTÁRIO
+========================================================= */
+
+.inventory-dimension > p {
+    color: #75687f;
+
+    font-size: 10px;
+}
+
+.inventory-capacity {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 14px 15px;
+
+    margin-bottom: 18px;
+
+    border-radius: 14px;
+
+    border:
+        1px solid rgba(168, 85, 247, 0.25);
+
+    background:
+        rgba(124, 58, 237, 0.06);
+}
+
+.inventory-capacity span {
+    color: #75687f;
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+#inventory-capacity {
+    color: #d8b4fe;
+
+    font-size: 18px;
+
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   EQUIPAMENTOS
+========================================================= */
+
+.equipment-list {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 9px;
+}
+
+.equipment-item {
+    min-height: 70px;
+
+    padding: 12px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    border-radius: 14px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.07);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.04),
+            rgba(255, 255, 255, 0.015)
+        );
+}
+
+.equipment-item small {
+    color: #75687f;
+
+    font-size: 8px;
+
+    letter-spacing: 1px;
+}
+
+.equipment-item strong {
+    margin-top: 5px;
+
+    color: #d8c7e8;
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   SLOTS
+========================================================= */
+
+#inventory-list {
+    margin-bottom: 10px;
+}
+
+#inventory-slots {
+    display: grid;
+
+    grid-template-columns:
+        repeat(5, 1fr);
+
+    gap: 7px;
+}
+
+.inventory-slot {
+    min-height: 44px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.065);
+
+    background:
+        linear-gradient(
+            145deg,
+            #15101b,
+            #0c0811
+        );
+
+    color: #62576c;
+
+    font-size: 9px;
+}
+
+.inventory-slot:hover {
+    border-color:
+        rgba(168, 85, 247, 0.35);
+}
+
+
+/* =========================================================
+   EFEITOS ELEMENTAIS
+========================================================= */
+
+.character-card.element-agua {
+    box-shadow:
+        0 0 45px rgba(56, 189, 248, 0.22),
+        inset 0 0 45px rgba(56, 189, 248, 0.04);
+}
+
+.character-card.element-fogo {
+    box-shadow:
+        0 0 45px rgba(249, 115, 22, 0.22),
+        inset 0 0 45px rgba(249, 115, 22, 0.04);
+}
+
+.character-card.element-terra {
+    box-shadow:
+        0 0 45px rgba(120, 113, 108, 0.2),
+        inset 0 0 45px rgba(120, 113, 108, 0.04);
+}
+
+.character-card.element-vento {
+    box-shadow:
+        0 0 45px rgba(125, 211, 252, 0.2),
+        inset 0 0 45px rgba(125, 211, 252, 0.04);
+}
+
+.character-card.element-luz {
+    box-shadow:
+        0 0 45px rgba(253, 224, 71, 0.22),
+        inset 0 0 45px rgba(253, 224, 71, 0.04);
+}
+
+.character-card.element-trevas {
+    box-shadow:
+        0 0 50px rgba(109, 40, 217, 0.3),
+        inset 0 0 50px rgba(88, 28, 135, 0.06);
+}
+
+.character-card.element-fisico {
+    box-shadow:
+        0 0 45px rgba(251, 191, 36, 0.18),
+        inset 0 0 45px rgba(251, 191, 36, 0.035);
+}
+
+.character-card.element-magico {
+    box-shadow:
+        0 0 50px rgba(217, 70, 239, 0.24),
+        inset 0 0 50px rgba(217, 70, 239, 0.05);
+}
+
+
+/* =========================================================
+   RESPONSIVO
+========================================================= */
+
+@media (max-width: 420px) {
+
+    .app {
+        padding:
+            14px 7px 30px;
+    }
+
+    .app-header h1 {
+        font-size: 21px;
+
+        letter-spacing: 2px;
+    }
+
+    .dimension-nav {
+        gap: 3px;
+
+        padding: 5px;
+
+        border-radius: 15px;
+    }
+
+    .dimension-button {
+        min-height: 44px;
+
+        font-size: 8px;
+    }
+
+    .character-card {
+        border-radius: 21px;
+    }
+
+    .card-header {
+        grid-template-columns:
+            1fr 62px 1fr;
+
+        padding:
+            8px 13px;
+    }
+
+    .character-crest {
+        width: 51px;
+        height: 51px;
+    }
+
+    #crest-symbol {
+        font-size: 22px;
+    }
+
+    .character-image {
+        height: 320px;
+
+        margin: 12px;
+    }
+
+    .character-info {
+        padding:
+            0 13px;
+    }
+
+    .identity {
+        gap: 7px;
+    }
+
+    .status-dimension,
+    .combat-dimension,
+    .inventory-dimension {
+        padding: 16px;
+    }
+
+    .element-option {
+        min-height: 92px;
+    }
+
+    #inventory-slots {
+        gap: 5px;
+    }
+
+    .inventory-slot {
+        min-height: 39px;
+    }
+}
+
+
+/* =========================================================
+   CELULARES PEQUENOS
+========================================================= */
+
+@media (max-width: 340px) {
+
+    .dimension-button {
+        font-size: 7px;
+    }
+
+    .character-image {
+        height: 285px;
+    }
+
+    .identity {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #inventory-slots {
+        grid-template-columns:
+            repeat(4, 1fr);
+    }
+}
+/* =========================================================
+   CAMPANHA
+========================================================= */
+
+.campaign-panel {
+    width: min(100%, 700px);
+    margin: 20px auto;
+    padding: 20px;
+
+    border: 1px solid rgba(255, 215, 120, 0.25);
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(20, 15, 35, 0.96),
+            rgba(8, 8, 18, 0.96)
+        );
+
+    box-shadow:
+        0 10px 35px rgba(0, 0, 0, 0.35);
+}
+
+.campaign-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.campaign-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    opacity: 0.7;
+}
+
+.campaign-panel h2 {
+    margin: 5px 0 0;
+}
+
+.campaign-area {
+    margin-top: 15px;
+}
+
+.campaign-code-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.campaign-code-box span {
+    font-size: 11px;
+    letter-spacing: 2px;
+    opacity: 0.7;
+}
+
+.campaign-code-box strong {
+    font-size: 25px;
+    letter-spacing: 4px;
+}
+
+.campaign-button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px 16px;
+
+    border: none;
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+.campaign-join-area {
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.campaign-join-form {
+    display: flex;
+    gap: 8px;
+}
+
+.campaign-join-form input {
+    flex: 1;
+    min-width: 0;
+
+    padding: 12px;
+
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+
+    background: rgba(0,0,0,0.25);
+
+    font-size: 16px;
+}
+
+.campaign-message {
+    min-height: 20px;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+
+    .campaign-panel {
+        margin: 15px 10px;
+        padding: 16px;
+    }
+
+    .campaign-join-form {
+        flex-direction: column;
+    }
+
+}

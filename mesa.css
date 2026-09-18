@@ -1,0 +1,2037 @@
+/* ============================================================
+   MESA RPG ONLINE
+   mesa.css
+   Interface principal da mesa
+============================================================ */
+
+/* ============================================================
+   RESET
+============================================================ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+
+    background:
+        radial-gradient(
+            circle at 50% 45%,
+            #2b1b3d 0%,
+            #120d1c 45%,
+            #07050b 100%
+        );
+
+    color: #eee7ff;
+    overflow: hidden;
+}
+
+
+/* ============================================================
+   VARIÁVEIS
+============================================================ */
+
+:root {
+    --mesa-dark: #09070d;
+    --mesa-deep: #110c18;
+    --mesa-purple: #6d3fa5;
+    --mesa-purple-light: #a879df;
+    --mesa-gold: #c9a45b;
+    --mesa-gold-light: #efd18a;
+
+    --card-bg: rgba(19, 13, 27, 0.96);
+    --card-border: rgba(201, 164, 91, 0.55);
+
+    --panel-bg: rgba(11, 8, 17, 0.97);
+
+    --hp: #b72d3b;
+    --mana: #356bc5;
+
+    --shadow:
+        0 12px 30px rgba(0, 0, 0, 0.65);
+
+    --gold-shadow:
+        0 0 15px rgba(201, 164, 91, 0.18);
+}
+
+
+/* ============================================================
+   CONTAINER PRINCIPAL
+============================================================ */
+
+.mesa-container {
+    position: relative;
+
+    width: 100vw;
+    height: 100vh;
+
+    min-height: 560px;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(91, 48, 128, 0.20) 0%,
+            rgba(15, 10, 23, 0.05) 45%,
+            rgba(0, 0, 0, 0.35) 100%
+        );
+}
+
+
+/* ============================================================
+   BORDA DECORATIVA DA MESA
+============================================================ */
+
+.mesa-container::before {
+    content: "";
+
+    position: absolute;
+    inset: 10px;
+
+    border: 1px solid rgba(201, 164, 91, 0.22);
+
+    border-radius: 26px;
+
+    pointer-events: none;
+
+    box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.65),
+        0 0 25px rgba(0, 0, 0, 0.35);
+
+    z-index: 20;
+}
+
+.mesa-container::after {
+    content: "";
+
+    position: absolute;
+    inset: 15px;
+
+    border: 1px solid rgba(255, 255, 255, 0.035);
+
+    border-radius: 22px;
+
+    pointer-events: none;
+
+    z-index: 20;
+}
+
+
+/* ============================================================
+   CABEÇALHO
+============================================================ */
+
+.mesa-header {
+    position: absolute;
+
+    top: 22px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 15;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 18px;
+
+    pointer-events: none;
+}
+
+.mesa-title {
+    text-align: center;
+
+    padding: 7px 24px 9px;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(23, 16, 32, 0.94),
+            rgba(9, 7, 13, 0.94)
+        );
+
+    border: 1px solid rgba(201, 164, 91, 0.42);
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.45),
+        inset 0 0 15px rgba(201, 164, 91, 0.04);
+}
+
+.mesa-title h1 {
+    font-size: clamp(17px, 2.4vw, 25px);
+
+    letter-spacing: 1px;
+
+    color: #f0dfbd;
+
+    text-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.mesa-title span {
+    display: block;
+
+    margin-top: 2px;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+    letter-spacing: 2px;
+
+    color: rgba(232, 216, 190, 0.58);
+}
+
+
+/* ============================================================
+   BOTÃO DE CONFIGURAÇÕES
+============================================================ */
+
+.mesa-settings-btn {
+    position: fixed;
+
+    top: 22px;
+    right: 25px;
+
+    z-index: 10000;
+
+    width: 42px;
+    height: 42px;
+
+    border-radius: 50%;
+
+    border: 1px solid rgba(201, 164, 91, 0.55);
+
+    background:
+        radial-gradient(
+            circle,
+            #2b1b39 0%,
+            #100b17 75%
+        );
+
+    color: #e4c982;
+
+    font-size: 19px;
+
+    cursor: pointer;
+
+    pointer-events: auto;
+
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.55);
+
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.mesa-settings-btn:hover {
+    transform: rotate(25deg) scale(1.06);
+
+    border-color: var(--mesa-gold-light);
+
+    box-shadow:
+        0 0 18px rgba(201, 164, 91, 0.28);
+}
+
+.mesa-settings-btn:active {
+    transform: scale(0.94);
+}
+
+
+/* ============================================================
+   ÁREA PRINCIPAL DA MESA
+============================================================ */
+
+.mesa-layout {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+}
+
+
+/* ============================================================
+   TABULEIRO / ÁREA CENTRAL
+============================================================ */
+
+.mesa-stage {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+
+    /*
+       ÁREA CENTRAL AMPLIADA
+    */
+
+    width: min(64vw, 850px);
+    height: min(66vh, 700px);
+
+    min-width: 400px;
+    min-height: 330px;
+
+    z-index: 2;
+}
+
+
+/* ============================================================
+   MOLDURA DO PALCO
+============================================================ */
+
+.mesa-stage::before {
+    content: "";
+
+    position: absolute;
+
+    inset: -10px;
+
+    border-radius: 28px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(201, 164, 91, 0.45),
+            rgba(73, 44, 97, 0.25),
+            rgba(201, 164, 91, 0.35)
+        );
+
+    z-index: -2;
+
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+.mesa-stage::after {
+    content: "";
+
+    position: absolute;
+
+    inset: -5px;
+
+    border-radius: 24px;
+
+    border: 1px solid rgba(238, 210, 143, 0.38);
+
+    pointer-events: none;
+
+    z-index: 4;
+}
+
+
+/* ============================================================
+   TELA CENTRAL
+============================================================ */
+
+.mesa-screen {
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    border-radius: 20px;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(76, 44, 105, 0.30),
+            rgba(9, 7, 13, 0.98) 75%
+        );
+
+    border:
+        1px solid rgba(201, 164, 91, 0.36);
+
+    box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.75),
+        inset 0 0 15px rgba(121, 70, 168, 0.12),
+        0 0 35px rgba(0, 0, 0, 0.55);
+}
+
+
+/* ============================================================
+   TEXTURA DECORATIVA
+============================================================ */
+
+.mesa-screen::before {
+    content: "";
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        repeating-linear-gradient(
+            0deg,
+            rgba(255, 255, 255, 0.012) 0px,
+            rgba(255, 255, 255, 0.012) 1px,
+            transparent 1px,
+            transparent 4px
+        );
+
+    pointer-events: none;
+}
+
+
+/* ============================================================
+   BRILHO CENTRAL
+============================================================ */
+
+.mesa-screen::after {
+    content: "";
+
+    position: absolute;
+
+    width: 55%;
+    height: 55%;
+
+    left: 22.5%;
+    top: 22.5%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(126, 72, 177, 0.10),
+            transparent 70%
+        );
+
+    pointer-events: none;
+}
+
+
+/* ============================================================
+   CONTEÚDO DA TELA
+============================================================ */
+
+.mesa-screen-content {
+    position: relative;
+
+    z-index: 2;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    padding: 35px;
+}
+
+.mesa-screen-content h2 {
+    font-size: clamp(22px, 3vw, 34px);
+
+    color: #ead9b5;
+
+    text-shadow:
+        0 3px 8px rgba(0, 0, 0, 0.8);
+}
+
+.mesa-screen-content p {
+    margin-top: 9px;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: clamp(11px, 1.5vw, 14px);
+
+    color: rgba(230, 220, 238, 0.55);
+}
+
+
+/* ============================================================
+   GRID DOS JOGADORES
+============================================================ */
+
+.jogadores-grid {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 8;
+
+    pointer-events: none;
+}
+
+
+/* ============================================================
+   CARDS DOS JOGADORES
+============================================================ */
+
+.player-card {
+    position: absolute;
+
+    width: clamp(145px, 16vw, 205px);
+    height: clamp(104px, 12vh, 135px);
+
+    pointer-events: auto;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(30, 20, 41, 0.98),
+            rgba(11, 8, 16, 0.98)
+        );
+
+    border:
+        1px solid var(--card-border);
+
+    box-shadow:
+        var(--shadow),
+        inset 0 0 20px rgba(117, 65, 159, 0.07);
+
+    overflow: hidden;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.22s ease,
+        border-color 0.22s ease,
+        box-shadow 0.22s ease;
+}
+
+
+/* ============================================================
+   BRILHO INTERNO
+============================================================ */
+
+.player-card::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 1px;
+
+    border-radius: 13px;
+
+    border: 1px solid rgba(255, 255, 255, 0.035);
+
+    pointer-events: none;
+}
+
+
+/* ============================================================
+   POSIÇÕES DOS 8 JOGADORES
+============================================================ */
+
+.player-card[data-seat="1"] {
+    top: 11%;
+    left: 3%;
+    transform: rotate(-1deg);
+}
+
+.player-card[data-seat="2"] {
+    top: 8%;
+    left: 23%;
+    transform: rotate(-0.5deg);
+}
+
+.player-card[data-seat="3"] {
+    top: 8%;
+    right: 23%;
+    transform: rotate(0.5deg);
+}
+
+.player-card[data-seat="4"] {
+    top: 11%;
+    right: 3%;
+    transform: rotate(1deg);
+}
+
+.player-card[data-seat="5"] {
+    bottom: 10%;
+    left: 3%;
+    transform: rotate(1deg);
+}
+
+.player-card[data-seat="6"] {
+    bottom: 7%;
+    left: 23%;
+    transform: rotate(0.5deg);
+}
+
+.player-card[data-seat="7"] {
+    bottom: 7%;
+    right: 23%;
+    transform: rotate(-0.5deg);
+}
+
+.player-card[data-seat="8"] {
+    bottom: 10%;
+    right: 3%;
+    transform: rotate(-1deg);
+}
+
+
+/* ============================================================
+   HOVER DOS CARDS
+============================================================ */
+
+.player-card:hover {
+    transform:
+        translateY(-6px)
+        scale(1.025)
+        rotate(0deg);
+
+    border-color:
+        rgba(239, 209, 138, 0.9);
+
+    box-shadow:
+        0 18px 35px rgba(0, 0, 0, 0.72),
+        0 0 22px rgba(201, 164, 91, 0.16);
+}
+
+.player-card:active {
+    transform:
+        translateY(-2px)
+        scale(0.99);
+}
+
+
+/* ============================================================
+   CONTEÚDO DO CARD
+============================================================ */
+
+.player-card-content {
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+
+    padding: 10px 11px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: space-between;
+}
+
+
+/* ============================================================
+   CABEÇALHO DO PLAYER
+============================================================ */
+
+.player-card-header {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+.player-avatar {
+    width: 32px;
+    height: 32px;
+
+    flex-shrink: 0;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #3c2550,
+            #17101f
+        );
+
+    border:
+        1px solid rgba(201, 164, 91, 0.35);
+
+    font-size: 16px;
+}
+
+.player-name {
+    min-width: 0;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+
+    font-size: clamp(12px, 1.4vw, 15px);
+
+    font-weight: bold;
+
+    color: #eee1c7;
+}
+
+
+/* ============================================================
+   RAÇA / CLASSE
+============================================================ */
+
+.player-info {
+    display: flex;
+
+    gap: 5px;
+
+    min-width: 0;
+}
+
+.player-info span {
+    min-width: 0;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+
+    padding: 3px 6px;
+
+    border-radius: 5px;
+
+    background: rgba(255, 255, 255, 0.035);
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 8px;
+
+    color: rgba(231, 220, 238, 0.62);
+}
+
+
+/* ============================================================
+   BARRAS
+============================================================ */
+
+.player-bars {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.status-values {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 8px;
+
+    color: rgba(236, 227, 242, 0.66);
+}
+
+.status-values span:last-child {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.status-bar {
+    position: relative;
+
+    width: 100%;
+    height: 6px;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background: rgba(0, 0, 0, 0.6);
+
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.status-bar span {
+    display: block;
+
+    height: 100%;
+
+    border-radius: inherit;
+
+    transition:
+        width 0.35s ease;
+}
+
+.hp-bar span {
+    background:
+        linear-gradient(
+            90deg,
+            #761d29,
+            #c43b48
+        );
+
+    box-shadow:
+        0 0 7px rgba(183, 45, 59, 0.4);
+}
+
+.mana-bar span {
+    background:
+        linear-gradient(
+            90deg,
+            #244986,
+            #4e83df
+        );
+
+    box-shadow:
+        0 0 7px rgba(53, 107, 197, 0.4);
+}
+
+
+/* ============================================================
+   PAINEL DO MESTRE
+============================================================ */
+
+.master-menu {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: flex;
+
+    align-items: flex-start;
+    justify-content: flex-end;
+
+    padding:
+        75px
+        25px
+        25px;
+
+    background:
+        rgba(0, 0, 0, 0.28);
+
+    backdrop-filter: blur(3px);
+
+    animation:
+        masterOverlayIn 0.18s ease;
+}
+
+
+/* ============================================================
+   CONTAINER DO MENU
+============================================================ */
+
+.master-menu-content {
+    position: relative;
+
+    width: min(310px, calc(100vw - 35px));
+
+    padding: 18px;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            155deg,
+            rgba(28, 18, 39, 0.99),
+            rgba(9, 7, 13, 0.99)
+        );
+
+    border:
+        1px solid rgba(201, 164, 91, 0.55);
+
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.75),
+        inset 0 0 25px rgba(119, 69, 159, 0.07);
+
+    animation:
+        masterPanelIn 0.2s ease;
+}
+
+.master-menu-content h2 {
+    margin-bottom: 15px;
+
+    padding-bottom: 11px;
+
+    border-bottom:
+        1px solid rgba(201, 164, 91, 0.20);
+
+    text-align: center;
+
+    color: #ead6aa;
+
+    font-size: 20px;
+}
+
+
+/* ============================================================
+   CONTROLES DO MESTRE
+============================================================ */
+
+.master-controls {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 9px;
+}
+
+.master-controls button {
+    min-height: 46px;
+
+    border-radius: 10px;
+
+    border:
+        1px solid rgba(201, 164, 91, 0.25);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(45, 28, 58, 0.95),
+            rgba(18, 11, 25, 0.95)
+        );
+
+    color: #e9dfd1;
+
+    font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.master-controls button:hover {
+    transform: translateY(-2px);
+
+    border-color:
+        rgba(239, 209, 138, 0.7);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(66, 40, 83, 0.98),
+            rgba(25, 15, 34, 0.98)
+        );
+}
+
+.master-controls button:active {
+    transform: scale(0.97);
+}
+
+
+/* ============================================================
+   CTE — INDICADOR
+============================================================ */
+
+.cte-indicator {
+    position: absolute;
+
+    top: 14px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 8;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding:
+        6px
+        13px;
+
+    border-radius: 999px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(37, 24, 50, 0.96),
+            rgba(12, 8, 18, 0.96)
+        );
+
+    border:
+        1px solid rgba(201, 164, 91, 0.42);
+
+    color: #ead9b5;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 10px;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.45);
+
+    pointer-events: none;
+}
+
+.cte-indicator-icon {
+    font-size: 13px;
+
+    filter:
+        drop-shadow(
+            0 0 5px rgba(201, 164, 91, 0.55)
+        );
+}
+
+
+/* ============================================================
+   CTE — OVERLAY
+============================================================ */
+
+.cte-overlay {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 50;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    padding: 25px;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(86, 46, 118, 0.30),
+            rgba(4, 3, 8, 0.82) 72%
+        );
+
+    backdrop-filter: blur(3px);
+
+    animation:
+        cteOverlayIn 0.18s ease;
+
+    cursor: crosshair;
+}
+
+
+/* ============================================================
+   CTE — BRILHO DE FUNDO
+============================================================ */
+
+.cte-overlay::before {
+    content: "";
+
+    position: absolute;
+
+    width: 75%;
+    height: 75%;
+
+    left: 12.5%;
+    top: 12.5%;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(168, 121, 223, 0.12),
+            transparent 68%
+        );
+
+    pointer-events: none;
+
+    animation:
+        ctePulse 1.2s ease-in-out infinite;
+}
+
+
+/* ============================================================
+   CTE — PAINEL INFORMATIVO
+============================================================ */
+
+.cte-info {
+    position: absolute;
+
+    top: 30px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 3;
+
+    width: min(90%, 360px);
+
+    text-align: center;
+
+    pointer-events: none;
+}
+
+.cte-info h2 {
+    font-size: clamp(22px, 4vw, 32px);
+
+    letter-spacing: 2px;
+
+    color: #f0dfbd;
+
+    text-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.95),
+        0 0 18px rgba(201, 164, 91, 0.20);
+}
+
+.cte-info p {
+    margin-top: 7px;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: clamp(10px, 1.7vw, 13px);
+
+    color: rgba(236, 227, 242, 0.68);
+}
+
+
+/* ============================================================
+   CTE — CONTADOR
+============================================================ */
+
+.cte-timer {
+    position: absolute;
+
+    left: 50%;
+    bottom: 27px;
+
+    transform: translateX(-50%);
+
+    z-index: 5;
+
+    min-width: 78px;
+
+    padding:
+        7px
+        14px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(7, 5, 11, 0.90);
+
+    border:
+        1px solid rgba(201, 164, 91, 0.40);
+
+    color: #f0dfbd;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-size: clamp(17px, 3vw, 24px);
+
+    font-weight: bold;
+
+    text-align: center;
+
+    letter-spacing: 1px;
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.55);
+}
+
+.cte-timer.warning {
+    border-color:
+        rgba(201, 164, 91, 0.80);
+
+    animation:
+        cteTimerWarning 0.25s ease-in-out infinite alternate;
+}
+
+.cte-timer.danger {
+    border-color:
+        rgba(183, 45, 59, 0.90);
+
+    color: #ff8791;
+
+    animation:
+        cteTimerDanger 0.16s ease-in-out infinite alternate;
+}
+
+
+/* ============================================================
+   CTE — ALVO
+============================================================ */
+
+.cte-target {
+    position: absolute;
+
+    z-index: 6;
+
+    width: clamp(62px, 10vw, 94px);
+    height: clamp(62px, 10vw, 94px);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    border:
+        2px solid rgba(239, 209, 138, 0.95);
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(239, 209, 138, 0.20) 0%,
+            rgba(126, 72, 177, 0.25) 35%,
+            rgba(15, 8, 25, 0.90) 72%
+        );
+
+    color: #f3dfae;
+
+    font-size: clamp(19px, 4vw, 29px);
+
+    cursor: pointer;
+
+    user-select: none;
+    -webkit-user-select: none;
+
+    touch-action: manipulation;
+
+    box-shadow:
+        0 0 0 5px rgba(201, 164, 91, 0.06),
+        0 0 22px rgba(201, 164, 91, 0.35),
+        0 0 50px rgba(126, 72, 177, 0.20);
+
+    animation:
+        cteTargetAppear 0.20s ease,
+        cteTargetPulse 0.75s ease-in-out infinite;
+
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.cte-target::before {
+    content: "";
+
+    position: absolute;
+
+    inset: -9px;
+
+    border-radius: 50%;
+
+    border:
+        1px solid rgba(239, 209, 138, 0.25);
+
+    animation:
+        cteTargetRing 1s linear infinite;
+
+    pointer-events: none;
+}
+
+.cte-target::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 10px;
+
+    border-radius: 50%;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.20);
+
+    pointer-events: none;
+}
+
+.cte-target:hover {
+    transform: scale(1.08);
+
+    box-shadow:
+        0 0 0 7px rgba(201, 164, 91, 0.08),
+        0 0 30px rgba(201, 164, 91, 0.55),
+        0 0 65px rgba(126, 72, 177, 0.30);
+}
+
+.cte-target:active {
+    transform: scale(0.90);
+}
+
+
+/* ============================================================
+   CTE — ESTADOS
+============================================================ */
+
+.cte-success {
+    animation:
+        cteSuccess 0.45s ease forwards;
+}
+
+.cte-failure {
+    animation:
+        cteFailure 0.45s ease forwards;
+}
+
+
+/* ============================================================
+   CTE — MENSAGEM DE RESULTADO
+============================================================ */
+
+.cte-result {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform:
+        translate(-50%, -50%)
+        scale(0.85);
+
+    z-index: 10;
+
+    min-width: min(80%, 310px);
+
+    padding:
+        18px
+        24px;
+
+    border-radius: 16px;
+
+    text-align: center;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(28, 18, 39, 0.98),
+            rgba(8, 6, 12, 0.98)
+        );
+
+    border:
+        1px solid rgba(201, 164, 91, 0.55);
+
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.75);
+
+    pointer-events: none;
+
+    animation:
+        cteResultIn 0.25s ease forwards;
+}
+
+.cte-result h3 {
+    font-size: clamp(19px, 4vw, 27px);
+
+    color: #ead9b5;
+}
+
+.cte-result p {
+    margin-top: 6px;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 11px;
+
+    color: rgba(235, 225, 241, 0.65);
+}
+
+
+/* ============================================================
+   CTE — ESTADO ATIVO NA MESA
+============================================================ */
+
+.mesa-screen.cte-active {
+    border-color:
+        rgba(239, 209, 138, 0.65);
+
+    box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.78),
+        inset 0 0 25px rgba(126, 72, 177, 0.18),
+        0 0 35px rgba(201, 164, 91, 0.18);
+}
+
+.mesa-screen.cte-active .mesa-screen-content {
+    filter: blur(1px);
+}
+
+
+/* ============================================================
+   ANIMAÇÕES DO CTE
+============================================================ */
+
+@keyframes cteOverlayIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes ctePulse {
+
+    0%,
+    100% {
+        transform: scale(0.92);
+        opacity: 0.55;
+    }
+
+    50% {
+        transform: scale(1.04);
+        opacity: 1;
+    }
+}
+
+@keyframes cteTargetAppear {
+
+    from {
+        opacity: 0;
+        transform: scale(0.35);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes cteTargetPulse {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 5px rgba(201, 164, 91, 0.06),
+            0 0 22px rgba(201, 164, 91, 0.35),
+            0 0 50px rgba(126, 72, 177, 0.20);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 9px rgba(201, 164, 91, 0.09),
+            0 0 34px rgba(201, 164, 91, 0.55),
+            0 0 65px rgba(126, 72, 177, 0.30);
+    }
+}
+
+@keyframes cteTargetRing {
+
+    from {
+        transform: scale(0.85);
+        opacity: 0.7;
+    }
+
+    to {
+        transform: scale(1.25);
+        opacity: 0;
+    }
+}
+
+@keyframes cteTimerWarning {
+
+    from {
+        transform:
+            translateX(-50%)
+            scale(1);
+    }
+
+    to {
+        transform:
+            translateX(-50%)
+            scale(1.04);
+    }
+}
+
+@keyframes cteTimerDanger {
+
+    from {
+        transform:
+            translateX(-50%)
+            scale(1);
+    }
+
+    to {
+        transform:
+            translateX(-50%)
+            scale(1.07);
+    }
+}
+
+@keyframes cteSuccess {
+
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    40% {
+        transform: scale(1.20);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.65);
+        opacity: 0;
+    }
+}
+
+@keyframes cteFailure {
+
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    20% {
+        transform: translateX(-8px);
+    }
+
+    40% {
+        transform: translateX(8px);
+    }
+
+    60% {
+        transform: translateX(-6px);
+    }
+
+    80% {
+        transform: translateX(6px);
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: 0;
+    }
+}
+
+@keyframes cteResultIn {
+
+    from {
+        opacity: 0;
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.82);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translate(-50%, -50%)
+            scale(1);
+    }
+}
+
+
+/* ============================================================
+   TABLET
+============================================================ */
+
+@media (max-width: 900px) {
+
+    .mesa-stage {
+        /*
+           PALCO CENTRAL AMPLIADO NO TABLET
+        */
+
+        width: 64vw;
+        height: 62vh;
+
+        min-width: 340px;
+    }
+
+    .player-card {
+        width: 155px;
+        height: 108px;
+    }
+
+    .player-card[data-seat="2"],
+    .player-card[data-seat="3"] {
+        top: 10%;
+    }
+
+    .player-card[data-seat="6"],
+    .player-card[data-seat="7"] {
+        bottom: 9%;
+    }
+
+    .cte-info {
+        top: 24px;
+    }
+
+    .cte-timer {
+        bottom: 22px;
+    }
+}
+
+
+/* ============================================================
+   CELULAR
+============================================================ */
+
+@media (max-width: 650px) {
+
+    body {
+        overflow: hidden;
+    }
+
+    .mesa-container {
+        min-height: 0;
+    }
+
+    .mesa-container::before {
+        inset: 5px;
+
+        border-radius: 18px;
+    }
+
+    .mesa-container::after {
+        inset: 9px;
+
+        border-radius: 15px;
+    }
+
+    .mesa-header {
+        top: 12px;
+    }
+
+    .mesa-title {
+        padding:
+            5px
+            15px
+            6px;
+    }
+
+    .mesa-title h1 {
+        font-size: 15px;
+    }
+
+    .mesa-title span {
+        font-size: 7px;
+        letter-spacing: 1.4px;
+    }
+
+    .mesa-settings-btn {
+        top: 11px;
+        right: 12px;
+
+        width: 35px;
+        height: 35px;
+
+        font-size: 16px;
+    }
+
+
+    /* --------------------------------
+       PALCO CENTRAL
+    -------------------------------- */
+
+    .mesa-stage {
+        left: 50%;
+        top: 50%;
+
+        /*
+           PALCO CENTRAL MAIOR NO CELULAR
+        */
+
+        width: 62vw;
+        height: 58vh;
+
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .mesa-screen {
+        border-radius: 14px;
+    }
+
+    .mesa-stage::before {
+        inset: -6px;
+
+        border-radius: 19px;
+    }
+
+    .mesa-stage::after {
+        inset: -3px;
+
+        border-radius: 17px;
+    }
+
+    .mesa-screen-content {
+        padding: 15px;
+    }
+
+    .mesa-screen-content h2 {
+        font-size: 17px;
+    }
+
+    .mesa-screen-content p {
+        font-size: 9px;
+    }
+
+
+    /* --------------------------------
+       CARDS
+    -------------------------------- */
+
+    .player-card {
+        width: 130px;
+        height: 91px;
+
+        border-radius: 11px;
+    }
+
+    .player-card-content {
+        padding: 7px 8px;
+    }
+
+    .player-avatar {
+        width: 25px;
+        height: 25px;
+
+        border-radius: 7px;
+
+        font-size: 13px;
+    }
+
+    .player-name {
+        font-size: 10px;
+    }
+
+    .player-info span {
+        padding: 2px 4px;
+
+        font-size: 6px;
+    }
+
+    .status-values {
+        font-size: 6px;
+    }
+
+    .status-bar {
+        height: 4px;
+    }
+
+
+    /* --------------------------------
+       POSIÇÕES MOBILE
+    -------------------------------- */
+
+    .player-card[data-seat="1"] {
+        top: 14%;
+        left: 2%;
+    }
+
+    .player-card[data-seat="2"] {
+        top: 10%;
+        left: 20%;
+    }
+
+    .player-card[data-seat="3"] {
+        top: 10%;
+        right: 20%;
+    }
+
+    .player-card[data-seat="4"] {
+        top: 14%;
+        right: 2%;
+    }
+
+    .player-card[data-seat="5"] {
+        bottom: 13%;
+        left: 2%;
+    }
+
+    .player-card[data-seat="6"] {
+        bottom: 9%;
+        left: 20%;
+    }
+
+    .player-card[data-seat="7"] {
+        bottom: 9%;
+        right: 20%;
+    }
+
+    .player-card[data-seat="8"] {
+        bottom: 13%;
+        right: 2%;
+    }
+
+
+    /* --------------------------------
+       MENU DO MESTRE
+    -------------------------------- */
+
+    .master-menu {
+        padding:
+            58px
+            10px
+            10px;
+    }
+
+    .master-menu-content {
+        width: 100%;
+
+        max-width: 320px;
+
+        border-radius: 15px;
+
+        padding: 14px;
+    }
+
+    .master-menu-content h2 {
+        font-size: 17px;
+
+        margin-bottom: 11px;
+    }
+
+    .master-controls {
+        gap: 7px;
+    }
+
+    .master-controls button {
+        min-height: 42px;
+
+        font-size: 11px;
+    }
+
+
+    /* --------------------------------
+       CTE MOBILE
+    -------------------------------- */
+
+    .cte-indicator {
+        top: 9px;
+
+        padding:
+            5px
+            10px;
+
+        font-size: 8px;
+    }
+
+    .cte-indicator-icon {
+        font-size: 11px;
+    }
+
+    .cte-overlay {
+        padding: 12px;
+    }
+
+    .cte-info {
+        top: 18px;
+
+        width: 90%;
+    }
+
+    .cte-info h2 {
+        font-size: 20px;
+
+        letter-spacing: 1.5px;
+    }
+
+    .cte-info p {
+        margin-top: 5px;
+
+        font-size: 9px;
+    }
+
+    .cte-target {
+        width: 66px;
+        height: 66px;
+
+        font-size: 20px;
+    }
+
+    .cte-timer {
+        bottom: 15px;
+
+        min-width: 65px;
+
+        padding:
+            5px
+            10px;
+
+        font-size: 17px;
+    }
+
+    .cte-result {
+        min-width: 75%;
+
+        padding:
+            14px
+            18px;
+
+        border-radius: 13px;
+    }
+
+    .cte-result h3 {
+        font-size: 20px;
+    }
+
+    .cte-result p {
+        font-size: 9px;
+    }
+}
+
+
+/* ============================================================
+   CELULAR MUITO PEQUENO
+============================================================ */
+
+@media (max-width: 430px) {
+
+    .player-card {
+        width: 112px;
+        height: 82px;
+    }
+
+    .player-card-content {
+        padding: 6px;
+    }
+
+    .player-avatar {
+        width: 22px;
+        height: 22px;
+
+        font-size: 11px;
+    }
+
+    .player-name {
+        font-size: 9px;
+    }
+
+    .player-info {
+        gap: 3px;
+    }
+
+    .player-info span {
+        font-size: 5px;
+    }
+
+    .status-values {
+        font-size: 5px;
+    }
+
+    .status-bar {
+        height: 3px;
+    }
+
+    .mesa-stage {
+        /*
+           PALCO CENTRAL MAIOR EM TELAS PEQUENAS
+        */
+
+        width: 60vw;
+        height: 55vh;
+    }
+
+    .player-card[data-seat="2"],
+    .player-card[data-seat="3"] {
+        top: 11%;
+    }
+
+    .player-card[data-seat="6"],
+    .player-card[data-seat="7"] {
+        bottom: 10%;
+    }
+
+
+    /* --------------------------------
+       CTE MUITO PEQUENO
+    -------------------------------- */
+
+    .cte-info h2 {
+        font-size: 17px;
+    }
+
+    .cte-info p {
+        font-size: 8px;
+    }
+
+    .cte-target {
+        width: 58px;
+        height: 58px;
+
+        font-size: 17px;
+    }
+
+    .cte-timer {
+        bottom: 11px;
+
+        font-size: 15px;
+    }
+}
+
+
+/* ============================================================
+   ACESSIBILIDADE / REDUÇÃO DE MOVIMENTO
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
+/* ============================================================
+   CORREÇÃO FINAL — MENU DO MESTRE
+============================================================ */
+
+.master-menu[hidden] {
+    display: none !important;
+}

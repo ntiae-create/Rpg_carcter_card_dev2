@@ -1,0 +1,882 @@
+/* =========================================================
+   RPG — SISTEMA DE PASSIVAS
+   VISUAL DAS PASSIVAS DOS PERSONAGENS
+========================================================= */
+
+
+/* =========================================================
+   ÁREA PRINCIPAL
+========================================================= */
+
+.passivas-area {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    width: 100%;
+    min-width: 0;
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   CONTAINER DA PASSIVA
+========================================================= */
+
+.passiva-visual {
+    position: relative;
+
+    width: 100%;
+    min-height: 58px;
+
+    padding: 8px 10px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    box-sizing: border-box;
+
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    border-radius: 10px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(18, 12, 35, 0.96),
+            rgba(7, 10, 25, 0.96)
+        );
+
+    box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.28);
+
+    overflow: hidden;
+
+    transition:
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease,
+        opacity 0.25s ease;
+
+    pointer-events: none;
+}
+
+
+/* brilho interno */
+
+.passiva-visual::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            120deg,
+            rgba(124, 58, 237, 0.08),
+            transparent 45%,
+            rgba(14, 165, 164, 0.05)
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   CABEÇALHO
+========================================================= */
+
+.passiva-visual-header {
+    position: relative;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    min-width: 0;
+}
+
+
+.passiva-visual-icon {
+    flex: 0 0 auto;
+
+    width: 25px;
+    height: 25px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 7px;
+
+    background:
+        rgba(124, 58, 237, 0.16);
+
+    border: 1px solid
+        rgba(124, 58, 237, 0.25);
+
+    font-size: 14px;
+}
+
+
+.passiva-visual-nome {
+    flex: 1;
+
+    min-width: 0;
+
+    color: #f5f3ff;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   DESCRIÇÃO
+========================================================= */
+
+.passiva-visual-descricao {
+    position: relative;
+    z-index: 2;
+
+    margin: 0;
+
+    color: rgba(226, 232, 240, 0.68);
+
+    font-size: 10px;
+    line-height: 1.35;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   ÁREA DOS STACKS
+========================================================= */
+
+.passiva-visual-stacks {
+    position: relative;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: 3px;
+
+    min-height: 8px;
+
+    margin-top: 1px;
+}
+
+
+/* =========================================================
+   STACK INDIVIDUAL
+========================================================= */
+
+.passiva-stack-ativo,
+.passiva-stack-inativo {
+    position: relative;
+
+    width: 9px;
+    height: 9px;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+
+/* Stack preenchido */
+
+.passiva-stack-ativo {
+    background:
+        radial-gradient(
+            circle at 35% 30%,
+            #ffffff 0%,
+            #c4b5fd 20%,
+            #8b5cf6 50%,
+            #6d28d9 100%
+        );
+
+    border: 1px solid
+        rgba(196, 181, 253, 0.75);
+
+    box-shadow:
+        0 0 6px
+        rgba(124, 58, 237, 0.75);
+
+    animation:
+        passivaStackAtivo 0.25s ease;
+}
+
+
+/* Stack vazio */
+
+.passiva-stack-inativo {
+    background:
+        rgba(255, 255, 255, 0.045);
+
+    border: 1px solid
+        rgba(255, 255, 255, 0.12);
+
+    opacity: 0.55;
+}
+
+
+/* =========================================================
+   QUANTIDADE DE STACKS
+========================================================= */
+
+.passiva-visual-stack-contador {
+    margin-left: 4px;
+
+    color: rgba(255, 255, 255, 0.7);
+
+    font-size: 9px;
+    font-weight: 700;
+
+    line-height: 1;
+}
+
+
+/* =========================================================
+   AURA
+========================================================= */
+
+.passiva-visual-aura {
+    position: absolute;
+
+    width: 80px;
+    height: 80px;
+
+    right: -25px;
+    bottom: -35px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(124, 58, 237, 0.22),
+            rgba(124, 58, 237, 0.06) 45%,
+            transparent 72%
+        );
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.35s ease;
+
+    animation:
+        passivaAura 3s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   PARTÍCULAS
+========================================================= */
+
+.passiva-visual-particulas {
+    position: absolute;
+
+    inset: 0;
+
+    overflow: hidden;
+
+    pointer-events: none;
+
+    opacity: 0;
+
+    transition:
+        opacity 0.3s ease;
+}
+
+
+.passiva-visual-particulas::before,
+.passiva-visual-particulas::after {
+    content: "";
+
+    position: absolute;
+
+    width: 3px;
+    height: 3px;
+
+    border-radius: 50%;
+
+    background: rgba(196, 181, 253, 0.7);
+
+    box-shadow:
+        18px 12px 0 rgba(196, 181, 253, 0.45),
+        45px 28px 0 rgba(167, 139, 250, 0.35),
+        72px 8px 0 rgba(196, 181, 253, 0.4),
+        95px 36px 0 rgba(139, 92, 246, 0.3);
+
+    animation:
+        passivaParticulas 3.5s linear infinite;
+}
+
+
+.passiva-visual-particulas::after {
+    animation-delay: -1.7s;
+
+    opacity: 0.55;
+}
+
+
+/* =========================================================
+   PASSIVA INATIVA
+========================================================= */
+
+.passiva-inativa {
+    opacity: 0.65;
+
+    border-color:
+        rgba(107, 114, 128, 0.2);
+
+    box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+
+.passiva-inativa
+.passiva-visual-icon {
+    background:
+        rgba(107, 114, 128, 0.1);
+
+    border-color:
+        rgba(107, 114, 128, 0.18);
+
+    filter: grayscale(0.35);
+}
+
+
+/* =========================================================
+   PASSIVA ATIVA
+========================================================= */
+
+.passiva-ativa {
+    opacity: 1;
+
+    border-color:
+        rgba(124, 58, 237, 0.52);
+
+    box-shadow:
+        0 4px 18px
+        rgba(124, 58, 237, 0.18);
+}
+
+
+.passiva-ativa
+.passiva-visual-aura {
+    opacity: 1;
+}
+
+
+.passiva-ativa
+.passiva-visual-particulas {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   PASSIVA NO MÁXIMO
+========================================================= */
+
+.passiva-maxima {
+    border-color:
+        rgba(245, 158, 11, 0.65);
+
+    box-shadow:
+        0 0 18px
+        rgba(245, 158, 11, 0.18),
+        inset 0 0 16px
+        rgba(245, 158, 11, 0.04);
+
+    animation:
+        passivaMaxima 2.2s ease-in-out infinite;
+}
+
+
+.passiva-maxima
+.passiva-visual-icon {
+    border-color:
+        rgba(245, 158, 11, 0.45);
+
+    background:
+        rgba(245, 158, 11, 0.12);
+}
+
+
+/* =========================================================
+   NÍVEIS DE STACK
+========================================================= */
+
+.passiva-visual.stack-1
+.passiva-visual-aura {
+    opacity: 0.25;
+}
+
+
+.passiva-visual.stack-2
+.passiva-visual-aura {
+    opacity: 0.35;
+}
+
+
+.passiva-visual.stack-3
+.passiva-visual-aura {
+    opacity: 0.45;
+}
+
+
+.passiva-visual.stack-4
+.passiva-visual-aura {
+    opacity: 0.55;
+}
+
+
+.passiva-visual.stack-5
+.passiva-visual-aura {
+    opacity: 0.65;
+}
+
+
+/* =========================================================
+   STACKS ALTOS
+========================================================= */
+
+.passiva-visual.stack-6
+.passiva-visual-aura {
+    opacity: 0.7;
+}
+
+
+.passiva-visual.stack-7
+.passiva-visual-aura {
+    opacity: 0.78;
+}
+
+
+.passiva-visual.stack-8
+.passiva-visual-aura {
+    opacity: 0.85;
+}
+
+
+.passiva-visual.stack-9
+.passiva-visual-aura {
+    opacity: 0.92;
+}
+
+
+.passiva-visual.stack-10
+.passiva-visual-aura {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   ANIMAÇÃO AO GANHAR STACK
+========================================================= */
+
+.passiva-stack-alterada {
+    animation:
+        passivaStackAlterada 0.45s ease;
+}
+
+
+@keyframes passivaStackAtivo {
+
+    0% {
+        transform: scale(0.5);
+        opacity: 0.3;
+    }
+
+    70% {
+        transform: scale(1.25);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+}
+
+
+@keyframes passivaStackAlterada {
+
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.3);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+}
+
+
+/* =========================================================
+   AURA
+========================================================= */
+
+@keyframes passivaAura {
+
+    0%,
+    100% {
+        transform: scale(0.9);
+        opacity: 0.45;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 0.8;
+    }
+
+}
+
+
+/* =========================================================
+   PARTÍCULAS
+========================================================= */
+
+@keyframes passivaParticulas {
+
+    0% {
+        transform:
+            translateY(18px)
+            translateX(-8px);
+
+        opacity: 0;
+    }
+
+    25% {
+        opacity: 0.8;
+    }
+
+    75% {
+        opacity: 0.5;
+    }
+
+    100% {
+        transform:
+            translateY(-35px)
+            translateX(12px);
+
+        opacity: 0;
+    }
+
+}
+
+
+/* =========================================================
+   EFEITO DE PASSIVA NO MÁXIMO
+========================================================= */
+
+@keyframes passivaMaxima {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 12px
+            rgba(245, 158, 11, 0.12);
+    }
+
+    50% {
+        box-shadow:
+            0 0 24px
+            rgba(245, 158, 11, 0.28);
+    }
+
+}
+
+
+/* =========================================================
+   VARIÁVEL DE NÍVEL
+========================================================= */
+
+.passiva-visual {
+    --passiva-nivel: 0;
+}
+
+
+/* =========================================================
+   PASSIVAS ESPECIAIS
+========================================================= */
+
+/*
+ * Quando uma passiva possui um estado especial,
+ * podemos destacar visualmente através dessas classes.
+ */
+
+.passiva-especial {
+    border-color:
+        rgba(14, 165, 164, 0.5);
+
+    box-shadow:
+        0 0 18px
+        rgba(14, 165, 164, 0.16);
+}
+
+
+.passiva-especial
+.passiva-visual-icon {
+    background:
+        rgba(14, 165, 164, 0.12);
+
+    border-color:
+        rgba(14, 165, 164, 0.3);
+}
+
+
+/* =========================================================
+   ESTADOS DE SUCESSO
+========================================================= */
+
+.passiva-sucesso {
+    animation:
+        passivaSucesso 0.5s ease;
+}
+
+
+@keyframes passivaSucesso {
+
+    0% {
+        transform: scale(1);
+    }
+
+    40% {
+        transform: scale(1.025);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+}
+
+
+/* =========================================================
+   ESTADOS DE ALERTA
+========================================================= */
+
+.passiva-alerta {
+    border-color:
+        rgba(239, 68, 68, 0.5);
+
+    box-shadow:
+        0 0 16px
+        rgba(239, 68, 68, 0.14);
+}
+
+
+/* =========================================================
+   PASSIVAS SEM STACK
+========================================================= */
+
+.passiva-sem-stack
+.passiva-visual-stacks {
+    display: none;
+}
+
+
+/*
+ * Quando não existe área de Stack,
+ * reduzimos um pouco o espaço interno.
+ */
+
+.passiva-sem-stack {
+    gap: 5px;
+}
+
+
+/* =========================================================
+   INDICADOR DE ESTADO
+========================================================= */
+
+.passiva-visual-status {
+    position: relative;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+
+    gap: 5px;
+
+    color:
+        rgba(226, 232, 240, 0.5);
+
+    font-size: 9px;
+}
+
+
+.passiva-visual-status::before {
+    content: "";
+
+    width: 5px;
+    height: 5px;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+
+    background:
+        #6b7280;
+}
+
+
+.passiva-ativa
+.passiva-visual-status::before {
+    background:
+        #8b5cf6;
+
+    box-shadow:
+        0 0 6px
+        rgba(139, 92, 246, 0.75);
+}
+
+
+.passiva-maxima
+.passiva-visual-status::before {
+    background:
+        #f59e0b;
+
+    box-shadow:
+        0 0 7px
+        rgba(245, 158, 11, 0.8);
+}
+
+
+/* =========================================================
+   RESPONSIVIDADE
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .passiva-visual {
+        min-height: 52px;
+
+        padding: 7px 8px;
+
+        border-radius: 9px;
+    }
+
+
+    .passiva-visual-icon {
+        width: 23px;
+        height: 23px;
+
+        font-size: 13px;
+    }
+
+
+    .passiva-visual-nome {
+        font-size: 11px;
+    }
+
+
+    .passiva-visual-descricao {
+        font-size: 9px;
+    }
+
+
+    .passiva-stack-ativo,
+    .passiva-stack-inativo {
+        width: 8px;
+        height: 8px;
+    }
+
+}
+
+
+@media (max-width: 430px) {
+
+    .passiva-visual {
+        min-height: 48px;
+
+        padding: 6px 7px;
+
+        gap: 4px;
+    }
+
+
+    .passiva-visual-icon {
+        width: 21px;
+        height: 21px;
+
+        font-size: 12px;
+    }
+
+
+    .passiva-visual-nome {
+        font-size: 10px;
+    }
+
+
+    .passiva-visual-descricao {
+        font-size: 8px;
+
+        -webkit-line-clamp: 2;
+    }
+
+
+    .passiva-stack-ativo,
+    .passiva-stack-inativo {
+        width: 7px;
+        height: 7px;
+    }
+
+}
+
+
+/* =========================================================
+   ACESSIBILIDADE
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .passiva-visual,
+    .passiva-stack-ativo,
+    .passiva-visual-aura,
+    .passiva-visual-particulas,
+    .passiva-maxima,
+    .passiva-sucesso,
+    .passiva-stack-alterada {
+
+        animation: none !important;
+
+        transition: none !important;
+    }
+
+}

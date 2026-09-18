@@ -1,0 +1,593 @@
+/* =========================================================
+   EFFECTS.CSS
+   Efeitos visuais do RPG Character Card
+========================================================= */
+
+
+/* =========================================================
+   VARIÁVEIS DOS ELEMENTOS
+========================================================= */
+
+.character-card.element-agua {
+    --element-color: #38bdf8;
+    --element-color-strong: #0284c7;
+}
+
+.character-card.element-luz {
+    --element-color: #fde68a;
+    --element-color-strong: #eab308;
+}
+
+.character-card.element-terra {
+    --element-color: #a3e635;
+    --element-color-strong: #65a30d;
+}
+
+.character-card.element-trevas {
+    --element-color: #a78bfa;
+    --element-color-strong: #7c3aed;
+}
+
+.character-card.element-vento {
+    --element-color: #67e8f9;
+    --element-color-strong: #0891b2;
+}
+
+.character-card.element-fogo {
+    --element-color: #fb923c;
+    --element-color-strong: #dc2626;
+}
+
+.character-card.element-fisico {
+    --element-color: #f8fafc;
+    --element-color-strong: #94a3b8;
+}
+
+.character-card.element-magico {
+    --element-color: #e879f9;
+    --element-color-strong: #c026d3;
+}
+
+
+/* =========================================================
+   ÁREA DA IMAGEM
+========================================================= */
+
+.character-image {
+    position: relative;
+
+    isolation: isolate;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   AURA ELEMENTAL — ATRÁS DO PERSONAGEM
+========================================================= */
+
+.character-image::before {
+
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 72%;
+    height: 72%;
+
+    transform:
+        translate(-50%, -50%)
+        scale(0.92);
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            var(--element-color, transparent) 0%,
+            color-mix(
+                in srgb,
+                var(--element-color, transparent) 35%,
+                transparent
+            ) 28%,
+            transparent 72%
+        );
+
+    opacity: 0.28;
+
+    filter: blur(25px);
+
+    pointer-events: none;
+
+    z-index: 0;
+
+    animation:
+        elementalAura 3.2s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   ANEL ELEMENTAL — TAMBÉM ATRÁS
+========================================================= */
+
+.character-image::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 68%;
+    height: 68%;
+
+    transform:
+        translate(-50%, -50%)
+        scale(0.88);
+
+    border-radius: 50%;
+
+    border:
+        1px solid
+        var(--element-color, transparent);
+
+    box-shadow:
+        0 0 20px
+        var(--element-color, transparent),
+
+        inset 0 0 20px
+        var(--element-color, transparent);
+
+    opacity: 0.2;
+
+    pointer-events: none;
+
+    z-index: 0;
+
+    animation:
+        elementalRing 3.2s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   AURA — ANIMAÇÃO
+========================================================= */
+
+@keyframes elementalAura {
+
+    0%,
+    100% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.88);
+
+        opacity: 0.18;
+    }
+
+    50% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(1.08);
+
+        opacity: 0.38;
+    }
+}
+
+
+/* =========================================================
+   ANEL — ANIMAÇÃO
+========================================================= */
+
+@keyframes elementalRing {
+
+    0%,
+    100% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.88);
+
+        opacity: 0.12;
+    }
+
+    50% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(1.12);
+
+        opacity: 0.4;
+    }
+}
+
+
+/* =========================================================
+   PNG DO PERSONAGEM
+   IMPORTANTE:
+   O PNG NÃO É ANIMADO.
+========================================================= */
+
+.character-image-display {
+
+    position: relative;
+
+    z-index: 3;
+
+    display: block;
+
+    max-width: 92%;
+    max-height: 92%;
+
+    object-fit: contain;
+
+    transform: none;
+
+    transition:
+        filter 0.5s ease;
+}
+
+
+/* =========================================================
+   BRILHO DO PERSONAGEM POR ELEMENTO
+========================================================= */
+
+.character-card.element-agua
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #38bdf8)
+        drop-shadow(0 0 16px #0284c7);
+}
+
+.character-card.element-luz
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #fde68a)
+        drop-shadow(0 0 16px #eab308);
+}
+
+.character-card.element-terra
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #a3e635)
+        drop-shadow(0 0 16px #65a30d);
+}
+
+.character-card.element-trevas
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #a78bfa)
+        drop-shadow(0 0 16px #7c3aed);
+}
+
+.character-card.element-vento
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #67e8f9)
+        drop-shadow(0 0 16px #0891b2);
+}
+
+.character-card.element-fogo
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #fb923c)
+        drop-shadow(0 0 16px #dc2626);
+}
+
+.character-card.element-fisico
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #f8fafc)
+        drop-shadow(0 0 16px #94a3b8);
+}
+
+.character-card.element-magico
+.character-image-display {
+
+    filter:
+        drop-shadow(0 0 7px #e879f9)
+        drop-shadow(0 0 16px #c026d3);
+}
+
+
+/* =========================================================
+   BRASÃO
+========================================================= */
+
+#character-crest {
+
+    position: relative;
+
+    animation:
+        crestPulse 2.2s ease-in-out infinite;
+
+    transition:
+        filter 0.5s ease,
+        transform 0.5s ease;
+}
+
+
+@keyframes crestPulse {
+
+    0%,
+    100% {
+
+        transform: scale(1);
+    }
+
+    50% {
+
+        transform: scale(1.08);
+    }
+}
+
+
+/* =========================================================
+   BRILHO DO BRASÃO
+========================================================= */
+
+.character-card.element-agua
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #38bdf8)
+        drop-shadow(0 0 14px #0284c7);
+}
+
+.character-card.element-luz
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #fde68a)
+        drop-shadow(0 0 14px #eab308);
+}
+
+.character-card.element-terra
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #a3e635)
+        drop-shadow(0 0 14px #65a30d);
+}
+
+.character-card.element-trevas
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #a78bfa)
+        drop-shadow(0 0 14px #7c3aed);
+}
+
+.character-card.element-vento
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #67e8f9)
+        drop-shadow(0 0 14px #0891b2);
+}
+
+.character-card.element-fogo
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #fb923c)
+        drop-shadow(0 0 14px #dc2626);
+}
+
+.character-card.element-fisico
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #f8fafc)
+        drop-shadow(0 0 14px #94a3b8);
+}
+
+.character-card.element-magico
+#character-crest {
+
+    filter:
+        drop-shadow(0 0 7px #e879f9)
+        drop-shadow(0 0 14px #c026d3);
+}
+
+
+/* =========================================================
+   ELEMENTO SELECIONADO
+========================================================= */
+
+.element-option.selected {
+
+    transform:
+        translateY(-3px)
+        scale(1.03);
+
+    border-color:
+        var(--element-color, #a855f7);
+
+    box-shadow:
+        0 0 15px
+        var(--element-color, #a855f7);
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+
+/* =========================================================
+   ANIMAÇÃO DO BOTÃO DE ATAQUE
+========================================================= */
+
+.combat-use-button.used {
+
+    animation:
+        attackFlash 0.45s ease;
+}
+
+
+@keyframes attackFlash {
+
+    0% {
+        transform: scale(1);
+    }
+
+    40% {
+        transform: scale(0.94);
+
+        filter:
+            brightness(1.8);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+
+/* =========================================================
+   ANIMAÇÃO DAS HABILIDADES
+========================================================= */
+
+.ability-card.used {
+
+    animation:
+        abilityPulse 0.55s ease;
+}
+
+
+@keyframes abilityPulse {
+
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+
+        transform:
+            scale(1.025);
+
+        box-shadow:
+            0 0 25px
+            var(--element-color, #7c3aed);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+
+/* =========================================================
+   PASSIVA
+========================================================= */
+
+.passive-card {
+
+    transition:
+        box-shadow 0.5s ease,
+        border-color 0.5s ease;
+}
+
+
+.character-card.element-agua
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(56, 189, 248, 0.18);
+}
+
+.character-card.element-luz
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(250, 204, 21, 0.18);
+}
+
+.character-card.element-terra
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(101, 163, 13, 0.18);
+}
+
+.character-card.element-trevas
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(124, 58, 237, 0.18);
+}
+
+.character-card.element-vento
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(6, 182, 212, 0.18);
+}
+
+.character-card.element-fogo
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(239, 68, 68, 0.18);
+}
+
+.character-card.element-fisico
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(148, 163, 184, 0.18);
+}
+
+.character-card.element-magico
+.passive-card {
+
+    box-shadow:
+        0 0 15px
+        rgba(192, 38, 211, 0.18);
+}
+
+
+/* =========================================================
+   CELULAR
+========================================================= */
+
+@media (max-width: 600px) {
+
+    .character-image-display {
+
+        max-width: 95%;
+        max-height: 95%;
+    }
+
+    .character-image::before {
+
+        width: 80%;
+        height: 70%;
+    }
+
+    .character-image::after {
+
+        width: 72%;
+        height: 62%;
+    }
+}

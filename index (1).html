@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>RPG Character Card</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="card.css">
+    <link rel="stylesheet" href="effects.css">
+
+    <style>
+
+        /* =====================================================
+           MESA RPG — ÁREA DE ENTRADA
+        ===================================================== */
+
+        .campaign-panel {
+            width: 100%;
+            max-width: 520px;
+            margin: 20px auto 30px;
+            padding: 0;
+        }
+
+        .campaign-panel-header,
+        .campaign-master-area,
+        .campaign-join-area {
+            display: none;
+        }
+
+        .campaign-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .campaign-button {
+            width: 100%;
+            min-height: 46px;
+            padding: 11px 16px;
+
+            border: 1px solid rgba(124, 58, 237, 0.35);
+            border-radius: 10px;
+
+            background: rgba(10, 10, 25, 0.85);
+
+            color: inherit;
+
+            font-weight: 700;
+            font-size: 14px;
+
+            cursor: pointer;
+
+            transition:
+                transform .15s ease,
+                border-color .15s ease,
+                background .15s ease;
+        }
+
+        .campaign-button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(124, 58, 237, 0.8);
+        }
+
+        .campaign-primary-button {
+            background: linear-gradient(
+                135deg,
+                #7c3aed,
+                #5b21b6
+            );
+
+            border-color: #8b5cf6;
+            color: white;
+        }
+
+        .campaign-join-form-container {
+            margin-top: 12px;
+        }
+
+        .campaign-join-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .campaign-join-form input {
+            flex: 1;
+            min-width: 0;
+
+            padding: 12px;
+
+            border-radius: 10px;
+            border: 1px solid rgba(124, 58, 237, .4);
+
+            background: rgba(5, 5, 15, .9);
+            color: inherit;
+
+            outline: none;
+
+            text-transform: uppercase;
+        }
+
+        .campaign-join-form input:focus {
+            border-color: #8b5cf6;
+        }
+
+        .campaign-join-form .campaign-button {
+            width: auto;
+            white-space: nowrap;
+        }
+
+        .campaign-message {
+            margin: 8px 0 0;
+
+            text-align: center;
+            font-size: 13px;
+
+            min-height: 18px;
+        }
+
+        .campaign-message.error {
+            color: #f87171;
+        }
+
+        .campaign-message.success {
+            color: #86efac;
+        }
+
+        .campaign-message.info {
+            color: #c4b5fd;
+        }
+
+        @media (max-width: 480px) {
+
+            .campaign-panel {
+                margin-top: 15px;
+                margin-bottom: 20px;
+            }
+
+            .campaign-join-form {
+                flex-direction: column;
+            }
+
+            .campaign-join-form .campaign-button {
+                width: 100%;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="app">
+
+
+    <!-- =====================================================
+         CABEÇALHO
+    ====================================================== -->
+
+    <header class="app-header">
+
+        <h1>
+            RPG CHARACTER CARD
+        </h1>
+
+        <p>
+            Ficha interativa de personagem
+        </p>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         NAVEGAÇÃO
+    ====================================================== -->
+
+    <nav class="dimension-nav">
+
+        <button
+            class="dimension-button active"
+            data-dimension="character"
+            type="button">
+
+            👤 Personagem
+
+        </button>
+
+
+        <button
+            class="dimension-button"
+            data-dimension="status"
+            type="button">
+
+            📊 Status
+
+        </button>
+
+
+        <button
+            class="dimension-button"
+            data-dimension="combat"
+            type="button">
+
+            ⚔️ Combate
+
+        </button>
+
+
+        <button
+            class="dimension-button"
+            data-dimension="inventory"
+            type="button">
+
+            🎒 Inventário
+
+        </button>
+
+    </nav>
+
+
+
+    <!-- =====================================================
+         CARD PRINCIPAL
+    ====================================================== -->
+
+    <main class="character-card">
+
+
+        <!-- =================================================
+             PERSONAGEM
+        ================================================== -->
+
+        <section
+            class="dimension character-dimension active"
+            data-dimension-content="character">
+
+
+            <div class="card-face card-front">
+
+
+                <div class="card-header">
+
+                    <div class="rarity">
+                        RARIDADE
+                    </div>
+
+
+                    <div
+                        id="character-crest"
+                        class="character-crest">
+
+                        <span id="crest-symbol">
+                            ?
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        id="character-level"
+                        class="level">
+
+                        LV. 1
+
+                    </div>
+
+                </div>
+
+
+
+                <div
+                    id="character-art-container"
+                    class="character-image">
+
+                    <div class="image-placeholder">
+
+                        <span>
+                            IMAGEM DO PERSONAGEM
+                        </span>
+
+                        <span>
+                            Adicione uma imagem no editor
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="character-info">
+
+                    <h2 id="character-name">
+                        Personagem
+                    </h2>
+
+
+                    <p class="title">
+                        Aguardando definição...
+                    </p>
+
+
+
+                    <div class="identity">
+
+
+                        <div>
+
+                            <span>
+                                RAÇA
+                            </span>
+
+                            <strong id="character-race">
+                                Humano
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                CLASSE
+                            </span>
+
+                            <strong id="character-class">
+                                Saber
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                AFINIDADE
+                            </span>
+
+                            <strong>
+
+                                <span id="character-affinity-symbol">
+                                    ?
+                                </span>
+
+                                <span id="character-affinity">
+                                    Nenhuma
+                                </span>
+
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                BRASÃO
+                            </span>
+
+                            <strong id="crest-stage">
+                                SEM NENHUM
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="xp-section">
+
+                        <div class="xp-info">
+
+                            <span>
+                                XP
+                            </span>
+
+                            <span id="character-xp-text">
+                                0 / 100
+                            </span>
+
+                        </div>
+
+
+                        <div class="xp-bar">
+
+                            <div
+                                id="character-xp-progress"
+                                class="xp-progress">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="badge-xp-section">
+
+                        <div class="badge-xp-header">
+
+                            <strong>
+                                XP DO BRASÃO
+                            </strong>
+
+                            <span id="crest-xp">
+                                0 XP
+                            </span>
+
+                        </div>
+
+
+                        <div class="badge-xp-bar">
+
+                            <div
+                                id="crest-xp-progress"
+                                class="badge-xp-progress">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 EDITOR
+            ================================================== -->
+
+            <div class="character-editor">
+
+                <h3>
+                    EDITAR PERSONAGEM
+                </h3>
+
+
+
+                <div class="editor-field">
+
+                    <label for="character-name-input">
+                        NOME
+                    </label>
+
+                    <input
+                        id="character-name-input"
+                        type="text"
+                        placeholder="Nome do personagem">
+
+                </div>
+
+
+
+                <div class="editor-field">
+
+                    <label for="character-race-select">
+                        RAÇA
+                    </label>
+
+                    <select id="character-race-select">
+
+                        <option value="Humano">
+                            Humano
+                        </option>
+
+                        <option value="Meio-elfo">
+                            Meio-elfo
+                        </option>
+
+                        <option value="Elfo">
+                            Elfo
+                        </option>
+
+                        <option value="Semi-besta">
+                            Semi-besta
+                        </option>
+
+                        <option value="Besta">
+                            Besta
+                        </option>
+
+                        <option disabled>
+                            ──────────
+                        </option>
+
+                        <option disabled>
+                            🔒 Vampiro
+                        </option>
+
+                        <option disabled>
+                            🔒 Lizard
+                        </option>
+
+                        <option disabled>
+                            🔒 Dragonoide
+                        </option>
+
+                        <option disabled>
+                            🔒 Aqua
+                        </option>
+
+                        <option disabled>
+                            🔒 Morto-vivo
+                        </option>
+
+                        <option disabled>
+                            🔒 Demônio
+                        </option>
+
+                        <option disabled>
+                            🔒 Divino
+                        </option>
+
+                        <option disabled>
+                            🔒 Dríade
+                        </option>
+
+                        <option disabled>
+                            🔒 Lupino
+                        </option>
+
+                        <option disabled>
+                            🔒 Doppelganger
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+
+                <div class="editor-field">
+
+                    <label for="character-class-select">
+                        CLASSE
+                    </label>
+
+                    <select id="character-class-select">
+
+                        <option>Saber</option>
+                        <option>Archer</option>
+                        <option>Rider</option>
+                        <option>Caster</option>
+                        <option>Assassin</option>
+                        <option>Lancer</option>
+                        <option>Berserker</option>
+                        <option>Tank</option>
+
+                    </select>
+
+                </div>
+
+
+
+                <div class="editor-field">
+
+                    <label for="character-image-url">
+                        URL DA IMAGEM
+                    </label>
+
+                    <input
+                        id="character-image-url"
+                        type="url"
+                        placeholder="https://...">
+
+                </div>
+
+
+
+                <div class="editor-buttons">
+
+                    <button
+                        id="apply-image-url"
+                        type="button">
+
+                        Usar URL
+
+                    </button>
+
+                    <button
+                        id="remove-image-button"
+                        type="button">
+
+                        Usar imagem padrão
+
+                    </button>
+
+                </div>
+
+
+
+                <!-- MODO MESTRE -->
+
+                <button
+                    id="master-button"
+                    class="master-button"
+                    type="button">
+
+                    ⚙️ MODO MESTRE
+
+                </button>
+
+
+
+                <div
+                    id="master-controls"
+                    class="master-controls">
+
+                    <h3>
+                        CONTROLES DO MESTRE
+                    </h3>
+
+
+
+                    <div class="control xp-control">
+
+                        <label>
+                            XP DO PERSONAGEM
+                        </label>
+
+                        <input
+                            id="xp-amount"
+                            type="number"
+                            min="1"
+                            value="100">
+
+                        <button
+                            id="add-xp"
+                            type="button">
+
+                            + XP
+
+                        </button>
+
+                        <button
+                            id="remove-xp"
+                            type="button">
+
+                            − XP
+
+                        </button>
+
+                    </div>
+
+
+
+                    <div class="control xp-control">
+
+                        <label>
+                            XP DO BRASÃO
+                        </label>
+
+                        <input
+                            id="crest-xp-amount"
+                            type="number"
+                            min="1"
+                            value="500">
+
+                        <button
+                            id="add-crest-xp"
+                            type="button">
+
+                            + XP
+
+                        </button>
+
+                        <button
+                            id="remove-crest-xp"
+                            type="button">
+
+                            − XP
+
+                        </button>
+
+                    </div>
+
+
+
+                    <button
+                        id="reset-character"
+                        type="button">
+
+                        ↻ RESETAR PERSONAGEM
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             STATUS
+        ================================================== -->
+
+        <section
+            class="dimension status-dimension"
+            data-dimension-content="status">
+
+            <div class="status-section">
+
+                <h2>
+                    STATUS
+                </h2>
+
+                <div class="stats">
+
+                    <h3 class="stats-title">
+                        RECURSOS
+                    </h3>
+
+                    <div class="stats-grid">
+
+                        <div class="stat">
+                            <span>❤️</span>
+                            <strong id="stat-hp">25</strong>
+                            <small>HP</small>
+                        </div>
+
+                        <div class="stat">
+                            <span>🔮</span>
+                            <strong id="stat-mp">15</strong>
+                            <small>MP</small>
+                        </div>
+
+                        <div class="stat">
+                            <span>⚡</span>
+                            <strong id="stat-est">30</strong>
+                            <small>EST</small>
+                        </div>
+
+                        <div class="stat">
+                            <span>🧠</span>
+                            <strong id="stat-sanidade">100</strong>
+                            <small>SANIDADE</small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="stats">
+
+                    <h3 class="stats-title">
+                        ATRIBUTOS DE COMBATE
+                    </h3>
+
+                    <div class="stats-grid">
+
+                        <div class="stat">
+                            <button class="attribute-plus" data-attribute="atk" type="button">+</button>
+                            <span>⚔️</span>
+                            <strong id="stat-atk">4</strong>
+                            <small>ATK</small>
+                        </div>
+
+                        <div class="stat">
+                            <button class="attribute-plus" data-attribute="atkMgc" type="button">+</button>
+                            <span>✨</span>
+                            <strong id="stat-atkMgc">4</strong>
+                            <small>ATK MGC</small>
+                        </div>
+
+                        <div class="stat">
+                            <button class="attribute-plus" data-attribute="def" type="button">+</button>
+                            <span>🛡️</span>
+                            <strong id="stat-def">8</strong>
+                            <small>DEF</small>
+                        </div>
+
+                        <div class="stat">
+                            <button class="attribute-plus" data-attribute="res" type="button">+</button>
+                            <span>🔰</span>
+                            <strong id="stat-res">8</strong>
+                            <small>RES</small>
+                        </div>
+
+                        <div class="stat">
+                            <button class="attribute-plus" data-attribute="agi" type="button">+</button>
+                            <span>💨</span>
+                            <strong id="stat-agi">8</strong>
+                            <small>AGI</small>
+                        </div>
+
+                        <div class="stat">
+                            <button class="attribute-plus" data-attribute="int" type="button">+</button>
+                            <span>🧠</span>
+                            <strong id="stat-int">15</strong>
+                            <small>INT</small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="attribute-points">
+
+                    <h3>
+                        PONTOS DE ATRIBUTO
+                    </h3>
+
+                    <strong id="attribute-points">
+                        3
+                    </strong>
+
+                    <span>
+                        pontos disponíveis
+                    </span>
+
+                </div>
+
+
+
+                <div class="element-section">
+
+                    <h3 class="stats-title">
+                        ESCOLHA SUA AFINIDADE
+                    </h3>
+
+                    <p class="element-description">
+                        Escolha um elemento para definir
+                        sua afinidade permanente.
+                    </p>
+
+                    <div class="element-grid">
+
+                        <button class="element-option" data-element="agua" type="button">
+                            <span>💧</span>
+                            <small>ÁGUA</small>
+                        </button>
+
+                        <button class="element-option" data-element="luz" type="button">
+                            <span>☀️</span>
+                            <small>LUZ</small>
+                        </button>
+
+                        <button class="element-option" data-element="terra" type="button">
+                            <span>🪨</span>
+                            <small>TERRA</small>
+                        </button>
+
+                        <button class="element-option" data-element="trevas" type="button">
+                            <span>🌑</span>
+                            <small>TREVAS</small>
+                        </button>
+
+                        <button class="element-option" data-element="vento" type="button">
+                            <span>🌪️</span>
+                            <small>VENTO</small>
+                        </button>
+
+                        <button class="element-option" data-element="fogo" type="button">
+                            <span>🔥</span>
+                            <small>FOGO</small>
+                        </button>
+
+                        <button class="element-option" data-element="fisico" type="button">
+                            <span>💪</span>
+                            <small>FÍSICO</small>
+                        </button>
+
+                        <button class="element-option" data-element="magico" type="button">
+                            <span>✨</span>
+                            <small>MÁGICO</small>
+                        </button>
+
+                    </div>
+
+                    <button
+                        id="confirm-element"
+                        class="confirm-element"
+                        type="button"
+                        disabled>
+
+                        CONFIRMAR AFINIDADE
+
+                    </button>
+
+                </div>
+
+
+
+                <div class="badges">
+
+                    <h3>
+                        BRASÕES
+                    </h3>
+
+                    <div class="badge-list">
+
+                        <div class="badge">💧</div>
+                        <div class="badge">☀️</div>
+                        <div class="badge">🪨</div>
+                        <div class="badge">🌑</div>
+                        <div class="badge">🌪️</div>
+                        <div class="badge">🔥</div>
+                        <div class="badge">💪</div>
+                        <div class="badge">✨</div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             COMBATE
+        ================================================== -->
+
+        <section
+            class="dimension combat-dimension"
+            data-dimension-content="combat">
+
+            <div class="combat-section">
+
+                <h2>
+                    ⚔️ COMBATE
+                </h2>
+
+                <p class="combat-subtitle">
+                    Configure suas ações e habilidades.
+                </p>
+
+                <div class="combat-resources">
+
+                    <div>
+                        <span>🔮 MP</span>
+                        <strong id="combat-mp">15</strong>
+                    </div>
+
+                    <div>
+                        <span>⚡ EST</span>
+                        <strong id="combat-est">30</strong>
+                    </div>
+
+                </div>
+
+
+
+                <div class="combat-card basic-attack-card">
+
+                    <div class="combat-card-header">
+
+                        <h3>
+                            ⚔️ ATAQUE BÁSICO
+                        </h3>
+
+                        <span>
+                            −1 EST
+                        </span>
+
+                    </div>
+
+                    <input
+                        id="basic-attack-name"
+                        class="combat-name-input"
+                        type="text"
+                        value="Ataque básico"
+                        placeholder="[EDITÁVEL]">
+
+                    <p>
+                        Ataque físico básico.
+                    </p>
+
+                    <button
+                        class="combat-use-button"
+                        data-action="basic-attack"
+                        type="button">
+
+                        USAR ATAQUE
+
+                    </button>
+
+                </div>
+
+
+
+                <div class="combat-card counterattack-card">
+
+                    <div class="combat-card-header">
+
+                        <h3>
+                            🔄 CONTRA-ATAQUE
+                        </h3>
+
+                        <span>
+                            −3 EST
+                        </span>
+
+                    </div>
+
+                    <p>
+                        Utilize após uma esquiva bem-sucedida.
+                    </p>
+
+                    <button
+                        class="combat-use-button"
+                        data-action="counterattack"
+                        type="button">
+
+                        CONTRA-ATACAR
+
+                    </button>
+
+                </div>
+
+
+
+                <div class="abilities-section">
+
+                    <h3 class="stats-title">
+                        HABILIDADES
+                    </h3>
+
+
+                    <div class="ability-card" data-ability-index="0">
+
+                        <div class="ability-header">
+                            <span>HABILIDADE 1</span>
+                            <span>EDITÁVEL</span>
+                        </div>
+
+                        <input
+                            class="ability-name-input"
+                            type="text"
+                            placeholder="[EDITÁVEL]">
+
+                        <div class="ability-cost-row">
+
+                            <select class="ability-cost-type">
+                                <option value="mp">MP</option>
+                                <option value="est">EST</option>
+                            </select>
+
+                            <input
+                                class="ability-cost-input"
+                                type="number"
+                                min="0"
+                                value="0">
+
+                        </div>
+
+                        <textarea
+                            class="ability-description-input"
+                            placeholder="Descrição da habilidade..."></textarea>
+
+                        <button
+                            class="combat-use-button ability-use-button"
+                            data-action="ability"
+                            data-ability-index="0"
+                            type="button">
+
+                            USAR HABILIDADE
+
+                        </button>
+
+                    </div>
+
+
+
+                    <div class="ability-card" data-ability-index="1">
+
+                        <div class="ability-header">
+                            <span>HABILIDADE 2</span>
+                            <span>EDITÁVEL</span>
+                        </div>
+
+                        <input
+                            class="ability-name-input"
+                            type="text"
+                            placeholder="[EDITÁVEL]">
+
+                        <div class="ability-cost-row">
+
+                            <select class="ability-cost-type">
+                                <option value="mp">MP</option>
+                                <option value="est">EST</option>
+                            </select>
+
+                            <input
+                                class="ability-cost-input"
+                                type="number"
+                                min="0"
+                                value="0">
+
+                        </div>
+
+                        <textarea
+                            class="ability-description-input"
+                            placeholder="Descrição da habilidade..."></textarea>
+
+                        <button
+                            class="combat-use-button ability-use-button"
+                            data-action="ability"
+                            data-ability-index="1"
+                            type="button">
+
+                            USAR HABILIDADE
+
+                        </button>
+
+                    </div>
+
+
+
+                    <div class="ability-card" data-ability-index="2">
+
+                        <div class="ability-header">
+                            <span>HABILIDADE 3</span>
+                            <span>EDITÁVEL</span>
+                        </div>
+
+                        <input
+                            class="ability-name-input"
+                            type="text"
+                            placeholder="[EDITÁVEL]">
+
+                        <div class="ability-cost-row">
+
+                            <select class="ability-cost-type">
+                                <option value="mp">MP</option>
+                                <option value="est">EST</option>
+                            </select>
+
+                            <input
+                                class="ability-cost-input"
+                                type="number"
+                                min="0"
+                                value="0">
+
+                        </div>
+
+                        <textarea
+                            class="ability-description-input"
+                            placeholder="Descrição da habilidade..."></textarea>
+
+                        <button
+                            class="combat-use-button ability-use-button"
+                            data-action="ability"
+                            data-ability-index="2"
+                            type="button">
+
+                            USAR HABILIDADE
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="passive-section">
+
+                    <h3 class="stats-title">
+                        PASSIVA
+                    </h3>
+
+                    <div class="passive-card">
+
+                        <div class="ability-header">
+                            <span>PASSIVA</span>
+                            <span>EDITÁVEL</span>
+                        </div>
+
+                        <input
+                            id="passive-name"
+                            class="passive-name-input"
+                            type="text"
+                            placeholder="[EDITÁVEL]">
+
+                        <textarea
+                            id="passive-description"
+                            class="passive-description-input"
+                            placeholder="Descreva o efeito da passiva..."></textarea>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="class-passive-section">
+
+                    <h3 class="stats-title">
+                        PASSIVA DE CLASSE
+                    </h3>
+
+                    <div
+                        class="passive-card class-passive-card">
+
+                        <div class="ability-header">
+                            <span>PASSIVA DE CLASSE</span>
+                            <span>AUTOMÁTICA</span>
+                        </div>
+
+                        <div class="class-passive-class">
+
+                            <small>CLASSE</small>
+
+                            <strong id="class-passive-class-name">
+                                —
+                            </strong>
+
+                        </div>
+
+                        <div class="class-passive-content">
+
+                            <small>PASSIVA</small>
+
+                            <strong id="class-passive-name">
+                                Selecione uma classe
+                            </strong>
+
+                        </div>
+
+                        <div class="class-passive-description">
+
+                            <small>EFEITO</small>
+
+                            <p id="class-passive-description">
+                                A passiva de classe aparecerá aqui automaticamente.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="combat-log-section">
+
+                    <h3 class="stats-title">
+                        REGISTRO DE COMBATE
+                    </h3>
+
+                    <div
+                        id="combat-log"
+                        class="combat-log">
+
+                        <p>
+                            Nenhuma ação realizada.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             INVENTÁRIO
+        ================================================== -->
+
+        <section
+            class="dimension inventory-dimension"
+            data-dimension-content="inventory">
+
+            <div class="inventory-section">
+
+                <h2>
+                    🎒 INVENTÁRIO
+                </h2>
+
+                <div class="inventory-capacity">
+
+                    <span>
+                        ESPAÇOS
+                    </span>
+
+                    <strong>
+                        <span id="inventory-slots">
+                            0/50
+                        </span>
+                    </strong>
+
+                </div>
+
+                <button
+                    id="inventory-add-button"
+                    class="inventory-add-button"
+                    type="button">
+
+                    + ADICIONAR ITEM
+
+                </button>
+
+                <form
+                    id="inventory-form"
+                    class="inventory-form">
+
+                    <div class="inventory-form-header">
+
+                        <h3>
+                            NOVO ITEM
+                        </h3>
+
+                    </div>
+
+                    <div class="editor-field">
+
+                        <label for="inventory-item-name">
+                            NOME DO ITEM
+                        </label>
+
+                        <input
+                            id="inventory-item-name"
+                            type="text"
+                            placeholder="Ex.: Poção de Cura"
+                            autocomplete="off"
+                            required>
+
+                    </div>
+
+                    <div class="editor-field">
+
+                        <label for="inventory-item-quantity">
+                            QUANTIDADE
+                        </label>
+
+                        <input
+                            id="inventory-item-quantity"
+                            type="number"
+                            min="1"
+                            value="1"
+                            required>
+
+                    </div>
+
+                    <div class="inventory-form-buttons">
+
+                        <button
+                            id="inventory-submit-button"
+                            type="submit">
+
+                            ADICIONAR
+
+                        </button>
+
+                        <button
+                            id="inventory-cancel-button"
+                            type="button">
+
+                            CANCELAR
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+                <div class="equipment-section">
+
+                    <h3>
+                        EQUIPAMENTOS
+                    </h3>
+
+                    <div class="equipment-list">
+
+                        <div class="equipment-slot">
+
+                            <span class="equipment-icon">
+                                ⚔️
+                            </span>
+
+                            <label for="equipment-weapon">
+                                ARMA
+                            </label>
+
+                            <input
+                                id="equipment-weapon"
+                                type="text"
+                                placeholder="Nenhuma">
+
+                        </div>
+
+                        <div class="equipment-slot">
+
+                            <span class="equipment-icon">
+                                🛡️
+                            </span>
+
+                            <label for="equipment-armor">
+                                ARMADURA
+                            </label>
+
+                            <input
+                                id="equipment-armor"
+                                type="text"
+                                placeholder="Nenhuma">
+
+                        </div>
+
+                        <div class="equipment-slot">
+
+                            <span class="equipment-icon">
+                                💍
+                            </span>
+
+                            <label for="equipment-accessory">
+                                ACESSÓRIO
+                            </label>
+
+                            <input
+                                id="equipment-accessory"
+                                type="text"
+                                placeholder="Nenhum">
+
+                        </div>
+
+                        <div class="equipment-slot">
+
+                            <span class="equipment-icon">
+                                🔮
+                            </span>
+
+                            <label for="equipment-relic">
+                                RELÍQUIA
+                            </label>
+
+                            <input
+                                id="equipment-relic"
+                                type="text"
+                                placeholder="Nenhuma">
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="inventory-list-section">
+
+                    <h3>
+                        ITENS
+                    </h3>
+
+                    <div id="inventory-list">
+
+                        <div class="inventory-empty">
+
+                            <span>
+                                🎒
+                            </span>
+
+                            <p>
+                                Inventário vazio.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+
+    <!-- =====================================================
+         ENTRADA NA MESA
+    ====================================================== -->
+
+    <section
+        id="campaign-panel"
+        class="campaign-panel">
+
+        <div class="campaign-actions">
+
+            <button
+                id="continue-campaign-button"
+                class="campaign-button campaign-primary-button"
+                type="button">
+
+                🎲 CONTINUAR CAMPANHA
+
+            </button>
+
+
+            <button
+                id="open-campaign-code-button"
+                class="campaign-button"
+                type="button">
+
+                🗝️ USAR CÓDIGO DA MESA
+
+            </button>
+
+        </div>
+
+
+
+        <div
+            id="campaign-join-form-container"
+            class="campaign-join-form-container"
+            hidden>
+
+            <div class="campaign-join-form">
+
+                <input
+                    id="campaign-code-input"
+                    type="text"
+                    maxlength="20"
+                    placeholder="CÓDIGO DA MESA"
+                    autocomplete="off"
+                    inputmode="text"
+                    aria-label="Código da Mesa">
+
+                <button
+                    id="join-campaign-button"
+                    class="campaign-button campaign-primary-button"
+                    type="button">
+
+                    ⚔️ ENTRAR
+
+                </button>
+
+            </div>
+
+
+            <p
+                id="campaign-join-message"
+                class="campaign-message">
+            </p>
+
+        </div>
+
+
+
+        <div
+            id="campaign-join-start"
+            hidden>
+        </div>
+
+
+        <div
+            id="campaign-joined-state"
+            hidden>
+        </div>
+
+    </section>
+
+</div>
+
+
+
+<!-- =========================================================
+     SUPABASE
+========================================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="supabase.js"></script>
+<script src="auth.js"></script>
+<script src="permissoes.js"></script>
+<script src="campaign.js"></script>
+
+<!-- SALVAMENTO DO PERSONAGEM NO SUPABASE -->
+<script src="salvamento.js"></script>
+
+<script src="classe.js"></script>
+<script src="character.js"></script>
+<script src="status.js"></script>
+<script src="combat.js"></script>
+<script src="inventory.js"></script>
+
+<!-- SISTEMA DE PASSIVAS -->
+<script src="passivas-dados.js"></script>
+<script src="passivas-stacks.js"></script>
+<script src="passivas-efeitos.js"></script>
+<script src="passivas.js"></script>
+
+<script src="script.js"></script>
+<script src="mesa-entrada.js"></script>
+</body>
+
+</html>
