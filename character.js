@@ -473,6 +473,43 @@ const CharacterModule = (() => {
 
     }
 
+    function garantirClasseValida() {
+
+        const classeAtual = obterClasseAtual();
+
+        if (classeAtual) {
+            return classeAtual;
+        }
+
+        /*
+           Se a classe atual não for válida,
+           usa a primeira classe disponível.
+        */
+        if (
+            typeof RPGClasses !== "undefined" &&
+            typeof character !== "undefined"
+        ) {
+
+            const nomes = Object.keys(RPGClasses);
+
+            if (nomes.length > 0) {
+
+                character.class = nomes[0];
+                console.log(
+                    "[Character] Classe inválida detectada. Alterado para:",
+                    nomes[0]
+                );
+                return RPGClasses[nomes[0]];
+
+            }
+
+        }
+
+        return null;
+
+    }
+
+
 
     /* =====================================================
        BLOQUEAR DEFINIÇÕES DO PERSONAGEM
@@ -585,6 +622,9 @@ const CharacterModule = (() => {
     ===================================================== */
 
     function configurarEditor() {
+
+
+        garantirClasseValida();
 
         const nameInput =
             get("character-name-input");
@@ -1266,6 +1306,7 @@ const CharacterModule = (() => {
 
         atualizarBloqueioDefinicoes,
 
+        garantirClasseValida,
         personagemConfirmado,
 
         obterDadosSupabase,
