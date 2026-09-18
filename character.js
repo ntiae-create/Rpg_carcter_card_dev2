@@ -855,6 +855,64 @@ const CharacterModule = (() => {
         }
 
 
+
+        /* -------------------------------------------------
+           UPLOAD DE IMAGEM DO DISPOSITIVO
+        ------------------------------------------------- */
+
+        const uploadButton =
+            get("upload-image-device");
+
+        const fileInput =
+            get("image-file-input");
+
+        if (uploadButton && fileInput) {
+
+            uploadButton.addEventListener(
+                "click",
+                () => {
+                    fileInput.click();
+                }
+            );
+
+            fileInput.addEventListener(
+                "change",
+                (evento) => {
+
+                    const arquivo = evento.target.files[0];
+
+                    if (!arquivo) {
+                        return;
+                    }
+
+                    if (!arquivo.type.startsWith("image/")) {
+                        alert("Por favor, selecione um arquivo de imagem.");
+                        return;
+                    }
+
+                    const leitor = new FileReader();
+
+                    leitor.onload = function (e) {
+                        character.imageURL = e.target.result;
+                        atualizarImagem();
+                        salvarPersonagem();
+                        console.log("📷 Imagem carregada do dispositivo:", arquivo.name);
+                    };
+
+                    leitor.onerror = function () {
+                        alert("Erro ao carregar a imagem. Tente novamente.");
+                    };
+
+                    leitor.readAsDataURL(arquivo);
+
+                    /* Limpa o input para permitir selecionar o mesmo arquivo novamente */
+                    fileInput.value = "";
+
+                }
+            );
+
+        }
+
         /*
            Aplica o estado inicial do bloqueio.
         */
