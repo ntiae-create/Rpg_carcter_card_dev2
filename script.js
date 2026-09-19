@@ -506,10 +506,17 @@ function mesclarObjetos(
 
 function salvarPersonagem() {
 
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(character)
-    );
+    try {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(character)
+        );
+    } catch (erro) {
+        console.error(
+            "[salvarPersonagem] Falha ao salvar (cota cheia?):",
+            erro
+        );
+    }
 
 
 }

@@ -910,20 +910,26 @@ const CharacterModule = (() => {
                         return;
                     }
 
-                    const leitor = new FileReader();
-
-                    leitor.onload = function (e) {
-                        character.imageURL = e.target.result;
-                        atualizarImagem();
-                        salvarPersonagem();
-                        console.log("📷 Imagem carregada do dispositivo:", arquivo.name);
-                    };
-
-                    leitor.onerror = function () {
-                        alert("Erro ao carregar a imagem. Tente novamente.");
-                    };
-
-                    leitor.readAsDataURL(arquivo);
+                    redimensionarImagem(
+                        arquivo,
+                        function (dataURL) {
+                            character.imageURL = dataURL;
+                            atualizarImagem();
+                            try {
+                                salvarPersonagem();
+                            } catch (erro) {
+                                alert(
+                                    "Não foi possível salvar a imagem: " +
+                                    "armazenamento cheio. Tente uma imagem menor."
+                                );
+                                console.error(erro);
+                            }
+                            console.log(
+                                "📷 Imagem carregada do dispositivo:",
+                                arquivo.name
+                            );
+                        }
+                    );
 
                     /* Limpa o input para permitir selecionar o mesmo arquivo novamente */
                     fileInput.value = "";
@@ -945,6 +951,50 @@ const CharacterModule = (() => {
     /* =====================================================
        ATUALIZAR IMAGEM
     ===================================================== */
+
+    /* =====================================================
+       REDIMENSIONAR IMAGEM (evita estourar cota do localStorage)
+       Imagens grandes geram data URLs que ultrapassam ~5MB
+       e o salvamento falha silenciosamente. Aqui comprimimos.
+    ===================================================== */
+    function redimensionarImagem(arquivo, callback) {
+        const TAMANHO_MAX = 600;
+        const leitor = new FileReader();
+        leitor.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                let largura = img.width;
+                let altura = img.height;
+                if (largura > altura && largura > TAMANHO_MAX) {
+                    altura = Math.round((altura * TAMANHO_MAX) / largura);
+                    largura = TAMANHO_MAX;
+                } else if (altura > TAMANHO_MAX) {
+                    largura = Math.round((largura * TAMANHO_MAX) / altura);
+                    altura = TAMANHO_MAX;
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = largura;
+                canvas.height = altura;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, largura, altura);
+                const temTransparencia =
+                    arquivo.type === "image/png" ||
+                    arquivo.type === "image/webp";
+                const dataURL = temTransparencia
+                    ? canvas.toDataURL("image/png")
+                    : canvas.toDataURL("image/jpeg", 0.75);
+                callback(dataURL);
+            };
+            img.onerror = function () {
+                alert("Erro ao processar a imagem. Tente outro arquivo.");
+            };
+            img.src = e.target.result;
+        };
+        leitor.onerror = function () {
+            alert("Erro ao carregar a imagem. Tente novamente.");
+        };
+        leitor.readAsDataURL(arquivo);
+    }
 
     function atualizarImagem() {
 
