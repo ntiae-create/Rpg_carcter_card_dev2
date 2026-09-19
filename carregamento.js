@@ -1,6 +1,6 @@
 /* =========================================================
-   RPG — SISTEMA CENTRAL DE CARREGAMENTO
-   Supabase → Estado do RPG → Interface
+   RPG — CARREGAMENTO CENTRAL
+   Supabase → personagem → módulos → interface
 ========================================================= */
 
 const CarregamentoRPG = (() => {
@@ -19,37 +19,12 @@ const CarregamentoRPG = (() => {
 
 
     /* =====================================================
-       INICIALIZAÇÃO
+       INICIAR
     ===================================================== */
 
     function iniciar() {
 
-        if (
-            document.readyState === "loading"
-        ) {
-
-            document.addEventListener(
-                "DOMContentLoaded",
-                iniciar,
-                { once: true }
-            );
-
-            return;
-
-        }
-
-
         registrarEventos();
-
-
-        /*
-           Tentativa inicial.
-
-           Não criamos polling próprio.
-           Os eventos de AUTH/CAMPANHA
-           são responsáveis por disparar
-           novas tentativas.
-        */
 
         tentarCarregar();
 
@@ -62,24 +37,6 @@ const CarregamentoRPG = (() => {
 
     function registrarEventos() {
 
-        if (
-            window.__carregamentoRPGEventos
-        ) {
-
-            return;
-
-        }
-
-
-        window.__carregamentoRPGEventos =
-            true;
-
-
-        /*
-           Quando a autenticação/campanha
-           termina de sincronizar.
-        */
-
         window.addEventListener(
             "rpgAuth:campanhaSincronizada",
             () => {
@@ -90,18 +47,9 @@ const CarregamentoRPG = (() => {
         );
 
 
-        /*
-           Quando a campanha ativa muda.
-        */
-
         window.addEventListener(
             "mesa:campanhaAlterada",
             () => {
-
-                /*
-                   Uma nova campanha significa
-                   que podemos ter outro personagem.
-                */
 
                 carregado = false;
 
@@ -109,16 +57,11 @@ const CarregamentoRPG = (() => {
 
                 ultimaCampanhaId = null;
 
-
                 tentarCarregar();
 
             }
         );
 
-
-        /*
-           Quando a sessão mudar.
-        */
 
         window.addEventListener(
             "rpgAuth:sessaoAtualizada",
@@ -129,7 +72,6 @@ const CarregamentoRPG = (() => {
                 ultimoPersonagemId = null;
 
                 ultimaCampanhaId = null;
-
 
                 tentarCarregar();
 
@@ -152,53 +94,52 @@ const CarregamentoRPG = (() => {
         }
 
 
-        if (
-            !window.supabaseClient
-        ) {
+        if (!window.supabaseClient) {
 
             return;
 
         }
 
 
-        if (
-            !window.rpgAuth
-        ) {
+        if (!window.rpgAuth) {
 
             return;
 
         }
 
 
-        if (
-            !window.rpgAuth.user
-        ) {
+        if (!window.rpgAuth.user) {
 
             return;
 
         }
 
-
-        /*
-           A campanha precisa estar definida.
-
-           Não selecionamos automaticamente
-           uma campanha.
-        */
 
         const campanha =
             obterCampanhaAtiva();
 
 
-        if (!campanha || !campanha.id) {
+        /*
+           Para jogadores precisamos da campanha.
+
+           Para o Mestre, o personagem pode ser
+           independente da campanha, portanto o
+           carregamento será feito pelo supabaseId
+           salvo no personagem local.
+        */
+
+        const ehMestre =
+            window.rpgAuth.isMaster === true;
+
+
+        if (
+            !ehMestre &&
+            (!campanha || !campanha.id)
+        ) {
 
             return;
 
         }
-
-
-        const user =
-            window.rpgAuth.user;
 
 
         carregando = true;
@@ -208,32 +149,24 @@ const CarregamentoRPG = (() => {
 
             const personagem =
                 await buscarPersonagem(
-                    user.id,
-                    campanha.id
+                    window.rpgAuth.user.id,
+                    campanha
+                        ? campanha.id
+                        : null
                 );
 
 
             if (!personagem) {
 
                 /*
-                   Não existe personagem
-                   nessa campanha.
-
-                   Não criamos um automaticamente.
+                   Não apagamos o personagem local
+                   quando nenhum registro é encontrado.
+                   Isso evita destruir o estado atual
+                   simplesmente porque a campanha ainda
+                   não foi sincronizada.
                 */
 
-                console.info(
-                    "[CarregamentoRPG] Nenhum personagem encontrado para a campanha ativa."
-                );
-
-
-                carregado = false;
-
-                ultimoPersonagemId = null;
-
-                ultimaCampanhaId =
-                    campanha.id;
-
+                carregando = false;
 
                 return;
 
@@ -241,45 +174,33 @@ const CarregamentoRPG = (() => {
 
 
             /*
-               Evita recarregar exatamente
-               o mesmo personagem na mesma campanha.
+               Evita restaurar exatamente o mesmo
+               personagem repetidamente.
             */
 
             if (
                 carregado &&
-                ultimoPersonagemId ===
-                    personagem.id &&
-                ultimaCampanhaId ===
-                    campanha.id
+                ultimoPersonagemId === personagem.id &&
+                (
+                    !campanha ||
+                    ultimaCampanhaId === campanha.id
+                )
             ) {
+
+                carregando = false;
 
                 return;
 
             }
 
 
-            /*
-               Restaura o personagem
-               no objeto global existente.
-            */
-
             restaurarPersonagem(
-                personagem,
-                campanha
+                personagem
             );
 
 
-            /*
-               Depois que o estado foi restaurado,
-               os módulos podem atualizar a interface.
-            */
-
             atualizarModulos();
 
-
-            /*
-               Sincroniza informações da mesa.
-            */
 
             sincronizarMesa(
                 personagem,
@@ -293,36 +214,24 @@ const CarregamentoRPG = (() => {
                 personagem.id;
 
             ultimaCampanhaId =
-                campanha.id;
-
-
-            dispararEventoCarregamento(
-                personagem,
                 campanha
-            );
+                    ? campanha.id
+                    : null;
 
-
-            console.info(
-                "[CarregamentoRPG] Personagem carregado:",
-                personagem.name
-            );
 
         }
 
-        catch (error) {
+        catch (erro) {
 
             console.error(
                 "[CarregamentoRPG] Erro ao carregar personagem:",
-                error
+                erro
             );
 
         }
 
-        finally {
 
-            carregando = false;
-
-        }
+        carregando = false;
 
     }
 
@@ -333,28 +242,17 @@ const CarregamentoRPG = (() => {
 
     function obterCampanhaAtiva() {
 
-        /*
-           Primeira fonte:
-           campaign.js
-        */
-
         if (
             window.rpgCampaign &&
-            typeof
-                window.rpgCampaign
-                    .obterCampanhaAtiva ===
-                "function"
+            typeof window.rpgCampaign.obterCampanhaAtiva ===
+            "function"
         ) {
 
             const campanha =
-                window.rpgCampaign
-                    .obterCampanhaAtiva();
+                window.rpgCampaign.obterCampanhaAtiva();
 
 
-            if (
-                campanha &&
-                campanha.id
-            ) {
+            if (campanha) {
 
                 return campanha;
 
@@ -363,15 +261,9 @@ const CarregamentoRPG = (() => {
         }
 
 
-        /*
-           Segunda fonte:
-           auth.js
-        */
-
         if (
             window.rpgAuth &&
-            window.rpgAuth.campaign &&
-            window.rpgAuth.campaign.id
+            window.rpgAuth.campaign
         ) {
 
             return window.rpgAuth.campaign;
@@ -393,6 +285,220 @@ const CarregamentoRPG = (() => {
         campaignId
     ) {
 
+        const ehMestre =
+            window.rpgAuth &&
+            window.rpgAuth.isMaster === true;
+
+
+        /*
+           ==================================================
+           MESTRE
+           ==================================================
+
+           O personagem do Mestre não precisa pertencer
+           à campanha.
+
+           Usamos primeiro o ID do personagem que já
+           está identificado no estado local.
+
+           Isso é importante porque o Mestre pode possuir
+           mais de um personagem independente.
+        */
+
+        if (ehMestre) {
+
+            let characterId = null;
+
+
+            /*
+               Primeiro tenta o personagem global atual.
+            */
+
+            if (
+                typeof character !== "undefined" &&
+                character &&
+                character.supabaseId
+            ) {
+
+                characterId =
+                    character.supabaseId;
+
+            }
+
+
+            /*
+               Caso o estado global ainda não tenha o ID,
+               tenta o localStorage diretamente.
+            */
+
+            if (!characterId) {
+
+                try {
+
+                    const STORAGE_KEY =
+                        "rpg_character_card";
+
+
+                    const salvo =
+                        localStorage.getItem(
+                            STORAGE_KEY
+                        );
+
+
+                    if (salvo) {
+
+                        const dados =
+                            JSON.parse(
+                                salvo
+                            );
+
+
+                        if (
+                            dados &&
+                            dados.supabaseId
+                        ) {
+
+                            characterId =
+                                dados.supabaseId;
+
+                        }
+
+                    }
+
+                }
+
+                catch (erro) {
+
+                    console.warn(
+                        "[CarregamentoRPG] Não foi possível ler o personagem salvo:",
+                        erro
+                    );
+
+                }
+
+            }
+
+
+            /*
+               Se temos o ID, buscamos exatamente
+               aquele personagem pertencente ao usuário.
+            */
+
+            if (characterId) {
+
+                const {
+                    data,
+                    error
+                } =
+                    await window.supabaseClient
+                        .from("characters")
+                        .select("*")
+                        .eq(
+                            "id",
+                            characterId
+                        )
+                        .eq(
+                            "user_id",
+                            userId
+                        )
+                        .maybeSingle();
+
+
+                if (error) {
+
+                    throw error;
+
+                }
+
+
+                if (data) {
+
+                    return data;
+
+                }
+
+            }
+
+
+            /*
+               Fallback seguro:
+               se não houver supabaseId, tenta encontrar
+               um personagem independente do Mestre.
+
+               Não usamos maybeSingle aqui porque o Mestre
+               pode possuir vários personagens independentes.
+            */
+
+            const {
+                data: personagens,
+                error: erroFallback
+            } =
+                await window.supabaseClient
+                    .from("characters")
+                    .select("*")
+                    .eq(
+                        "user_id",
+                        userId
+                    )
+                    .is(
+                        "campaign_id",
+                        null
+                    )
+                    .order(
+                        "created_at",
+                        {
+                            ascending: false
+                        }
+                    );
+
+
+            if (erroFallback) {
+
+                throw erroFallback;
+
+            }
+
+
+            /*
+               Se houver apenas um personagem independente,
+               podemos utilizá-lo.
+
+               Se houver vários e nenhum supabaseId puder
+               identificar o atual, não escolhemos
+               arbitrariamente um personagem.
+            */
+
+            if (
+                Array.isArray(personagens) &&
+                personagens.length === 1
+            ) {
+
+                return personagens[0];
+
+            }
+
+
+            return null;
+
+        }
+
+
+        /*
+           ==================================================
+           JOGADOR
+           ==================================================
+
+           Jogadores continuam sendo carregados
+           exclusivamente pelo usuário + campanha.
+        */
+
+        if (!campaignId) {
+
+            return null;
+
+        }
+
+
         const {
             data,
             error
@@ -413,12 +519,6 @@ const CarregamentoRPG = (() => {
 
         if (error) {
 
-            console.error(
-                "[CarregamentoRPG] Erro ao buscar personagem:",
-                error
-            );
-
-
             throw error;
 
         }
@@ -434,29 +534,12 @@ const CarregamentoRPG = (() => {
     ===================================================== */
 
     function restaurarPersonagem(
-        dados,
-        campanha
+        dados
     ) {
 
-        /*
-           character é uma variável global
-           criada pelo script.js.
-
-           Não usamos window.character,
-           pois variáveis globais declaradas
-           com let/const não precisam existir
-           como propriedade de window.
-        */
-
         if (
-            typeof character === "undefined" ||
-            !character
+            typeof character === "undefined"
         ) {
-
-            console.warn(
-                "[CarregamentoRPG] Objeto character não encontrado."
-            );
-
 
             return;
 
@@ -464,9 +547,27 @@ const CarregamentoRPG = (() => {
 
 
         /*
-           -------------------------------------------------
+           ==================================================
+           IDENTIFICAÇÃO
+           ==================================================
+        */
+
+        character.supabaseId =
+            dados.id || null;
+
+
+        character.campaign_id =
+            dados.campaign_id || null;
+
+
+        character.slot =
+            dados.slot ?? null;
+
+
+        /*
+           ==================================================
            DADOS PRINCIPAIS
-           -------------------------------------------------
+           ==================================================
         */
 
         if (
@@ -474,7 +575,7 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.name =
-                dados.name || "";
+                dados.name;
 
         }
 
@@ -484,7 +585,7 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.race =
-                dados.race || "Humano";
+                dados.race;
 
         }
 
@@ -494,7 +595,7 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.class =
-                dados.class || "Guerreiro";
+                dados.class;
 
         }
 
@@ -504,19 +605,23 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.affinity =
-                dados.affinity || "";
+                dados.affinity;
 
         }
 
+
+        /*
+           ==================================================
+           PROGRESSÃO
+           ==================================================
+        */
 
         if (
             dados.level !== undefined
         ) {
 
             character.level =
-                Number(
-                    dados.level
-                ) || 1;
+                dados.level;
 
         }
 
@@ -526,9 +631,7 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.xp =
-                Number(
-                    dados.xp
-                ) || 0;
+                dados.xp;
 
         }
 
@@ -538,107 +641,33 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.crestXP =
-                Number(
-                    dados.crest_xp
-                ) || 0;
+                dados.crest_xp;
 
         }
 
 
         if (
-            dados.attribute_points !==
-            undefined
+            dados.attribute_points !== undefined
         ) {
 
             character.attributePoints =
-                Number(
-                    dados.attribute_points
-                ) || 0;
-
-        }
-
-
-        /* =================================================
-           CAMPANHA / SLOT
-        ================================================= */
-
-        character.campaign_id =
-            dados.campaign_id ||
-            campanha.id;
-
-
-        if (
-            dados.slot !== undefined
-        ) {
-
-            character.slot =
-                dados.slot;
+                dados.attribute_points;
 
         }
 
 
         /*
-           ID do Supabase.
-
-           O salvamentos.js utiliza esse
-           valor para atualizar a linha correta.
+           ==================================================
+           SANIDADE
+           ==================================================
         */
 
         if (
-            dados.id
-        ) {
-
-            character.supabaseId =
-                dados.id;
-
-        }
-
-
-        /* =================================================
-           RECURSOS
-        ================================================= */
-
-        if (
-            !character.resources
+            !character.resources ||
+            typeof character.resources !== "object"
         ) {
 
             character.resources = {};
-
-        }
-
-
-        if (
-            dados.hp !== undefined
-        ) {
-
-            character.resources.hp =
-                Number(
-                    dados.hp
-                ) || 0;
-
-        }
-
-
-        if (
-            dados.mp !== undefined
-        ) {
-
-            character.resources.mp =
-                Number(
-                    dados.mp
-                ) || 0;
-
-        }
-
-
-        if (
-            dados.est !== undefined
-        ) {
-
-            character.resources.est =
-                Number(
-                    dados.est
-                ) || 0;
 
         }
 
@@ -648,16 +677,59 @@ const CarregamentoRPG = (() => {
         ) {
 
             character.resources.sanidade =
-                Number(
-                    dados.sanity
-                ) || 0;
+                dados.sanity;
 
         }
 
 
-        /* =================================================
+        /*
+           ==================================================
+           RECURSOS
+           ==================================================
+        */
+
+        if (
+            dados.hp !== undefined
+        ) {
+
+            character.resources.hp =
+                dados.hp;
+
+        }
+
+
+        if (
+            dados.mp !== undefined
+        ) {
+
+            character.resources.mp =
+                dados.mp;
+
+        }
+
+
+        if (
+            dados.est !== undefined
+        ) {
+
+            character.resources.est =
+                dados.est;
+
+        }
+
+
+        /*
+           ==================================================
            IMAGEM
-        ================================================= */
+           ==================================================
+
+           Se o Supabase possui image_url, ele tem
+           prioridade.
+
+           Não comparamos com a arte automática aqui,
+           porque uma URL salva no banco representa
+           explicitamente a imagem daquele personagem.
+        */
 
         if (
             dados.image_url &&
@@ -666,280 +738,71 @@ const CarregamentoRPG = (() => {
             ).trim()
         ) {
 
-            /*
-               A imagem existente no Supabase
-               passa a ser a fonte principal.
-
-               Não tentamos recalcular a arte
-               pela raça + classe neste momento,
-               evitando que uma diferença de nome
-               como "Bufao" / "Bufão" sobrescreva
-               a imagem correta.
-            */
-
             character.imageURL =
                 String(
                     dados.image_url
                 ).trim();
 
 
-            /*
-               A imagem veio do Supabase.
-               Portanto, ela deve ser preservada
-               durante este carregamento.
-            */
-
-            character.imageAuto = false;
+            character.imageAuto =
+                false;
 
         }
 
         else {
 
-            /*
-               Não existe imagem salva no Supabase.
-
-               Nesse caso, o sistema continua podendo
-               utilizar a arte automática normalmente.
-            */
-
-            character.imageURL = "";
-
-            character.imageAuto = true;
-
-        }
+            character.imageURL =
+                "";
 
 
-        /* =================================================
-           COMBATE
-
-           Caso futuramente existam colunas
-           JSONB "combat" e "inventory",
-           elas serão restauradas automaticamente.
-
-           Se não existirem, nada acontece.
-        ================================================= */
-
-        if (
-            dados.combat &&
-            typeof dados.combat ===
-                "object"
-        ) {
-
-            character.combat =
-                mesclarObjeto(
-                    character.combat || {},
-                    dados.combat
-                );
-
-        }
-
-
-        /* =================================================
-           INVENTÁRIO
-        ================================================= */
-
-        if (
-            dados.inventory &&
-            typeof dados.inventory ===
-                "object"
-        ) {
-
-            character.inventory =
-                mesclarObjeto(
-                    character.inventory || {},
-                    dados.inventory
-                );
+            character.imageAuto =
+                true;
 
         }
 
 
         /*
-           Garantias mínimas.
+           ==================================================
+           CONFIRMAÇÃO
+           ==================================================
         */
 
-        garantirEstruturas();
-
-    }
-
-
-    /* =====================================================
-       MESCLAR OBJETOS
-    ===================================================== */
-
-    function mesclarObjeto(
-        base,
-        dados
-    ) {
-
         if (
-            !base ||
-            typeof base !== "object"
+            dados.confirmed !== undefined
         ) {
 
-            base = {};
+            character.confirmed =
+                dados.confirmed;
 
         }
 
 
-        if (
-            !dados ||
-            typeof dados !== "object"
-        ) {
+        /*
+           ==================================================
+           SALVAR NO ESTADO LOCAL
+           ==================================================
 
-            return base;
+           O localStorage serve como cache local do
+           personagem restaurado.
+        */
 
-        }
+        try {
 
-
-        Object.keys(dados)
-            .forEach(
-                chave => {
-
-                    const valor =
-                        dados[chave];
-
-
-                    if (
-                        valor &&
-                        typeof valor ===
-                            "object" &&
-                        !Array.isArray(
-                            valor
-                        )
-                    ) {
-
-                        base[chave] =
-                            mesclarObjeto(
-                                base[chave] || {},
-                                valor
-                            );
-
-                    }
-
-                    else {
-
-                        base[chave] =
-                            valor;
-
-                    }
-
-                }
+            localStorage.setItem(
+                "rpg_character_card",
+                JSON.stringify(
+                    character
+                )
             );
 
-
-        return base;
-
-    }
-
-
-    /* =====================================================
-       GARANTIR ESTRUTURAS
-    ===================================================== */
-
-    function garantirEstruturas() {
-
-        /*
-           Recursos
-        */
-
-        if (
-            !character.resources
-        ) {
-
-            character.resources = {};
-
         }
 
+        catch (erro) {
 
-        /*
-           Combate
-        */
-
-        if (
-            !character.combat
-        ) {
-
-            character.combat = {};
-
-        }
-
-
-        if (
-            !Array.isArray(
-                character.combat.abilities
-            )
-        ) {
-
-            character.combat.abilities = [];
-
-        }
-
-
-        if (
-            !character.combat.passive
-        ) {
-
-            character.combat.passive = {
-
-                name: "",
-
-                description: ""
-
-            };
-
-        }
-
-
-        if (
-            !Array.isArray(
-                character.combat.log
-            )
-        ) {
-
-            character.combat.log = [];
-
-        }
-
-
-        /*
-           Inventário
-        */
-
-        if (
-            !character.inventory
-        ) {
-
-            character.inventory = {};
-
-        }
-
-
-        if (
-            !Array.isArray(
-                character.inventory.items
-            )
-        ) {
-
-            character.inventory.items = [];
-
-        }
-
-
-        if (
-            !character.inventory.equipment
-        ) {
-
-            character.inventory.equipment = {
-
-                weapon: "",
-
-                armor: "",
-
-                accessory: "",
-
-                relic: ""
-
-            };
+            console.warn(
+                "[CarregamentoRPG] Não foi possível atualizar o armazenamento local:",
+                erro
+            );
 
         }
 
@@ -953,8 +816,7 @@ const CarregamentoRPG = (() => {
     function atualizarModulos() {
 
         /*
-           Primeiro a estrutura base
-           do personagem.
+           CHARACTER
         */
 
         if (
@@ -963,34 +825,27 @@ const CarregamentoRPG = (() => {
         ) {
 
             /*
-               Se o personagem já possui uma
-               imagem vinda do Supabase, não
-               recalculamos a arte automática.
-
-               Isso preserva exatamente a URL
-               carregada do banco.
+               Se não existe imagem salva,
+               permite que o CharacterModule gere
+               a arte automática através de raça + classe.
             */
 
             if (
                 !character.imageURL &&
-                typeof CharacterModule
-                    .aplicarArteAutomatica ===
-                    "function"
+                typeof CharacterModule.aplicarArteAutomatica ===
+                "function"
             ) {
 
-                CharacterModule
-                    .aplicarArteAutomatica();
+                CharacterModule.aplicarArteAutomatica();
 
             }
 
             else if (
-                typeof CharacterModule
-                    .atualizarImagem ===
-                    "function"
+                typeof CharacterModule.atualizarImagem ===
+                "function"
             ) {
 
-                CharacterModule
-                    .atualizarImagem();
+                CharacterModule.atualizarImagem();
 
             }
 
@@ -998,50 +853,54 @@ const CarregamentoRPG = (() => {
 
 
         /*
-           Combate
+           COMBATE
         */
 
         if (
             typeof CombatModule !==
-                "undefined" &&
-            typeof CombatModule
-                .atualizar ===
-                "function"
+            "undefined"
         ) {
 
-            CombatModule
-                .atualizar();
+            if (
+                typeof CombatModule.atualizar ===
+                "function"
+            ) {
+
+                CombatModule.atualizar();
+
+            }
 
         }
 
 
         /*
-           Inventário
+           INVENTÁRIO
         */
 
         if (
             typeof InventoryModule !==
-                "undefined" &&
-            typeof InventoryModule
-                .atualizar ===
-                "function"
+            "undefined"
         ) {
 
-            InventoryModule
-                .atualizar();
+            if (
+                typeof InventoryModule.atualizar ===
+                "function"
+            ) {
+
+                InventoryModule.atualizar();
+
+            }
 
         }
 
 
         /*
-           Interface geral.
-
-           Não é obrigatório existir.
+           INTERFACE PRINCIPAL
         */
 
         if (
             typeof atualizarInterface ===
-                "function"
+            "function"
         ) {
 
             atualizarInterface();
@@ -1061,71 +920,82 @@ const CarregamentoRPG = (() => {
     ) {
 
         if (
-            window.MesaRPG &&
-            typeof
-                window.MesaRPG
-                    .sincronizarCampanha ===
-                "function"
+            !window.rpgAuth
         ) {
 
-            window.MesaRPG
-                .sincronizarCampanha(
-                    campanha
-                );
+            return;
 
         }
 
 
         /*
-           Se a mesa possuir uma API de
-           jogador atual, usamos somente
-           se ela existir.
+           Atualiza a referência do personagem atual
+           dentro do contexto de autenticação quando
+           possível.
+        */
+
+        window.rpgAuth.currentCharacter =
+            personagem;
+
+
+        window.rpgAuth.campaignCharacter =
+            personagem;
+
+
+        /*
+           Personagem do Mestre pode não possuir
+           campaign_id/slot.
+
+           Portanto não alteramos esses valores aqui.
         */
 
         if (
-            window.MesaRPG &&
-            typeof
-                window.MesaRPG
-                    .atualizarJogadorAtual ===
-                "function"
+            campanha &&
+            campanha.id &&
+            personagem.campaign_id === campanha.id
         ) {
 
-            window.MesaRPG
-                .atualizarJogadorAtual(
-                    personagem.id ||
-                    personagem.supabaseId ||
-                    null
-                );
+            window.rpgAuth.campaignCharacter =
+                personagem;
 
         }
 
-    }
 
-
-    /* =====================================================
-       EVENTO DE CONCLUSÃO
-    ===================================================== */
-
-    function dispararEventoCarregamento(
-        personagem,
-        campanha
-    ) {
+        /*
+           Notifica os módulos que dependem do
+           personagem restaurado.
+        */
 
         window.dispatchEvent(
             new CustomEvent(
-                "rpg:carregamentoConcluido",
+                "rpg:personagemCarregado",
                 {
-
                     detail: {
-
-                        character:
+                        personagem:
                             personagem,
 
-                        campaign:
-                            campanha
-
+                        campanha:
+                            campanha || null
                     }
+                }
+            )
+        );
 
+
+        window.dispatchEvent(
+            new CustomEvent(
+                "mesa:jogadorAtualizado",
+                {
+                    detail: {
+                        characterId:
+                            personagem.id,
+
+                        slot:
+                            personagem.slot,
+
+                        userId:
+                            personagem.user_id
+                    }
                 }
             )
         );
@@ -1134,7 +1004,7 @@ const CarregamentoRPG = (() => {
 
 
     /* =====================================================
-       RECARREGAR MANUALMENTE
+       RECARREGAR
     ===================================================== */
 
     async function recarregar() {
@@ -1145,8 +1015,7 @@ const CarregamentoRPG = (() => {
 
         ultimaCampanhaId = null;
 
-
-        return tentarCarregar();
+        await tentarCarregar();
 
     }
 
@@ -1155,35 +1024,36 @@ const CarregamentoRPG = (() => {
        ESTADO
     ===================================================== */
 
-    function estaCarregado() {
+    function obterEstado() {
 
-        return carregado;
+        return {
 
-    }
+            carregando,
 
+            carregado,
 
-    function estaCarregando() {
+            ultimoPersonagemId,
 
-        return carregando;
+            ultimaCampanhaId
+
+        };
 
     }
 
 
     /* =====================================================
-       API
+       API PÚBLICA
     ===================================================== */
 
     return {
 
         iniciar,
 
-        tentarCarregar,
-
         recarregar,
 
-        estaCarregado,
+        tentarCarregar,
 
-        estaCarregando
+        obterEstado
 
     };
 
@@ -1191,7 +1061,7 @@ const CarregamentoRPG = (() => {
 
 
 /* =========================================================
-   API GLOBAL
+   DISPONIBILIZAR GLOBALMENTE
 ========================================================= */
 
 window.CarregamentoRPG =
@@ -1199,7 +1069,27 @@ window.CarregamentoRPG =
 
 
 /* =========================================================
-   INICIAR
+   INICIALIZAÇÃO
 ========================================================= */
 
-CarregamentoRPG.iniciar();
+if (
+    document.readyState ===
+    "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+            CarregamentoRPG.iniciar();
+
+        }
+    );
+
+}
+
+else {
+
+    CarregamentoRPG.iniciar();
+
+}
