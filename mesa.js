@@ -254,15 +254,7 @@ let mesaRealtimeCampaignId = null;
 
 function obterSupabaseMesa() {
 
-    return (
-
-        window.supabaseClient ||
-
-        window.supabase ||
-
-        null
-
-    );
+    return window.supabaseMesa || null;
 
 }
 
@@ -1200,6 +1192,7 @@ function carregarContextoUsuario() {
     atualizarPermissaoUsuario();
 
     descobrirJogadorAtual();
+
 
 }
 
