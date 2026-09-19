@@ -33,10 +33,31 @@
 
 
     /* =====================================================
-       VERIFICAR CLIENTE DO SUPABASE.JS
+       OBTER CLIENTE DO SUPABASE.JS
     ===================================================== */
 
     function obterCliente() {
+
+        /*
+         * Depois de inicializado, sempre reutiliza
+         * exatamente o mesmo cliente.
+         */
+
+        if (
+            estado.cliente &&
+            typeof estado.cliente.from === "function"
+        ) {
+
+            return estado.cliente;
+
+        }
+
+
+        /*
+         * Primeira obtenção:
+         * pega exclusivamente o cliente criado
+         * pelo supabase.js.
+         */
 
         if (
             window.supabaseClient &&
@@ -46,6 +67,7 @@
             return window.supabaseClient;
 
         }
+
 
         return null;
     }
