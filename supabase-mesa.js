@@ -1,62 +1,29 @@
 "use strict";
 
-/*
-==============================================================
- SUPABASE — MESA
- -------------------------------------------------------------
- Módulo isolado de integração da Mesa com o Supabase.
+/* =========================================================
+   SUPABASE MESA
+   CAMADA DE ACESSO DO SISTEMA DA MESA
 
- Este arquivo NÃO deve:
- - alterar mesa.js
- - alterar auth.js
- - alterar campaign.js
- - carregar personagens automaticamente
- - iniciar Realtime automaticamente
-
- Ele apenas prepara o cliente e recebe o contexto
- fornecido pelo supabase-entrada.js.
-==============================================================
-*/
+   IMPORTANTE:
+   - NÃO cria outro cliente Supabase
+   - Usa exclusivamente window.supabaseClient
+   - O cliente é criado pelo supabase.js
+========================================================= */
 
 (function () {
 
     console.log("[Supabase Mesa] Carregando módulo...");
 
 
-    /*
-    ==========================================================
-     CONFIGURAÇÃO
-    ==========================================================
-    */
-
-    const CONFIG = {
-
-        url:
-            "https://bjkbfxcmyihdruqrwsdf.supabase.co",
-
-        key:
-            "sb_publishable_j2Qi8rg5sr3qvtq6-HAvkQ_Deurk34_"
-
-    };
-
-
-    /*
-    ==========================================================
-     ESTADO INTERNO
-    ==========================================================
-    */
+    /* =====================================================
+       ESTADO
+    ===================================================== */
 
     const estado = {
 
         inicializado: false,
 
-        bibliotecaDisponivel: false,
-
         cliente: null,
-
-        origemCliente: null,
-
-        mesmoClienteGlobal: false,
 
         contextoRecebido: false,
 
@@ -65,30 +32,11 @@
     };
 
 
-    /*
-    ==========================================================
-     VERIFICA A BIBLIOTECA DO SUPABASE
-    ==========================================================
-    */
+    /* =====================================================
+       VERIFICAR CLIENTE DO SUPABASE.JS
+    ===================================================== */
 
-    function verificarBiblioteca() {
-
-        estado.bibliotecaDisponivel = !!(
-            window.supabase &&
-            typeof window.supabase.createClient === "function"
-        );
-
-        return estado.bibliotecaDisponivel;
-    }
-
-
-    /*
-    ==========================================================
-     OBTÉM O CLIENTE SUPABASE GLOBAL
-    ==========================================================
-    */
-
-    function obterClienteGlobal() {
+    function obterCliente() {
 
         if (
             window.supabaseClient &&
@@ -103,216 +51,89 @@
     }
 
 
-    /*
-    ==========================================================
-     INICIALIZAÇÃO
-    ==========================================================
-    */
+    /* =====================================================
+       INICIALIZAR
+    ===================================================== */
 
     function inicializar() {
 
         console.log(
-            "[Supabase Mesa] Solicitação de inicialização."
+            "[Supabase Mesa] Inicializando..."
         );
 
 
-        /*
-        ------------------------------------------------------
-        Evita inicializar novamente
-        ------------------------------------------------------
-        */
-
-        if (estado.inicializado) {
-
-            console.log(
-                "[Supabase Mesa] Cliente já inicializado."
-            );
-
-            return estado.cliente;
-
-        }
+        const cliente =
+            obterCliente();
 
 
-        /*
-        ------------------------------------------------------
-        PRIMEIRA OPÇÃO:
-        reutilizar o cliente oficial já criado pelo supabase.js
-        ------------------------------------------------------
-        */
-
-        const clienteGlobal =
-            obterClienteGlobal();
-
-
-        if (clienteGlobal) {
-
-            estado.cliente =
-                clienteGlobal;
-
-            estado.origemCliente =
-                "supabase.js";
-
-            estado.mesmoClienteGlobal =
-                true;
-
-            estado.inicializado =
-                true;
-
-
-            console.log(
-                "[Supabase Mesa] Cliente global reutilizado."
-            );
-
-
-            window.dispatchEvent(
-
-                new CustomEvent(
-                    "supabase:mesaPronto",
-                    {
-                        detail: {
-
-                            cliente:
-                                estado.cliente,
-
-                            origem:
-                                estado.origemCliente,
-
-                            mesmoClienteGlobal:
-                                estado.mesmoClienteGlobal
-
-                        }
-                    }
-                )
-
-            );
-
-
-            return estado.cliente;
-
-        }
-
-
-        /*
-        ------------------------------------------------------
-        FALLBACK:
-        caso o cliente global ainda não exista.
-        ------------------------------------------------------
-        */
-
-        console.warn(
-            "[Supabase Mesa] Cliente global não encontrado. Tentando criar cliente próprio."
-        );
-
-
-        if (!verificarBiblioteca()) {
-
-            console.warn(
-                "[Supabase Mesa] Biblioteca oficial do Supabase não encontrada."
-            );
-
-            return null;
-
-        }
-
-
-        try {
-
-            estado.cliente =
-
-                window.supabase.createClient(
-
-                    CONFIG.url,
-
-                    CONFIG.key
-
-                );
-
-
-            estado.origemCliente =
-                "cliente-próprio";
-
-            estado.mesmoClienteGlobal =
-                false;
-
-            estado.inicializado =
-                true;
-
-
-            console.log(
-                "[Supabase Mesa] Cliente próprio criado como fallback."
-            );
-
-
-            window.dispatchEvent(
-
-                new CustomEvent(
-                    "supabase:mesaPronto",
-                    {
-                        detail: {
-
-                            cliente:
-                                estado.cliente,
-
-                            origem:
-                                estado.origemCliente,
-
-                            mesmoClienteGlobal:
-                                estado.mesmoClienteGlobal
-
-                        }
-                    }
-                )
-
-            );
-
-
-            return estado.cliente;
-
-
-        } catch (erro) {
+        if (!cliente) {
 
             console.error(
-                "[Supabase Mesa] Erro ao criar cliente:",
-                erro
+                "[Supabase Mesa] Cliente do supabase.js não encontrado."
             );
 
-
-            estado.cliente =
-                null;
-
-            estado.origemCliente =
-                null;
-
-            estado.mesmoClienteGlobal =
-                false;
-
-            estado.inicializado =
-                false;
-
+            estado.inicializado = false;
+            estado.cliente = null;
 
             return null;
-
         }
 
+
+        estado.cliente =
+            cliente;
+
+        estado.inicializado =
+            true;
+
+
+        console.log(
+            "[Supabase Mesa] Cliente do supabase.js conectado."
+        );
+
+
+        window.dispatchEvent(
+            new CustomEvent(
+                "supabase:mesaPronto",
+                {
+                    detail: {
+                        cliente:
+                            estado.cliente
+                    }
+                }
+            )
+        );
+
+
+        return estado.cliente;
     }
 
 
-    /*
-    ==========================================================
-     RECEBE O CONTEXTO DA ENTRADA
-    ==========================================================
-    */
+    /* =====================================================
+       VERIFICAR DISPONIBILIDADE
+    ===================================================== */
+
+    function estaDisponivel() {
+
+        return (
+            estado.inicializado &&
+            !!estado.cliente
+        );
+    }
+
+
+    /* =====================================================
+       RECEBER CONTEXTO DA MESA
+    ===================================================== */
 
     function receberContexto(contexto) {
 
         if (!contexto) {
 
             console.warn(
-                "[Supabase Mesa] Contexto vazio recebido."
+                "[Supabase Mesa] Nenhum contexto recebido."
             );
 
             return false;
-
         }
 
 
@@ -341,96 +162,167 @@
 
 
         window.dispatchEvent(
-
             new CustomEvent(
                 "supabase:mesaContextoRecebido",
                 {
                     detail: {
-
                         contexto:
                             estado.contexto
-
                     }
                 }
             )
-
         );
 
 
         return true;
-
     }
 
 
-    /*
-    ==========================================================
-     OBTÉM O CLIENTE
-    ==========================================================
-    */
-
-    function obterCliente() {
-
-        return estado.cliente;
-
-    }
-
-
-    /*
-    ==========================================================
-     OBTÉM O CONTEXTO
-    ==========================================================
-    */
+    /* =====================================================
+       OBTER CONTEXTO
+    ===================================================== */
 
     function obterContexto() {
 
         return estado.contexto;
-
     }
 
 
-    /*
-    ==========================================================
-     STATUS
-    ==========================================================
-    */
+    /* =====================================================
+       EXECUTAR CONSULTA
+       -----------------------------------------------------
+       Permite que o mesa.js use a camada SupabaseMesa
+       sem precisar acessar o cliente diretamente.
+    ===================================================== */
 
-    function estaDisponivel() {
+    function tabela(nome) {
 
-        return (
+        const cliente =
+            obterCliente();
 
-            estado.inicializado &&
 
-            !!estado.cliente
+        if (!cliente) {
 
+            console.error(
+                "[Supabase Mesa] Cliente Supabase indisponível."
+            );
+
+            return null;
+        }
+
+
+        if (!nome) {
+
+            console.error(
+                "[Supabase Mesa] Nome da tabela não informado."
+            );
+
+            return null;
+        }
+
+
+        return cliente.from(nome);
+    }
+
+
+    /* =====================================================
+       AUTH
+    ===================================================== */
+
+    function auth() {
+
+        const cliente =
+            obterCliente();
+
+
+        if (!cliente) {
+
+            console.error(
+                "[Supabase Mesa] Cliente Supabase indisponível."
+            );
+
+            return null;
+        }
+
+
+        return cliente.auth;
+    }
+
+
+    /* =====================================================
+       REALTIME
+    ===================================================== */
+
+    function canal(nome) {
+
+        const cliente =
+            obterCliente();
+
+
+        if (!cliente) {
+
+            console.error(
+                "[Supabase Mesa] Cliente Supabase indisponível."
+            );
+
+            return null;
+        }
+
+
+        return cliente.channel(nome);
+    }
+
+
+    function removerCanal(canalSupabase) {
+
+        const cliente =
+            obterCliente();
+
+
+        if (
+            !cliente ||
+            !canalSupabase
+        ) {
+
+            return null;
+        }
+
+
+        return cliente.removeChannel(
+            canalSupabase
         );
-
     }
 
 
-    /*
-    ==========================================================
-     DIAGNÓSTICO
-    ==========================================================
-    */
+    /* =====================================================
+       DIAGNÓSTICO
+    ===================================================== */
 
     function diagnostico() {
 
+        const cliente =
+            obterCliente();
+
+
         return {
 
-            biblioteca:
-                estado.bibliotecaDisponivel,
+            modulo:
+                true,
 
             inicializado:
                 estado.inicializado,
 
             cliente:
-                !!estado.cliente,
+                !!cliente,
 
-            origemCliente:
-                estado.origemCliente,
+            clienteValido:
+                !!(
+                    cliente &&
+                    typeof cliente.from === "function"
+                ),
 
-            mesmoClienteGlobal:
-                estado.mesmoClienteGlobal,
+            origem:
+                "supabase.js",
 
             contextoRecebido:
                 estado.contextoRecebido,
@@ -445,27 +337,32 @@
                 !!estado.contexto?.personagem
 
         };
-
     }
 
 
-    /*
-    ==========================================================
-     API PÚBLICA
-    ==========================================================
-    */
+    /* =====================================================
+       API PÚBLICA
+    ===================================================== */
 
     window.SupabaseMesa = {
 
         inicializar,
 
-        receberContexto,
-
         obterCliente,
+
+        estaDisponivel,
+
+        receberContexto,
 
         obterContexto,
 
-        estaDisponivel,
+        tabela,
+
+        auth,
+
+        canal,
+
+        removerCanal,
 
         diagnostico
 
@@ -475,5 +372,36 @@
     console.log(
         "[Supabase Mesa] Módulo disponível."
     );
+
+
+    /* =====================================================
+       INICIALIZAÇÃO AUTOMÁTICA
+    ===================================================== */
+
+    function iniciarAutomaticamente() {
+
+        inicializar();
+
+    }
+
+
+    if (
+        document.readyState === "loading"
+    ) {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            iniciarAutomaticamente,
+            {
+                once: true
+            }
+        );
+
+    } else {
+
+        iniciarAutomaticamente();
+
+    }
+
 
 })();
