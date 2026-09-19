@@ -1,42 +1,67 @@
-/* ==========================================
-   MESA ONLINE — RPG
-   SUPABASE DA MESA
-========================================== */
+/* =========================================================
+   SUPABASE — MESA RPG
+   Cliente separado exclusivamente para a mesa.
 
-"use strict";
+   IMPORTANTE:
+   - Usa o mesmo projeto Supabase do sistema principal.
+   - Não altera window.supabaseClient.
+   - Não cria autenticação própria.
+   - Não registra listeners.
+   - Não dispara eventos.
+========================================================= */
 
 (function () {
 
-    const SUPABASE_URL =
+    "use strict";
+
+
+    const SUPABASE_MESA_URL =
         "https://bjkbfxcmyihdruqrwsdf.supabase.co";
 
-    const SUPABASE_KEY =
+
+    const SUPABASE_MESA_KEY =
         "sb_publishable_j2Qi8rg5sr3qvtq6-HAvkQ_Deurk34_";
 
 
-    if (!window.supabase) {
+    /*
+     * A biblioteca oficial precisa existir antes deste arquivo.
+     */
+
+    if (
+        !window.supabase ||
+        typeof window.supabase.createClient !== "function"
+    ) {
 
         console.error(
-            "[Supabase Mesa] Biblioteca do Supabase não encontrada."
+            "[Supabase Mesa] Biblioteca do Supabase não foi carregada."
         );
+
+        window.supabaseMesa = null;
 
         return;
     }
 
 
-    const supabaseClient =
+    /*
+     * Cria o cliente exclusivo da mesa.
+     */
+
+    const supabaseMesa =
         window.supabase.createClient(
-            SUPABASE_URL,
-            SUPABASE_KEY
+            SUPABASE_MESA_URL,
+            SUPABASE_MESA_KEY
         );
 
 
-    window.supabaseClient =
-        supabaseClient;
+    /*
+     * Disponibiliza somente para a mesa.
+     */
+
+    window.supabaseMesa = supabaseMesa;
 
 
     console.log(
-        "[Supabase Mesa] Cliente Supabase inicializado."
+        "[Supabase Mesa] Cliente inicializado."
     );
 
 })();
