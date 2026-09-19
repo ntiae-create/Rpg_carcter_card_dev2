@@ -148,8 +148,7 @@ body {
     align-items: center;
     justify-content: center;
 
-    gap: 18px;
-
+   
     pointer-events: none;
 }
 
