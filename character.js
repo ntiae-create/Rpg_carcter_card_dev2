@@ -1020,6 +1020,19 @@ const CharacterModule = (() => {
         leitor.readAsDataURL(arquivo);
     }
 
+    /* =====================================================
+       ESCAPAR HTML (utilitário local — antes não existia
+       neste módulo e causava ReferenceError na imagem)
+    ===================================================== */
+    function escaparHTML(texto) {
+        return String(texto)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
     function atualizarImagem() {
 
         const container =
@@ -1039,17 +1052,20 @@ const CharacterModule = (() => {
             character.imageURL
         ) {
 
+            container.classList.add("has-image");
             container.innerHTML = `
                 <img
                     src="${escaparHTML(character.imageURL)}"
                     alt="Imagem do personagem"
                     class="character-image-display"
-                    onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
+                    style="width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:3;"
+                    onerror="this.parentElement.innerHTML='<div style=&quot;padding:40px 20px;text-align:center;color:#f87171;font-size:12px;&quot;>⚠️ Não foi possível carregar a imagem. Tente reenviar.</div>';"
                 >
             `;
 
         } else {
 
+            container.classList.remove("has-image");
             container.innerHTML = `
 
                 <div class="image-placeholder">
