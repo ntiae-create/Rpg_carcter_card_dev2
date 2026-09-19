@@ -1,617 +1,645 @@
 /* =========================================================
-DIAGNÓSTICO DA MESA RPG
+   DIAGNÓSTICO DA MESA RPG
 ========================================================= */
 
 .mesa-header-actions {
-display: flex;
-align-items: center;
-gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
+
 /* =========================================================
-BOTÃO DO DIAGNÓSTICO
+   BOTÃO DO DIAGNÓSTICO
 ========================================================= */
 
 .mesa-diagnostico-btn {
 
-width: 42px;
-height: 42px;
+    width: 42px;
+    height: 42px;
 
-border: 1px solid rgba(139, 92, 246, 0.55);
+    border: 1px solid rgba(139, 92, 246, 0.55);
 
-border-radius: 10px;
+    border-radius: 10px;
 
-background:
-    linear-gradient(
-        145deg,
-        rgba(55, 24, 91, 0.95),
-        rgba(18, 9, 34, 0.98)
-    );
+    background:
+        linear-gradient(
+            145deg,
+            rgba(55, 24, 91, 0.95),
+            rgba(18, 9, 34, 0.98)
+        );
 
-color: #ffffff;
+    color: #ffffff;
 
-font-size: 19px;
+    font-size: 19px;
 
-cursor: pointer;
+    cursor: pointer;
 
-transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
+
 
 .mesa-diagnostico-btn:hover {
 
-transform: translateY(-1px);
+    transform: translateY(-1px);
 
-border-color: #a78bfa;
+    border-color: #a78bfa;
 
-box-shadow:
-    0 0 12px rgba(139, 92, 246, 0.45);
-
+    box-shadow:
+        0 0 12px rgba(139, 92, 246, 0.45);
 }
 
+
 /* =========================================================
-PAINEL
+   PAINEL
 ========================================================= */
 
 .mesa-diagnostico {
 
-position: fixed;
+    position: fixed;
 
-inset: 0;
+    inset: 0;
 
-z-index: 99999;
+    /*
+       CAMADA MUITO ALTA PARA FICAR ACIMA
+       DO BOTÃO DE CONFIGURAÇÕES E DOS
+       DEMAIS ELEMENTOS DA MESA.
+    */
+    z-index: 1000000 !important;
 
-display: flex;
+    display: flex;
 
-justify-content: center;
+    justify-content: center;
 
-align-items: center;
+    align-items: center;
 
-padding: 16px;
+    padding: 16px;
 
-background:
-    rgba(2, 3, 10, 0.78);
+    background:
+        rgba(2, 3, 10, 0.78);
 
-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
 
+    /*
+       Garante que o painel possa receber
+       toques/cliques no celular.
+    */
+    pointer-events: auto;
 }
+
 
 .mesa-diagnostico[hidden] {
-display: none;
+    display: none !important;
 }
 
+
+/*
+   Garante que nenhum elemento interno
+   fique atrás de outra camada.
+*/
+
+.mesa-diagnostico,
+.mesa-diagnostico * {
+    pointer-events: auto;
+}
+
+
 /* =========================================================
-CONTEÚDO
+   CONTEÚDO
 ========================================================= */
 
 .mesa-diagnostico-content {
 
-width: min(760px, 100%);
+    width: min(760px, 100%);
 
-max-height: 92vh;
+    max-height: 92vh;
 
-overflow-y: auto;
+    overflow-y: auto;
 
-padding: 18px;
+    padding: 18px;
 
-border: 1px solid rgba(139, 92, 246, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.65);
 
-border-radius: 18px;
+    border-radius: 18px;
 
-background:
-    linear-gradient(
-        145deg,
-        #120b20,
-        #080612
-    );
+    background:
+        linear-gradient(
+            145deg,
+            #120b20,
+            #080612
+        );
 
-color: #f5f0ff;
+    color: #f5f0ff;
 
-box-shadow:
-    0 0 30px rgba(124, 58, 237, 0.22),
-    inset 0 0 25px rgba(124, 58, 237, 0.04);
+    box-shadow:
+        0 0 30px rgba(124, 58, 237, 0.22),
+        inset 0 0 25px rgba(124, 58, 237, 0.04);
 
-scrollbar-width: thin;
-
+    scrollbar-width: thin;
 }
 
+
 /* =========================================================
-CABEÇALHO
+   CABEÇALHO
 ========================================================= */
 
 .mesa-diagnostico-header {
 
-display: flex;
+    display: flex;
 
-align-items: flex-start;
+    align-items: flex-start;
 
-justify-content: space-between;
+    justify-content: space-between;
 
-gap: 12px;
+    gap: 12px;
 
-margin-bottom: 18px;
-
+    margin-bottom: 18px;
 }
+
 
 .mesa-diagnostico-header h2 {
 
-margin: 0 0 4px;
+    margin: 0 0 4px;
 
-font-size: 21px;
-
+    font-size: 21px;
 }
+
 
 .mesa-diagnostico-header span {
 
-font-size: 12px;
+    font-size: 12px;
 
-color: #a9a1b8;
-
+    color: #a9a1b8;
 }
+
 
 .diagnostico-fechar {
 
-width: 38px;
-height: 38px;
+    width: 38px;
+    height: 38px;
 
-flex-shrink: 0;
+    flex-shrink: 0;
 
-border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
 
-border-radius: 9px;
+    border-radius: 9px;
 
-background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.05);
 
-color: #ffffff;
+    color: #ffffff;
 
-font-size: 17px;
+    font-size: 17px;
 
-cursor: pointer;
-
+    cursor: pointer;
 }
 
+
 /* =========================================================
-SEÇÕES
+   SEÇÕES
 ========================================================= */
 
 .diagnostico-section {
 
-margin-bottom: 16px;
+    margin-bottom: 16px;
 
-padding: 14px;
+    padding: 14px;
 
-border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 
-border-radius: 13px;
+    border-radius: 13px;
 
-background:
-    rgba(255, 255, 255, 0.025);
-
+    background:
+        rgba(255, 255, 255, 0.025);
 }
+
 
 .diagnostico-section h3 {
 
-margin: 0 0 12px;
+    margin: 0 0 12px;
 
-font-size: 14px;
+    font-size: 14px;
 
-color: #ddd6fe;
-
+    color: #ddd6fe;
 }
+
 
 .diagnostico-section-title {
 
-display: flex;
+    display: flex;
 
-justify-content: space-between;
+    justify-content: space-between;
 
-align-items: center;
-
+    align-items: center;
 }
+
 
 .diagnostico-section-title button {
 
-border: 0;
+    border: 0;
 
-border-radius: 7px;
+    border-radius: 7px;
 
-padding: 5px 9px;
+    padding: 5px 9px;
 
-background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.07);
 
-color: #c4b5fd;
+    color: #c4b5fd;
 
-font-size: 11px;
+    font-size: 11px;
 
-cursor: pointer;
-
+    cursor: pointer;
 }
 
+
 /* =========================================================
-STATUS
+   STATUS
 ========================================================= */
 
 .diagnostico-grid {
 
-display: grid;
+    display: grid;
 
-grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
 
-gap: 8px;
-
+    gap: 8px;
 }
+
 
 .diagnostico-item {
 
-display: flex;
+    display: flex;
 
-align-items: center;
+    align-items: center;
 
-justify-content: space-between;
+    justify-content: space-between;
 
-gap: 8px;
+    gap: 8px;
 
-min-width: 0;
+    min-width: 0;
 
-padding: 10px;
+    padding: 10px;
 
-border-radius: 9px;
+    border-radius: 9px;
 
-background:
-    rgba(0, 0, 0, 0.22);
-
+    background:
+        rgba(0, 0, 0, 0.22);
 }
+
 
 .diagnostico-item span {
 
-color: #aaa2b7;
+    color: #aaa2b7;
 
-font-size: 12px;
-
+    font-size: 12px;
 }
+
 
 .diagnostico-item strong {
 
-color: #ffffff;
+    color: #ffffff;
 
-font-size: 12px;
+    font-size: 12px;
 
-text-align: right;
+    text-align: right;
 
-overflow: hidden;
+    overflow: hidden;
 
-text-overflow: ellipsis;
-
+    text-overflow: ellipsis;
 }
 
+
 /* =========================================================
-DADOS DA CAMPANHA
+   DADOS DA CAMPANHA
 ========================================================= */
 
 .diagnostico-dados {
 
-display: flex;
+    display: flex;
 
-flex-direction: column;
+    flex-direction: column;
 
-gap: 8px;
-
+    gap: 8px;
 }
+
 
 .diagnostico-dados > div {
 
-display: flex;
+    display: flex;
 
-justify-content: space-between;
+    justify-content: space-between;
 
-gap: 10px;
+    gap: 10px;
 
-padding: 8px 10px;
+    padding: 8px 10px;
 
-border-radius: 8px;
+    border-radius: 8px;
 
-background:
-    rgba(0, 0, 0, 0.2);
-
+    background:
+        rgba(0, 0, 0, 0.2);
 }
+
 
 .diagnostico-dados span {
 
-color: #958ca4;
+    color: #958ca4;
 
-font-size: 11px;
-
+    font-size: 11px;
 }
+
 
 .diagnostico-dados strong {
 
-max-width: 70%;
+    max-width: 70%;
 
-overflow: hidden;
+    overflow: hidden;
 
-text-overflow: ellipsis;
+    text-overflow: ellipsis;
 
-white-space: nowrap;
+    white-space: nowrap;
 
-color: #e9ddff;
+    color: #e9ddff;
 
-font-size: 11px;
-
+    font-size: 11px;
 }
 
+
 /* =========================================================
-SLOTS
+   SLOTS
 ========================================================= */
 
 .diagnostico-slots {
 
-display: grid;
+    display: grid;
 
-grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
 
-gap: 8px;
-
+    gap: 8px;
 }
+
 
 .diagnostico-slot {
 
-padding: 10px;
+    padding: 10px;
 
-border-radius: 9px;
+    border-radius: 9px;
 
-border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.07);
 
-background:
-    rgba(0, 0, 0, 0.2);
-
+    background:
+        rgba(0, 0, 0, 0.2);
 }
+
 
 .diagnostico-slot.ocupado {
 
-border-color: rgba(74, 222, 128, 0.35);
+    border-color: rgba(74, 222, 128, 0.35);
 
-background:
-    rgba(74, 222, 128, 0.045);
-
+    background:
+        rgba(74, 222, 128, 0.045);
 }
+
 
 .diagnostico-slot.vazio {
 
-opacity: 0.65;
-
+    opacity: 0.65;
 }
+
 
 .diagnostico-slot-topo {
 
-display: flex;
+    display: flex;
 
-justify-content: space-between;
+    justify-content: space-between;
 
-align-items: center;
+    align-items: center;
 
-margin-bottom: 6px;
-
+    margin-bottom: 6px;
 }
+
 
 .diagnostico-slot-numero {
 
-font-weight: bold;
+    font-weight: bold;
 
-font-size: 12px;
-
+    font-size: 12px;
 }
+
 
 .diagnostico-slot-status {
 
-font-size: 10px;
-
+    font-size: 10px;
 }
+
 
 .diagnostico-slot-nome {
 
-color: #eee7f7;
+    color: #eee7f7;
 
-font-size: 12px;
+    font-size: 12px;
 
-font-weight: 600;
+    font-weight: 600;
 
-overflow: hidden;
+    overflow: hidden;
 
-text-overflow: ellipsis;
+    text-overflow: ellipsis;
 
-white-space: nowrap;
-
+    white-space: nowrap;
 }
+
 
 .diagnostico-slot-id {
 
-margin-top: 4px;
+    margin-top: 4px;
 
-color: #81788e;
+    color: #81788e;
 
-font-size: 9px;
+    font-size: 9px;
 
-overflow: hidden;
+    overflow: hidden;
 
-text-overflow: ellipsis;
+    text-overflow: ellipsis;
 
-white-space: nowrap;
-
+    white-space: nowrap;
 }
 
+
 /* =========================================================
-LOG
+   LOG
 ========================================================= */
 
 .diagnostico-log {
 
-max-height: 220px;
+    max-height: 220px;
 
-overflow-y: auto;
+    overflow-y: auto;
 
-padding: 8px;
+    padding: 8px;
 
-border-radius: 9px;
+    border-radius: 9px;
 
-background:
-    #050509;
+    background:
+        #050509;
 
-font-family:
-    monospace;
+    font-family:
+        monospace;
 
-scrollbar-width: thin;
-
+    scrollbar-width: thin;
 }
+
 
 .diagnostico-log-vazio {
 
-padding: 12px;
+    padding: 12px;
 
-color: #625c68;
+    color: #625c68;
 
-font-size: 11px;
+    font-size: 11px;
 
-text-align: center;
-
+    text-align: center;
 }
+
 
 .diagnostico-log-item {
 
-padding: 5px 4px;
+    padding: 5px 4px;
 
-border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 
-font-size: 10px;
+    font-size: 10px;
 
-line-height: 1.45;
+    line-height: 1.45;
 
-word-break: break-word;
-
+    word-break: break-word;
 }
+
 
 .diagnostico-log-hora {
 
-color: #706879;
-
+    color: #706879;
 }
+
 
 .diagnostico-log-info {
 
-color: #c4b5fd;
-
+    color: #c4b5fd;
 }
+
 
 .diagnostico-log-sucesso {
 
-color: #86efac;
-
+    color: #86efac;
 }
+
 
 .diagnostico-log-aviso {
 
-color: #fde68a;
-
+    color: #fde68a;
 }
+
 
 .diagnostico-log-erro {
 
-color: #fca5a5;
-
+    color: #fca5a5;
 }
 
+
 /* =========================================================
-BOTÕES
+   BOTÕES
 ========================================================= */
 
 .diagnostico-actions {
 
-display: grid;
+    display: grid;
 
-grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
 
-gap: 9px;
-
+    gap: 9px;
 }
+
 
 .diagnostico-actions button {
 
-min-height: 42px;
+    min-height: 42px;
 
-border: 1px solid rgba(139, 92, 246, 0.35);
+    border: 1px solid rgba(139, 92, 246, 0.35);
 
-border-radius: 9px;
+    border-radius: 9px;
 
-background:
-    rgba(124, 58, 237, 0.12);
+    background:
+        rgba(124, 58, 237, 0.12);
 
-color: #ddd6fe;
+    color: #ddd6fe;
 
-font-weight: 600;
+    font-weight: 600;
 
-cursor: pointer;
+    cursor: pointer;
 
-transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
-
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
 }
+
 
 .diagnostico-actions button:hover {
 
-background:
-    rgba(124, 58, 237, 0.22);
+    background:
+        rgba(124, 58, 237, 0.22);
 
-border-color:
-    rgba(167, 139, 250, 0.7);
-
+    border-color:
+        rgba(167, 139, 250, 0.7);
 }
 
+
 /* =========================================================
-CELULAR
+   CELULAR
 ========================================================= */
 
 @media (max-width: 600px) {
 
-.mesa-diagnostico {
+    .mesa-diagnostico {
 
-    align-items: flex-start;
+        align-items: flex-start;
 
-    padding: 8px;
-}
+        padding: 8px;
+    }
 
-.mesa-diagnostico-content {
 
-    max-height: 96vh;
+    .mesa-diagnostico-content {
 
-    padding: 13px;
+        max-height: 96vh;
 
-    border-radius: 14px;
-}
+        padding: 13px;
 
-.diagnostico-grid {
+        border-radius: 14px;
+    }
 
-    grid-template-columns: 1fr;
-}
 
-.diagnostico-slots {
+    .diagnostico-grid {
 
-    grid-template-columns: 1fr;
-}
+        grid-template-columns: 1fr;
+    }
 
-.diagnostico-actions {
 
-    grid-template-columns: 1fr;
-}
+    .diagnostico-slots {
 
-.mesa-diagnostico-header h2 {
+        grid-template-columns: 1fr;
+    }
 
-    font-size: 18px;
-}
 
+    .diagnostico-actions {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    .mesa-diagnostico-header h2 {
+
+        font-size: 18px;
+    }
 }
