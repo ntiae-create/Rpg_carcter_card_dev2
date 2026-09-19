@@ -160,6 +160,18 @@
 
 
             /* ----------------------------------------------
+               DIAGNÓSTICO
+            ---------------------------------------------- */
+
+            case "diagnostico":
+
+                abrirDiagnostico();
+
+                break;
+
+
+
+            /* ----------------------------------------------
                CTE
             ---------------------------------------------- */
 
@@ -186,6 +198,36 @@
                 );
 
         }
+
+    }
+
+
+
+    /* ========================================================
+       DIAGNÓSTICO
+    ======================================================== */
+
+    function abrirDiagnostico() {
+
+        if (
+
+            window.MesaDiagnostico &&
+
+            typeof window.MesaDiagnostico.abrir ===
+            "function"
+
+        ) {
+
+            window.MesaDiagnostico.abrir();
+
+            return;
+
+        }
+
+
+        console.warn(
+            "[Button Mesa] MesaDiagnostico ainda não está disponível."
+        );
 
     }
 
@@ -600,6 +642,8 @@
         fecharPainel,
 
         atualizarMesa,
+
+        abrirDiagnostico,
 
         iniciarCTE,
 
