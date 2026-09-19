@@ -201,19 +201,62 @@ let mesaRealtimeCampaignId = null;
 
 /* ============================================================
    OBTER CLIENTE SUPABASE
+============================================================
+
+ IMPORTANTE:
+
+ O mesa.js NÃO cria cliente Supabase.
+
+ O cliente oficial pertence ao:
+
+     supabase.js
+
+ O SupabaseMesa funciona como camada intermediária:
+
+     mesa.js
+        ↓
+     SupabaseMesa
+        ↓
+     window.supabaseClient
 ============================================================ */
 
 function obterSupabaseMesa() {
 
-    return (
+    if (
 
-        window.supabaseClient ||
+        window.SupabaseMesa &&
 
-        window.supabase ||
+        typeof window.SupabaseMesa.obterCliente ===
+        "function"
 
-        null
+    ) {
 
+        const cliente =
+            window.SupabaseMesa.obterCliente();
+
+
+        if (
+
+            cliente &&
+
+            typeof cliente.from ===
+            "function"
+
+        ) {
+
+            return cliente;
+
+        }
+
+    }
+
+
+    console.warn(
+        "[Mesa] SupabaseMesa não possui um cliente Supabase disponível."
     );
+
+
+    return null;
 
 }
 
@@ -246,7 +289,7 @@ async function carregarJogadoresDaCampanha() {
     if (!supabase) {
 
         console.warn(
-            "[Mesa Realtime] Cliente Supabase não encontrado."
+            "[Mesa Realtime] Cliente Supabase não encontrado através do SupabaseMesa."
         );
 
         return [];
@@ -574,7 +617,7 @@ async function iniciarRealtimeMesa() {
     if (!supabase) {
 
         console.warn(
-            "[Mesa Realtime] Não foi possível iniciar: Supabase não encontrado."
+            "[Mesa Realtime] Não foi possível iniciar: Supabase não encontrado através do SupabaseMesa."
         );
 
         return;
@@ -3206,6 +3249,7 @@ function atualizarAssentos() {
         }
 
     );
+
 
 }
 
