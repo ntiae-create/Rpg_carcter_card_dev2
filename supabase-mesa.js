@@ -54,6 +54,10 @@
 
         cliente: null,
 
+        origemCliente: null,
+
+        mesmoClienteGlobal: false,
+
         contextoRecebido: false,
 
         contexto: null
@@ -80,6 +84,27 @@
 
     /*
     ==========================================================
+     OBTÉM O CLIENTE SUPABASE GLOBAL
+    ==========================================================
+    */
+
+    function obterClienteGlobal() {
+
+        if (
+            window.supabaseClient &&
+            typeof window.supabaseClient.from === "function"
+        ) {
+
+            return window.supabaseClient;
+
+        }
+
+        return null;
+    }
+
+
+    /*
+    ==========================================================
      INICIALIZAÇÃO
     ==========================================================
     */
@@ -93,7 +118,7 @@
 
         /*
         ------------------------------------------------------
-        Evita criar mais de um cliente
+        Evita inicializar novamente
         ------------------------------------------------------
         */
 
@@ -104,14 +129,80 @@
             );
 
             return estado.cliente;
+
         }
 
 
         /*
         ------------------------------------------------------
-        Verifica a biblioteca
+        PRIMEIRA OPÇÃO:
+        reutilizar o cliente oficial já criado pelo supabase.js
         ------------------------------------------------------
         */
+
+        const clienteGlobal =
+            obterClienteGlobal();
+
+
+        if (clienteGlobal) {
+
+            estado.cliente =
+                clienteGlobal;
+
+            estado.origemCliente =
+                "supabase.js";
+
+            estado.mesmoClienteGlobal =
+                true;
+
+            estado.inicializado =
+                true;
+
+
+            console.log(
+                "[Supabase Mesa] Cliente global reutilizado."
+            );
+
+
+            window.dispatchEvent(
+
+                new CustomEvent(
+                    "supabase:mesaPronto",
+                    {
+                        detail: {
+
+                            cliente:
+                                estado.cliente,
+
+                            origem:
+                                estado.origemCliente,
+
+                            mesmoClienteGlobal:
+                                estado.mesmoClienteGlobal
+
+                        }
+                    }
+                )
+
+            );
+
+
+            return estado.cliente;
+
+        }
+
+
+        /*
+        ------------------------------------------------------
+        FALLBACK:
+        caso o cliente global ainda não exista.
+        ------------------------------------------------------
+        */
+
+        console.warn(
+            "[Supabase Mesa] Cliente global não encontrado. Tentando criar cliente próprio."
+        );
+
 
         if (!verificarBiblioteca()) {
 
@@ -120,54 +211,63 @@
             );
 
             return null;
+
         }
 
-
-        /*
-        ------------------------------------------------------
-        Cria o cliente
-        ------------------------------------------------------
-        */
 
         try {
 
             estado.cliente =
+
                 window.supabase.createClient(
+
                     CONFIG.url,
+
                     CONFIG.key
+
                 );
 
 
-            estado.inicializado = true;
+            estado.origemCliente =
+                "cliente-próprio";
+
+            estado.mesmoClienteGlobal =
+                false;
+
+            estado.inicializado =
+                true;
 
 
             console.log(
-                "[Supabase Mesa] Cliente criado com sucesso."
+                "[Supabase Mesa] Cliente próprio criado como fallback."
             );
 
 
-            /*
-            --------------------------------------------------
-            Evento
-            --------------------------------------------------
-            */
-
             window.dispatchEvent(
+
                 new CustomEvent(
                     "supabase:mesaPronto",
                     {
                         detail: {
 
                             cliente:
-                                estado.cliente
+                                estado.cliente,
+
+                            origem:
+                                estado.origemCliente,
+
+                            mesmoClienteGlobal:
+                                estado.mesmoClienteGlobal
 
                         }
                     }
                 )
+
             );
 
 
             return estado.cliente;
+
 
         } catch (erro) {
 
@@ -177,13 +277,23 @@
             );
 
 
-            estado.cliente = null;
+            estado.cliente =
+                null;
 
-            estado.inicializado = false;
+            estado.origemCliente =
+                null;
+
+            estado.mesmoClienteGlobal =
+                false;
+
+            estado.inicializado =
+                false;
 
 
             return null;
+
         }
+
     }
 
 
@@ -202,6 +312,7 @@
             );
 
             return false;
+
         }
 
 
@@ -219,7 +330,8 @@
         };
 
 
-        estado.contextoRecebido = true;
+        estado.contextoRecebido =
+            true;
 
 
         console.log(
@@ -229,6 +341,7 @@
 
 
         window.dispatchEvent(
+
             new CustomEvent(
                 "supabase:mesaContextoRecebido",
                 {
@@ -240,10 +353,12 @@
                     }
                 }
             )
+
         );
 
 
         return true;
+
     }
 
 
@@ -256,6 +371,7 @@
     function obterCliente() {
 
         return estado.cliente;
+
     }
 
 
@@ -268,6 +384,7 @@
     function obterContexto() {
 
         return estado.contexto;
+
     }
 
 
@@ -280,9 +397,13 @@
     function estaDisponivel() {
 
         return (
+
             estado.inicializado &&
+
             !!estado.cliente
+
         );
+
     }
 
 
@@ -305,6 +426,12 @@
             cliente:
                 !!estado.cliente,
 
+            origemCliente:
+                estado.origemCliente,
+
+            mesmoClienteGlobal:
+                estado.mesmoClienteGlobal,
+
             contextoRecebido:
                 estado.contextoRecebido,
 
@@ -318,6 +445,7 @@
                 !!estado.contexto?.personagem
 
         };
+
     }
 
 
