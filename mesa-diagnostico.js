@@ -615,7 +615,38 @@ function diagnosticarSupabase() {
         window.supabase;  
 
 
-    const detalhes = [];  
+    const detalhes = [];
+
+detalhes.push(
+    `typeof window.supabaseClient: ${typeof window.supabaseClient}`
+);
+
+detalhes.push(
+    `cliente possui from(): ${
+        window.supabaseClient &&
+        typeof window.supabaseClient.from === "function"
+            ? "SIM"
+            : "NÃO"
+    }`
+);
+
+detalhes.push(
+    `cliente possui auth: ${
+        window.supabaseClient &&
+        !!window.supabaseClient.auth
+            ? "SIM"
+            : "NÃO"
+    }`
+);
+
+detalhes.push(
+    `biblioteca possui createClient: ${
+        window.supabase &&
+        typeof window.supabase.createClient === "function"
+            ? "SIM"
+            : "NÃO"
+    }`
+);  
 
 
     detalhes.push(  
