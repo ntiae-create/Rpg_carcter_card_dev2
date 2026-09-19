@@ -17,6 +17,7 @@
  - Controlar CTE
  - Manter os 8 lugares
  - Sincronizar campanha
+ - SINCRONIZAR JOGADORES EM TEMPO REAL
  - Processar interações
  - Conversar com mesa-jogadores.js
  - Conversar com mesa-aventura.js
@@ -223,6 +224,610 @@ const mesaState = {
 
 
 /* ============================================================
+   REALTIME
+============================================================ */
+
+/*
+    Canal Realtime responsável pelos personagens
+    da campanha atualmente aberta.
+
+    IMPORTANTE:
+
+    O Realtime não substitui a tabela characters.
+
+    Ele apenas avisa a mesa quando alguma coisa
+    mudou no banco.
+
+    Quando recebe uma alteração, fazemos uma nova
+    leitura dos personagens da campanha para garantir
+    que o estado local fique completamente atualizado.
+*/
+
+let mesaRealtimeChannel = null;
+
+let mesaRealtimeCampaignId = null;
+
+
+/* ============================================================
+   OBTER CLIENTE SUPABASE
+============================================================ */
+
+function obterSupabaseMesa() {
+
+    return (
+
+        window.supabaseClient ||
+
+        window.supabase ||
+
+        null
+
+    );
+
+}
+
+
+/* ============================================================
+   CARREGAR JOGADORES DA CAMPANHA
+============================================================ */
+
+async function carregarJogadoresDaCampanha() {
+
+    const campanhaId =
+        mesaState.campanha.id;
+
+
+    if (!campanhaId) {
+
+        console.warn(
+            "[Mesa Realtime] Nenhuma campanha ativa para carregar jogadores."
+        );
+
+        return [];
+
+    }
+
+
+    const supabase =
+        obterSupabaseMesa();
+
+
+    if (!supabase) {
+
+        console.warn(
+            "[Mesa Realtime] Cliente Supabase não encontrado."
+        );
+
+        return [];
+
+    }
+
+
+    try {
+
+        const {
+
+            data: personagens,
+
+            error
+
+        } = await supabase
+
+            .from("characters")
+
+            .select("*")
+
+            .eq(
+                "campaign_id",
+                campanhaId
+            )
+
+            .order(
+                "slot",
+                {
+                    ascending:
+                        true,
+
+                    nullsFirst:
+                        false
+                }
+            );
+
+
+        if (error) {
+
+            console.error(
+                "[Mesa Realtime] Erro ao carregar personagens:",
+                error
+            );
+
+            return [];
+
+        }
+
+
+        const lista =
+
+            Array.isArray(personagens)
+
+                ? personagens
+
+                : [];
+
+
+        /*
+         ------------------------------------------------------
+         ATUALIZAR CACHE GLOBAL
+         ------------------------------------------------------
+        */
+
+        if (window.rpgAuth) {
+
+            window.rpgAuth.campaignCharacters =
+                lista;
+
+        }
+
+
+        /*
+         ------------------------------------------------------
+         ATUALIZAR OS 8 ASSENTOS
+         ------------------------------------------------------
+        */
+
+        sincronizarJogadoresRealtime(
+            lista
+        );
+
+
+        /*
+         ------------------------------------------------------
+         AVISAR OS OUTROS MÓDULOS
+         ------------------------------------------------------
+        */
+
+        document.dispatchEvent(
+
+            new CustomEvent(
+                "rpg:campanhaAtualizada",
+                {
+
+                    detail: {
+
+                        campanha:
+                            mesaState.campanha,
+
+                        personagens:
+                            lista
+
+                    }
+
+                }
+
+            )
+
+        );
+
+
+        document.dispatchEvent(
+
+            new CustomEvent(
+                "mesa:jogadoresAtualizados",
+                {
+
+                    detail: {
+
+                        personagens:
+                            lista
+
+                    }
+
+                }
+
+            )
+
+        );
+
+
+        return lista;
+
+    } catch (erro) {
+
+        console.error(
+            "[Mesa Realtime] Falha ao sincronizar jogadores:",
+            erro
+        );
+
+        return [];
+
+    }
+
+}
+
+
+/* ============================================================
+   SINCRONIZAR ASSENTOS PELO REALTIME
+============================================================ */
+
+function sincronizarJogadoresRealtime(
+    personagens = []
+) {
+
+    const lista =
+
+        Array.isArray(personagens)
+
+            ? personagens
+
+            : [];
+
+
+    /*
+     Criamos uma representação dos jogadores
+     usando o slot existente em characters.
+    */
+
+    const jogadores =
+
+        lista
+
+            .filter(
+                personagem => {
+
+                    const slot =
+                        Number(
+                            personagem?.slot
+                        );
+
+                    return (
+
+                        Number.isInteger(slot) &&
+
+                        slot >= 1 &&
+
+                        slot <=
+                            MESA_CONFIG.maxJogadores
+
+                    );
+
+                }
+            )
+
+            .map(
+                personagem => ({
+
+                    slot:
+                        Number(
+                            personagem.slot
+                        ),
+
+                    ocupado:
+                        true,
+
+                    characterId:
+                        personagem.id ||
+                        null,
+
+                    userId:
+                        personagem.user_id ||
+                        null
+
+                })
+
+            );
+
+
+    /*
+     A própria função já sabe como montar
+     os oito lugares.
+    */
+
+    definirAssentos(
+        jogadores
+    );
+
+
+    /*
+     ----------------------------------------------------------
+     ATUALIZAR O JOGADOR ATUAL
+     ----------------------------------------------------------
+    */
+
+    const usuarioId =
+        mesaState.usuario.id;
+
+
+    if (usuarioId) {
+
+        const meuPersonagem =
+
+            lista.find(
+
+                personagem =>
+
+                    String(
+                        personagem?.user_id
+                    ) ===
+                    String(
+                        usuarioId
+                    )
+
+            );
+
+
+        if (meuPersonagem) {
+
+            mesaState.jogadorAtual.characterId =
+
+                meuPersonagem.id ||
+
+                null;
+
+
+            mesaState.jogadorAtual.slot =
+
+                Number(
+                    meuPersonagem.slot
+                ) ||
+
+                null;
+
+        }
+
+    }
+
+
+    /*
+     ----------------------------------------------------------
+     LOG
+     ----------------------------------------------------------
+    */
+
+    console.log(
+        "[Mesa Realtime] Jogadores sincronizados:",
+        lista
+    );
+
+}
+
+
+/* ============================================================
+   INICIAR REALTIME DA CAMPANHA
+============================================================ */
+
+async function iniciarRealtimeMesa() {
+
+    const campanhaId =
+        mesaState.campanha.id;
+
+
+    if (!campanhaId) {
+
+        console.warn(
+            "[Mesa Realtime] Não foi possível iniciar: campanha sem ID."
+        );
+
+        return;
+
+    }
+
+
+    const supabase =
+        obterSupabaseMesa();
+
+
+    if (!supabase) {
+
+        console.warn(
+            "[Mesa Realtime] Não foi possível iniciar: Supabase não encontrado."
+        );
+
+        return;
+
+    }
+
+
+    /*
+     ----------------------------------------------------------
+     SE JÁ EXISTE UM CANAL PARA ESSA CAMPANHA,
+     NÃO CRIAMOS OUTRO.
+     ----------------------------------------------------------
+    */
+
+    if (
+
+        mesaRealtimeChannel &&
+
+        mesaRealtimeCampaignId ===
+            String(campanhaId)
+
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+     Se existe canal de outra campanha,
+     removemos antes.
+    */
+
+    await pararRealtimeMesa();
+
+
+    mesaRealtimeCampaignId =
+        String(campanhaId);
+
+
+    const nomeCanal =
+
+        `mesa-campanha-${campanhaId}`;
+
+
+    console.log(
+        "[Mesa Realtime] Iniciando canal:",
+        nomeCanal
+    );
+
+
+    mesaRealtimeChannel =
+
+        supabase
+
+            .channel(
+                nomeCanal
+            )
+
+            .on(
+
+                "postgres_changes",
+
+                {
+
+                    event:
+                        "*",
+
+                    schema:
+                        "public",
+
+                    table:
+                        "characters",
+
+                    filter:
+                        `campaign_id=eq.${campanhaId}`
+
+                },
+
+                payload => {
+
+                    console.log(
+                        "[Mesa Realtime] Alteração recebida:",
+                        payload
+                    );
+
+
+                    /*
+                     Não tentamos montar manualmente
+                     o estado usando apenas payload.
+
+                     Recarregamos a lista completa para
+                     manter os 8 slots consistentes.
+                    */
+
+                    carregarJogadoresDaCampanha();
+
+                }
+
+            )
+
+            .subscribe(
+
+                status => {
+
+                    console.log(
+                        "[Mesa Realtime] Status:",
+                        status
+                    );
+
+
+                    if (
+                        status ===
+                        "SUBSCRIBED"
+                    ) {
+
+                        console.log(
+                            "[Mesa Realtime] Conectado à campanha:",
+                            campanhaId
+                        );
+
+                    }
+
+                }
+
+            );
+
+}
+
+
+/* ============================================================
+   PARAR REALTIME
+============================================================ */
+
+async function pararRealtimeMesa() {
+
+    if (!mesaRealtimeChannel) {
+
+        mesaRealtimeCampaignId =
+            null;
+
+        return;
+
+    }
+
+
+    const supabase =
+        obterSupabaseMesa();
+
+
+    try {
+
+        if (supabase) {
+
+            await supabase.removeChannel(
+                mesaRealtimeChannel
+            );
+
+        }
+
+    } catch (erro) {
+
+        console.warn(
+            "[Mesa Realtime] Erro ao remover canal:",
+            erro
+        );
+
+    }
+
+
+    mesaRealtimeChannel =
+        null;
+
+
+    mesaRealtimeCampaignId =
+        null;
+
+
+    console.log(
+        "[Mesa Realtime] Canal encerrado."
+    );
+
+}
+
+
+/* ============================================================
+   SINCRONIZAR REALTIME COM A CAMPANHA ATUAL
+============================================================ */
+
+async function sincronizarRealtimeCampanha() {
+
+    if (!mesaState.campanha.id) {
+
+        await pararRealtimeMesa();
+
+        return;
+
+    }
+
+
+    await carregarJogadoresDaCampanha();
+
+    await iniciarRealtimeMesa();
+
+}
+
+
+/* ============================================================
    REFERÊNCIAS DA INTERFACE
 ============================================================ */
 
@@ -389,6 +994,28 @@ function inicializarMesa() {
     atualizarAssentos();
 
     inicializarSubmodulos();
+
+
+    /*
+     ----------------------------------------------------------
+     INICIAR SINCRONIZAÇÃO REALTIME
+     ----------------------------------------------------------
+
+     Usamos setTimeout para permitir que os outros
+     módulos da mesa terminem a inicialização primeiro.
+    */
+
+    setTimeout(
+
+        () => {
+
+            sincronizarRealtimeCampanha();
+
+        },
+
+        0
+
+    );
 
 
     document.dispatchEvent(
@@ -1004,6 +1631,10 @@ function sincronizarCampanha(
     }
 
 
+    const campanhaAnterior =
+        mesaState.campanha.id;
+
+
     mesaState.campanha.id =
 
         campanha.id ||
@@ -1041,6 +1672,29 @@ function sincronizarCampanha(
     atualizarPermissaoUsuario();
 
     atualizarCampanhaVisual();
+
+
+    /*
+     Se a campanha mudou, trocamos o canal Realtime.
+    */
+
+    if (
+        campanhaAnterior !==
+        mesaState.campanha.id
+    ) {
+
+        sincronizarRealtimeCampanha();
+
+    } else {
+
+        /*
+         Mesmo sendo a mesma campanha, garantimos
+         que o canal esteja ativo.
+        */
+
+        sincronizarRealtimeCampanha();
+
+    }
 
 }
 
@@ -2778,13 +3432,6 @@ function atualizarAssento(
         );
 
 
-    if (!card) {
-
-        return;
-
-    }
-
-
     const assento =
         mesaState.jogadores[
             Number(slot) - 1
@@ -2797,6 +3444,13 @@ function atualizarAssento(
 
     }
 
+
+    /*
+     IMPORTANTE:
+
+     Se o novo estado vier vazio, precisamos
+     realmente limpar characterId e userId.
+    */
 
     if (
         typeof dados.ocupado !==
@@ -2812,21 +3466,32 @@ function atualizarAssento(
 
 
     if (
-        dados.characterId
+        typeof dados.characterId !==
+        "undefined"
     ) {
 
         assento.characterId =
-            dados.characterId;
+            dados.characterId ||
+            null;
 
     }
 
 
     if (
-        dados.userId
+        typeof dados.userId !==
+        "undefined"
     ) {
 
         assento.userId =
-            dados.userId;
+            dados.userId ||
+            null;
+
+    }
+
+
+    if (!card) {
+
+        return;
 
     }
 
@@ -2927,7 +3592,10 @@ function definirAssentos(
                         index + 1,
 
                     ocupado:
-                        true,
+                        Boolean(
+                            jogador.ocupado !==
+                            false
+                        ),
 
                     characterId:
 
@@ -3101,7 +3769,19 @@ window.MesaRPG = {
 
     mostrarTelaPrincipal,
 
-    resetarMesaVisual
+    resetarMesaVisual,
+
+    /*
+     API Realtime
+    */
+
+    carregarJogadoresDaCampanha,
+
+    iniciarRealtimeMesa,
+
+    pararRealtimeMesa,
+
+    sincronizarRealtimeCampanha
 
 };
 
@@ -3211,6 +3891,23 @@ window.usuarioEhMestreMesa =
 
 window.usuarioEhJogadorMesa =
     usuarioEhJogador;
+
+
+/*
+ Funções Realtime também ficam disponíveis
+ globalmente caso outro módulo precise delas.
+*/
+
+window.carregarJogadoresDaCampanha =
+    carregarJogadoresDaCampanha;
+
+
+window.iniciarRealtimeMesa =
+    iniciarRealtimeMesa;
+
+
+window.pararRealtimeMesa =
+    pararRealtimeMesa;
 
 
 /* ============================================================
