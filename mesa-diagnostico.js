@@ -1,8 +1,10 @@
 /* =========================================================
    MESA RPG — SISTEMA DE DIAGNÓSTICO
    VERSÃO DETALHADA
+   + SUPABASE
    + SUPABASE MESA
-   + DIAGNÓSTICO DO CLIENTE GLOBAL
+   + SUPABASE ENTRADA
+   + VERIFICAÇÃO DE CONEXÃO ENTRE OS MÓDULOS
 ========================================================= */
 
 (function () {
@@ -69,49 +71,50 @@
 
     /*
     ---------------------------------------------------------
-    Obtém somente um CLIENTE Supabase real.
+    SUPABASE PRINCIPAL
 
-    window.supabase =
-        biblioteca oficial
+    window.supabase
+        = biblioteca oficial
 
-    window.supabaseClient =
-        cliente criado pelo supabase.js
+    window.supabaseClient
+        = cliente criado pelo supabase.js
 
-    SupabaseMesa.obterCliente() =
-        cliente utilizado pela camada isolada
+    O diagnóstico NÃO cria cliente.
     ---------------------------------------------------------
     */
 
     function obterSupabase() {
 
-        const client =
+        const cliente =
             window.supabaseClient;
 
 
         if (
-            client &&
-            typeof client.from === "function" &&
-            client.auth &&
-            typeof client.auth.getUser === "function" &&
-            typeof client.channel === "function"
+            cliente &&
+            typeof cliente.from === "function" &&
+            cliente.auth &&
+            typeof cliente.auth.getUser === "function" &&
+            typeof cliente.channel === "function"
         ) {
 
-            return client;
+            return cliente;
 
         }
 
-
-        /*
-        Não usamos window.supabase aqui.
-
-        window.supabase é a biblioteca,
-        não o cliente.
-        */
 
         return null;
 
     }
 
+
+    /*
+    ---------------------------------------------------------
+    SUPABASE MESA
+
+    O diagnóstico pega EXATAMENTE o cliente que
+    supabase-mesa.js está utilizando.
+    ---------------------------------------------------------
+    */
 
     function obterSupabaseMesa() {
 
@@ -297,13 +300,11 @@
 
         }
 
-
         if (teste.status === "aviso") {
 
             tipo = "aviso";
 
         }
-
 
         if (teste.status === "erro") {
 
@@ -464,7 +465,7 @@
 
 
     /* =====================================================
-       STATUS DA INTERFACE
+       STATUS
     ===================================================== */
 
     function definirStatus(chave, texto) {
@@ -485,7 +486,7 @@
 
 
     /* =====================================================
-       DIAGNÓSTICO — SCRIPTS E AMBIENTE
+       DIAGNÓSTICO — AMBIENTE
     ===================================================== */
 
     function diagnosticarAmbiente() {
@@ -508,27 +509,21 @@
         const supabaseEntrada =
             !!window.SupabaseEntrada;
 
-        const elementosMesa =
-            !!document.getElementById(
-                "mesa-diagnostico"
-            );
-
         const detalhes = [];
 
 
         detalhes.push(
-            `MesaRPG: ${mesa ? "encontrado" : "ausente"}`
+            `MesaRPG: ${
+                mesa
+                    ? "encontrado"
+                    : "ausente"
+            }`
         );
 
 
         detalhes.push(
-            `rpgAuth: ${auth ? "encontrado" : "ausente"}`
-        );
-
-
-        detalhes.push(
-            `window.supabaseClient: ${
-                supabaseClient
+            `rpgAuth: ${
+                auth
                     ? "encontrado"
                     : "ausente"
             }`
@@ -539,6 +534,15 @@
             `window.supabase: ${
                 supabaseGlobal
                     ? "biblioteca encontrada"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `window.supabaseClient: ${
+                supabaseClient
+                    ? "cliente encontrado"
                     : "ausente"
             }`
         );
@@ -556,15 +560,6 @@
         detalhes.push(
             `SupabaseEntrada: ${
                 supabaseEntrada
-                    ? "encontrado"
-                    : "ausente"
-            }`
-        );
-
-
-        detalhes.push(
-            `Painel de diagnóstico: ${
-                elementosMesa
                     ? "encontrado"
                     : "ausente"
             }`
@@ -603,7 +598,7 @@
                 [
                     "Scripts da Mesa não foram carregados.",
                     "A ordem dos scripts no HTML pode estar incorreta.",
-                    "Algum arquivo JavaScript pode ter falhado durante o carregamento."
+                    "Algum arquivo JavaScript pode ter falhado."
                 ],
                 "Verifique os arquivos JavaScript incluídos no mesa.html."
             );
@@ -611,9 +606,7 @@
         }
 
 
-        registrarDiagnosticoTeste(
-            "ambiente"
-        );
+        registrarDiagnosticoTeste("ambiente");
 
     }
 
@@ -624,87 +617,14 @@
 
     function diagnosticarSupabase() {
 
-        const clienteGlobal =
-            window.supabaseClient || null;
-
+        const client =
+            window.supabaseClient;
 
         const biblioteca =
-            window.supabase || null;
+            window.supabase;
 
+        const detalhes = [];
 
-        const moduloMesa =
-            window.SupabaseMesa || null;
-
-
-        let clienteMesa = null;
-
-
-        /*
-        -----------------------------------------------------
-        Tenta obter o cliente usado pelo SupabaseMesa.
-        -----------------------------------------------------
-        */
-
-        try {
-
-            if (
-                moduloMesa &&
-                typeof moduloMesa.obterCliente ===
-                "function"
-            ) {
-
-                clienteMesa =
-                    moduloMesa.obterCliente();
-
-            }
-
-        } catch (erro) {
-
-            console.warn(
-                "[MesaDiagnostico] Erro ao obter cliente do SupabaseMesa:",
-                erro
-            );
-
-        }
-
-
-        /*
-        -----------------------------------------------------
-        VALIDAÇÃO DO CLIENTE GLOBAL
-        -----------------------------------------------------
-        */
-
-        const clienteGlobalValido =
-            !!(
-                clienteGlobal &&
-                typeof clienteGlobal.from === "function" &&
-                clienteGlobal.auth &&
-                typeof clienteGlobal.auth.getUser === "function" &&
-                typeof clienteGlobal.channel === "function"
-            );
-
-
-        /*
-        -----------------------------------------------------
-        VALIDAÇÃO DO CLIENTE DO SUPABASE MESA
-        -----------------------------------------------------
-        */
-
-        const clienteMesaValido =
-            !!(
-                clienteMesa &&
-                typeof clienteMesa.from === "function" &&
-                clienteMesa.auth &&
-                typeof clienteMesa.auth.getUser === "function" &&
-                typeof clienteMesa.channel === "function"
-            );
-
-
-        /*
-        -----------------------------------------------------
-        VALIDAÇÃO DA BIBLIOTECA
-        -----------------------------------------------------
-        */
 
         const bibliotecaValida =
             !!(
@@ -713,7 +633,14 @@
             );
 
 
-        const detalhes = [];
+        const clienteValido =
+            !!(
+                client &&
+                typeof client.from === "function" &&
+                client.auth &&
+                typeof client.auth.getUser === "function" &&
+                typeof client.channel === "function"
+            );
 
 
         detalhes.push(
@@ -726,200 +653,326 @@
 
 
         detalhes.push(
-            `Cliente global window.supabaseClient: ${
-                clienteGlobalValido
-                    ? "VÁLIDO"
-                    : clienteGlobal
-                        ? "ENCONTRADO, MAS INVÁLIDO"
-                        : "AUSENTE"
+            `Cliente window.supabaseClient: ${
+                client
+                    ? "ENCONTRADO"
+                    : "AUSENTE"
             }`
         );
 
 
         detalhes.push(
-            `Cliente SupabaseMesa: ${
-                clienteMesaValido
-                    ? "VÁLIDO"
-                    : clienteMesa
-                        ? "ENCONTRADO, MAS INVÁLIDO"
-                        : "AUSENTE"
-            }`
-        );
-
-
-        /*
-        -----------------------------------------------------
-        VERIFICA SE É EXATAMENTE O MESMO OBJETO
-        -----------------------------------------------------
-        */
-
-        const mesmoCliente =
-            !!(
-                clienteGlobal &&
-                clienteMesa &&
-                clienteGlobal === clienteMesa
-            );
-
-
-        detalhes.push(
-            `Mesmo objeto global/Mesa: ${
-                mesmoCliente
+            `Cliente válido: ${
+                clienteValido
                     ? "SIM"
                     : "NÃO"
             }`
         );
 
 
-        /*
-        =====================================================
-        CASO 1 — CLIENTE GLOBAL VÁLIDO
-        =====================================================
-        */
+        if (!bibliotecaValida) {
 
-        if (clienteGlobalValido) {
+            detalhes.push(
+                "Biblioteca oficial não encontrada."
+            );
+
+        } else {
+
+            detalhes.push(
+                "Biblioteca oficial encontrada."
+            );
+
+        }
+
+
+        if (!client) {
 
             definirStatus(
                 "supabase",
-                "🟢 Conectado"
+                "🔴 Ausente"
             );
 
 
             definirTeste(
                 "supabase",
-                "sucesso",
+                "erro",
                 "Supabase",
-                "O cliente Supabase global foi encontrado e validado corretamente.",
+                "O cliente criado pelo supabase.js não foi encontrado.",
                 detalhes.join(" | "),
-                "Nenhum problema estrutural detectado.",
-                [],
-                "Nenhuma ação necessária."
+                "A Mesa não possui acesso ao cliente Supabase principal.",
+                [
+                    "supabase.js não foi carregado.",
+                    "supabase.js não criou window.supabaseClient.",
+                    "A ordem dos scripts está incorreta."
+                ],
+                "Verifique se a biblioteca Supabase é carregada antes do supabase.js."
             );
 
 
-            registrarDiagnosticoTeste(
-                "supabase"
-            );
+            registrarDiagnosticoTeste("supabase");
 
 
-            return clienteGlobal;
+            return null;
 
         }
 
 
-        /*
-        =====================================================
-        CASO 2 — CLIENTE DO SUPABASE MESA VÁLIDO
-        =====================================================
-        */
+        if (!clienteValido) {
 
-        if (clienteMesaValido) {
-
-            /*
-            -------------------------------------------------
-            O SUPABASE MESA ESTÁ USANDO O MESMO CLIENTE
-            -------------------------------------------------
-            */
-
-            if (mesmoCliente) {
-
-                definirStatus(
-                    "supabase",
-                    "🟢 Conectado"
-                );
-
-
-                definirTeste(
-                    "supabase",
-                    "sucesso",
-                    "Supabase",
-                    "O Supabase está conectado e o SupabaseMesa está utilizando o mesmo cliente global.",
-                    detalhes.join(" | "),
-                    "Nenhum problema estrutural detectado.",
-                    [],
-                    "Nenhuma ação necessária."
-                );
-
-            }
-
-            /*
-            -------------------------------------------------
-            CLIENTE PRÓPRIO / FALLBACK
-            -------------------------------------------------
-            */
-
-            else {
-
-                definirStatus(
-                    "supabase",
-                    "🟡 Fallback"
-                );
-
-
-                definirTeste(
-                    "supabase",
-                    "aviso",
-                    "Supabase",
-                    "O Supabase está disponível através do SupabaseMesa, mas o cliente global window.supabaseClient não foi encontrado.",
-                    detalhes.join(" | "),
-                    "A Mesa possui um cliente funcional, porém não está utilizando o cliente global criado pelo supabase.js.",
-                    [
-                        "supabase.js não criou window.supabaseClient.",
-                        "supabase.js pode não ter sido carregado.",
-                        "O SupabaseMesa criou um cliente próprio como fallback."
-                    ],
-                    "Verifique se supabase.js está sendo carregado antes de supabase-mesa.js."
-                );
-
-            }
-
-
-            registrarDiagnosticoTeste(
-                "supabase"
+            definirStatus(
+                "supabase",
+                "🟡 Inválido"
             );
 
 
-            return clienteMesa;
+            definirTeste(
+                "supabase",
+                "aviso",
+                "Supabase",
+                "window.supabaseClient existe, mas não possui a estrutura esperada.",
+                detalhes.join(" | "),
+                "As operações da Mesa podem falhar.",
+                [
+                    "O cliente foi sobrescrito.",
+                    "supabase.js possui inicialização incompleta."
+                ],
+                "Verifique o conteúdo do supabase.js."
+            );
+
+
+            registrarDiagnosticoTeste("supabase");
+
+
+            return null;
 
         }
 
 
-        /*
-        =====================================================
-        CASO 3 — NENHUM CLIENTE
-        =====================================================
-        */
+        detalhes.push(
+            "auth(): disponível"
+        );
+
+
+        detalhes.push(
+            "from(): disponível"
+        );
+
+
+        detalhes.push(
+            "channel(): disponível"
+        );
+
 
         definirStatus(
             "supabase",
-            "🔴 Ausente"
+            "🟢 Conectado"
         );
 
 
         definirTeste(
             "supabase",
-            "erro",
+            "sucesso",
             "Supabase",
-            bibliotecaValida
-                ? "A biblioteca Supabase foi encontrada, mas nenhum cliente Supabase válido está disponível."
-                : "A biblioteca Supabase e nenhum cliente Supabase válido foram encontrados.",
+            "Cliente criado pelo supabase.js encontrado e validado.",
             detalhes.join(" | "),
-            "A Mesa não possui um cliente Supabase funcional para banco de dados, autenticação ou Realtime.",
-            [
-                "supabase.js não foi carregado.",
-                "window.supabaseClient não foi criado.",
-                "SupabaseMesa ainda não inicializou um cliente.",
-                "A ordem dos scripts no mesa.html pode estar incorreta."
-            ],
-            "Verifique se a biblioteca do Supabase e o supabase.js estão carregados antes do supabase-mesa.js."
+            "Nenhum problema estrutural detectado.",
+            [],
+            "Nenhuma ação necessária."
         );
+
+
+        registrarDiagnosticoTeste("supabase");
+
+
+        return client;
+
+    }
+
+
+    /* =====================================================
+       DIAGNÓSTICO — ENCONTRO DOS CLIENTES
+    ===================================================== */
+
+    function diagnosticarConexaoSupabase() {
+
+        const clienteGlobal =
+            window.supabaseClient;
+
+        const clienteMesa =
+            obterSupabaseMesa();
+
+        const entrada =
+            window.SupabaseEntrada;
+
+        const detalhes = [];
+
+
+        const globalValido =
+            !!(
+                clienteGlobal &&
+                typeof clienteGlobal.from === "function"
+            );
+
+
+        const mesaValido =
+            !!(
+                clienteMesa &&
+                typeof clienteMesa.from === "function"
+            );
+
+
+        const mesmaReferencia =
+            !!(
+                globalValido &&
+                mesaValido &&
+                clienteGlobal === clienteMesa
+            );
+
+
+        detalhes.push(
+            `Cliente do supabase.js: ${
+                globalValido
+                    ? "ENCONTRADO"
+                    : "AUSENTE"
+            }`
+        );
+
+
+        detalhes.push(
+            `Cliente do SupabaseMesa: ${
+                mesaValido
+                    ? "ENCONTRADO"
+                    : "AUSENTE"
+            }`
+        );
+
+
+        detalhes.push(
+            `Mesma referência: ${
+                mesmaReferencia
+                    ? "SIM"
+                    : "NÃO"
+            }`
+        );
+
+
+        detalhes.push(
+            `SupabaseEntrada: ${
+                entrada
+                    ? "ENCONTRADO"
+                    : "AUSENTE"
+            }`
+        );
+
+
+        if (
+            mesmaReferencia &&
+            entrada
+        ) {
+
+            definirTeste(
+                "conexaoSupabase",
+                "sucesso",
+                "Conexão Supabase",
+                "supabase.js e supabase-mesa.js estão utilizando o mesmo cliente Supabase, e o SupabaseEntrada está presente como ponte.",
+                detalhes.join(" | "),
+                "Nenhum problema detectado na ligação entre os módulos.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+
+            registrar(
+                "sucesso",
+                "Supabase: cliente do supabase.js encontrado e reutilizado pelo SupabaseMesa."
+            );
+
+        }
+
+        else if (
+            globalValido &&
+            mesaValido &&
+            !mesmaReferencia
+        ) {
+
+            definirTeste(
+                "conexaoSupabase",
+                "aviso",
+                "Conexão Supabase",
+                "Existem dois clientes Supabase diferentes entre o supabase.js e o SupabaseMesa.",
+                detalhes.join(" | "),
+                "A Mesa pode estar trabalhando com estados diferentes de conexão.",
+                [
+                    "SupabaseMesa criou um cliente próprio.",
+                    "window.supabaseClient não estava disponível quando SupabaseMesa foi inicializado."
+                ],
+                "Faça o supabase-mesa.js reutilizar window.supabaseClient."
+            );
+
+
+            registrar(
+                "aviso",
+                "Supabase: existem dois clientes diferentes."
+            );
+
+        }
+
+        else if (
+            globalValido &&
+            !mesaValido
+        ) {
+
+            definirTeste(
+                "conexaoSupabase",
+                "aviso",
+                "Conexão Supabase",
+                "O cliente do supabase.js existe, mas o SupabaseMesa ainda não está conectado a ele.",
+                detalhes.join(" | "),
+                "A camada isolada da Mesa ainda não possui o cliente principal.",
+                [
+                    "SupabaseMesa ainda não foi inicializado.",
+                    "supabase-mesa.js não conseguiu obter window.supabaseClient."
+                ],
+                "Verifique a ordem de carregamento dos scripts."
+            );
+
+
+            registrar(
+                "aviso",
+                "Supabase: cliente global encontrado, mas ainda não conectado ao SupabaseMesa."
+            );
+
+        }
+
+        else {
+
+            definirTeste(
+                "conexaoSupabase",
+                "erro",
+                "Conexão Supabase",
+                "Não foi possível encontrar o cliente Supabase principal.",
+                detalhes.join(" | "),
+                "A Mesa não possui uma conexão Supabase compartilhada.",
+                [
+                    "supabase.js não carregou.",
+                    "window.supabaseClient não foi criado.",
+                    "SupabaseMesa não conseguiu obter o cliente."
+                ],
+                "Verifique primeiro o supabase.js e depois o supabase-mesa.js."
+            );
+
+
+            registrar(
+                "erro",
+                "Supabase: cliente principal ausente."
+            );
+
+        }
 
 
         registrarDiagnosticoTeste(
-            "supabase"
+            "conexaoSupabase"
         );
-
-
-        return null;
 
     }
 
@@ -933,10 +986,8 @@
         const modulo =
             window.SupabaseMesa;
 
-
         const entrada =
             window.SupabaseEntrada;
-
 
         const detalhes = [];
 
@@ -965,21 +1016,19 @@
                 "supabaseMesa",
                 "erro",
                 "Supabase Mesa",
-                "O módulo isolado da Mesa não foi encontrado.",
+                "O módulo supabase-mesa.js não foi encontrado.",
                 detalhes.join(" | "),
                 "A Mesa não possui sua camada isolada de acesso ao Supabase.",
                 [
                     "supabase-mesa.js não foi carregado.",
-                    "O script possui erro durante a inicialização.",
+                    "O script apresentou erro.",
                     "A ordem dos scripts está incorreta."
                 ],
                 "Verifique se supabase-mesa.js está incluído no mesa.html."
             );
 
 
-            registrarDiagnosticoTeste(
-                "supabaseMesa"
-            );
+            registrarDiagnosticoTeste("supabaseMesa");
 
 
             return;
@@ -1006,20 +1055,18 @@
                     "supabaseMesa",
                     "erro",
                     "Supabase Mesa",
-                    "O módulo foi encontrado, mas não possui a função diagnostico().",
-                    "SupabaseMesa.diagnostico() não está disponível.",
-                    "Não é possível verificar corretamente a camada isolada.",
+                    "O módulo foi encontrado, mas não possui diagnostico().",
+                    "A função de diagnóstico interno não existe.",
+                    "Não é possível confirmar o estado do módulo.",
                     [
-                        "supabase-mesa.js está em versão antiga.",
-                        "A API pública do módulo está incompleta."
+                        "supabase-mesa.js está desatualizado.",
+                        "A API pública está incompleta."
                     ],
-                    "Atualize o supabase-mesa.js para a versão que possui diagnostico()."
+                    "Verifique o supabase-mesa.js."
                 );
 
 
-                registrarDiagnosticoTeste(
-                    "supabaseMesa"
-                );
+                registrarDiagnosticoTeste("supabaseMesa");
 
 
                 return;
@@ -1032,20 +1079,18 @@
                 "supabaseMesa",
                 "erro",
                 "Supabase Mesa",
-                "O módulo foi encontrado, mas seu diagnóstico interno apresentou erro.",
+                "O diagnóstico interno do SupabaseMesa apresentou erro.",
                 obterMensagemErro(erro),
                 "Não é possível confirmar o estado da camada isolada.",
                 [
                     "Erro interno no supabase-mesa.js.",
-                    "Cliente Supabase não foi criado corretamente."
+                    "Cliente não inicializado."
                 ],
-                "Verifique o diagnóstico interno do SupabaseMesa."
+                "Verifique o supabase-mesa.js."
             );
 
 
-            registrarDiagnosticoTeste(
-                "supabaseMesa"
-            );
+            registrarDiagnosticoTeste("supabaseMesa");
 
 
             return;
@@ -1053,98 +1098,21 @@
         }
 
 
-        /*
-        -----------------------------------------------------
-        IMPORTANTE:
-
-        O supabase-mesa.js atual pode reutilizar
-        window.supabaseClient sem preencher corretamente
-        estadoModulo.biblioteca.
-
-        Por isso o diagnóstico verifica a biblioteca
-        diretamente também.
-        -----------------------------------------------------
-        */
-
-        const bibliotecaModulo =
-            !!estadoModulo?.biblioteca;
-
-
-        const bibliotecaGlobal =
-            !!(
-                window.supabase &&
-                typeof window.supabase.createClient ===
-                "function"
-            );
-
-
-        const biblioteca =
-            bibliotecaModulo ||
-            bibliotecaGlobal;
-
+        const cliente =
+            !!estadoModulo?.cliente;
 
         const inicializado =
             !!estadoModulo?.inicializado;
 
-
-        const cliente =
-            !!estadoModulo?.cliente;
-
-
-        const origemCliente =
+        const origem =
             estadoModulo?.origemCliente ||
             "desconhecida";
 
-
-        const mesmoClienteGlobal =
+        const mesmoGlobal =
             !!estadoModulo?.mesmoClienteGlobal;
-
 
         const contexto =
             !!estadoModulo?.contextoRecebido;
-
-
-        const campanha =
-            !!estadoModulo?.campanha;
-
-
-        const usuario =
-            !!estadoModulo?.usuario;
-
-
-        const personagem =
-            !!estadoModulo?.personagem;
-
-
-        /*
-        -----------------------------------------------------
-        VERIFICAÇÃO EXTRA DA REFERÊNCIA
-        -----------------------------------------------------
-        */
-
-        const clienteGlobal =
-            window.supabaseClient || null;
-
-
-        const clienteMesa =
-            obterSupabaseMesa();
-
-
-        const mesmaReferencia =
-            !!(
-                clienteGlobal &&
-                clienteMesa &&
-                clienteGlobal === clienteMesa
-            );
-
-
-        detalhes.push(
-            `Biblioteca: ${
-                biblioteca
-                    ? "OK"
-                    : "ausente"
-            }`
-        );
 
 
         detalhes.push(
@@ -1166,22 +1134,13 @@
 
 
         detalhes.push(
-            `Origem do cliente: ${origemCliente}`
+            `Origem: ${origem}`
         );
 
 
         detalhes.push(
             `Mesmo cliente global: ${
-                mesmoClienteGlobal
-                    ? "SIM"
-                    : "NÃO"
-            }`
-        );
-
-
-        detalhes.push(
-            `Mesma referência real: ${
-                mesmaReferencia
+                mesmoGlobal
                     ? "SIM"
                     : "NÃO"
             }`
@@ -1197,175 +1156,62 @@
         );
 
 
-        detalhes.push(
-            `Campanha: ${
-                campanha
-                    ? "recebida"
-                    : "ausente"
-            }`
-        );
-
-
-        detalhes.push(
-            `Usuário: ${
-                usuario
-                    ? "recebido"
-                    : "ausente"
-            }`
-        );
-
-
-        detalhes.push(
-            `Personagem: ${
-                personagem
-                    ? "recebido"
-                    : "ausente"
-            }`
-        );
-
-
-        /*
-        =====================================================
-        CLIENTE GLOBAL REUTILIZADO
-        =====================================================
-        */
-
         if (
             inicializado &&
             cliente &&
-            (
-                mesmoClienteGlobal ||
-                mesmaReferencia ||
-                origemCliente === "supabase.js"
-            )
+            mesmoGlobal
         ) {
 
             definirTeste(
                 "supabaseMesa",
                 "sucesso",
                 "Supabase Mesa",
-                "A camada isolada da Mesa está reutilizando o mesmo cliente Supabase global criado pelo supabase.js.",
+                "O SupabaseMesa está utilizando o mesmo cliente criado pelo supabase.js.",
                 detalhes.join(" | "),
-                "Nenhum problema estrutural detectado na conexão compartilhada.",
+                "A camada isolada está conectada ao cliente principal.",
                 [],
-                "Nenhuma ação necessária nesta etapa."
+                "Nenhuma ação necessária."
             );
 
         }
 
-
-        /*
-        =====================================================
-        CLIENTE PRÓPRIO — FALLBACK
-        =====================================================
-        */
-
         else if (
             inicializado &&
             cliente &&
-            (
-                origemCliente === "cliente-próprio" ||
-                !mesmoClienteGlobal
-            )
+            !mesmoGlobal
         ) {
 
             definirTeste(
                 "supabaseMesa",
                 "aviso",
                 "Supabase Mesa",
-                "A camada isolada da Mesa está funcionando, mas está usando um cliente Supabase próprio como fallback.",
+                "O SupabaseMesa está funcionando com um cliente próprio.",
                 detalhes.join(" | "),
-                "A Mesa possui conexão, porém não está reutilizando window.supabaseClient.",
+                "A conexão existe, mas não está compartilhando o cliente do supabase.js.",
                 [
                     "window.supabaseClient não estava disponível durante a inicialização.",
-                    "supabase-mesa.js precisou criar um cliente próprio.",
-                    "Pode haver diferença entre os estados dos clientes."
+                    "O SupabaseMesa criou um cliente de fallback."
                 ],
                 "Verifique a ordem de carregamento de supabase.js e supabase-mesa.js."
             );
 
         }
 
-
-        /*
-        =====================================================
-        CLIENTE AUSENTE
-        =====================================================
-        */
-
-        else if (
-            biblioteca &&
-            !cliente
-        ) {
+        else {
 
             definirTeste(
                 "supabaseMesa",
                 "erro",
                 "Supabase Mesa",
-                "A biblioteca Supabase foi encontrada, mas a camada da Mesa não possui um cliente válido.",
+                "O SupabaseMesa foi encontrado, mas ainda não possui um cliente funcional.",
                 detalhes.join(" | "),
-                "A camada isolada ainda não consegue realizar operações no Supabase.",
+                "A camada isolada ainda não consegue acessar o Supabase.",
                 [
-                    "Cliente global não foi encontrado.",
-                    "Fallback não conseguiu criar o cliente.",
-                    "Erro durante a inicialização do módulo."
+                    "Cliente global ausente.",
+                    "Inicialização incompleta.",
+                    "Erro ao criar ou obter o cliente."
                 ],
-                "Verifique a inicialização do supabase-mesa.js."
-            );
-
-        }
-
-
-        /*
-        =====================================================
-        CONTEXTO AUSENTE
-        =====================================================
-        */
-
-        else if (
-            cliente &&
-            !contexto
-        ) {
-
-            definirTeste(
-                "supabaseMesa",
-                "aviso",
-                "Supabase Mesa",
-                "O cliente Supabase está disponível, mas nenhum contexto da Mesa foi recebido.",
-                detalhes.join(" | "),
-                "A conexão existe, mas a camada ainda não recebeu campanha, usuário ou personagem.",
-                [
-                    "supabase-entrada.js ainda não enviou o contexto.",
-                    "rpg_mesa_ativa não possui dados.",
-                    "A inicialização da entrada ainda não terminou."
-                ],
-                "Verifique o contexto salvo da Mesa."
-            );
-
-        }
-
-
-        /*
-        =====================================================
-        CASO PARCIAL
-        =====================================================
-        */
-
-        else {
-
-            definirTeste(
-                "supabaseMesa",
-                "aviso",
-                "Supabase Mesa",
-                "O módulo isolado foi encontrado, mas sua inicialização ainda está incompleta.",
-                detalhes.join(" | "),
-                "A conexão da Mesa ainda não pode ser considerada totalmente pronta.",
-                [
-                    "Biblioteca ainda não detectada.",
-                    "Cliente ainda não criado.",
-                    "Contexto ainda não recebido."
-                ],
-                "Verifique novamente após a inicialização da Mesa."
+                "Verifique primeiro o diagnóstico do Supabase."
             );
 
         }
@@ -1411,7 +1257,7 @@
                 "usuario",
                 "sucesso",
                 "Autenticação",
-                "O sistema local da Mesa possui um usuário autenticado.",
+                "O sistema local possui um usuário autenticado.",
                 id
                     ? `ID do usuário: ${id}`
                     : "ID não informado.",
@@ -1421,9 +1267,7 @@
             );
 
 
-            registrarDiagnosticoTeste(
-                "usuario"
-            );
+            registrarDiagnosticoTeste("usuario");
 
 
             return auth.user;
@@ -1434,7 +1278,8 @@
         if (
             !supabase ||
             !supabase.auth ||
-            typeof supabase.auth.getUser !== "function"
+            typeof supabase.auth.getUser !==
+            "function"
         ) {
 
             definirStatus(
@@ -1448,20 +1293,18 @@
                 "aviso",
                 "Autenticação",
                 "Não foi possível consultar o usuário autenticado.",
-                "O cliente Supabase ou o método auth.getUser() não está disponível.",
-                "Não é possível confirmar a sessão atual.",
+                "O cliente Supabase não está disponível para autenticação.",
+                "Não é possível confirmar a sessão.",
                 [
                     "Supabase ausente.",
-                    "Cliente Supabase incompleto.",
-                    "Sistema de autenticação ainda não inicializado."
+                    "Cliente incompleto.",
+                    "Autenticação ainda não inicializada."
                 ],
                 "Corrija primeiro o diagnóstico do Supabase."
             );
 
 
-            registrarDiagnosticoTeste(
-                "usuario"
-            );
+            registrarDiagnosticoTeste("usuario");
 
 
             return null;
@@ -1473,7 +1316,6 @@
 
             const resposta =
                 await supabase.auth.getUser();
-
 
             const usuario =
                 resposta?.data?.user;
@@ -1501,9 +1343,7 @@
                 );
 
 
-                registrarDiagnosticoTeste(
-                    "usuario"
-                );
+                registrarDiagnosticoTeste("usuario");
 
 
                 return usuario;
@@ -1522,20 +1362,18 @@
                 "erro",
                 "Autenticação",
                 "O Supabase respondeu, mas não existe usuário autenticado.",
-                "supabase.auth.getUser() não retornou um usuário.",
-                "A Mesa não consegue associar as ações atuais a um usuário autenticado.",
+                "auth.getUser() não retornou um usuário.",
+                "A Mesa não consegue associar as ações ao usuário.",
                 [
                     "Sessão expirada.",
                     "Usuário não realizou login.",
-                    "Sessão não foi restaurada corretamente."
+                    "Sessão não foi restaurada."
                 ],
-                "Verifique o login e a restauração da sessão do usuário."
+                "Verifique o login e a sessão."
             );
 
 
-            registrarDiagnosticoTeste(
-                "usuario"
-            );
+            registrarDiagnosticoTeste("usuario");
 
 
             return null;
@@ -1552,21 +1390,19 @@
                 "usuario",
                 "erro",
                 "Autenticação",
-                "O Supabase encontrou um erro ao consultar o usuário.",
+                "Erro ao consultar o usuário no Supabase.",
                 obterMensagemErro(erro),
-                "A sessão do usuário não pôde ser confirmada.",
+                "A sessão não pôde ser confirmada.",
                 [
                     "Sessão inválida.",
-                    "Problema de configuração do Supabase.",
-                    "Falha temporária na comunicação."
+                    "Problema de configuração.",
+                    "Falha temporária."
                 ],
-                "Verifique o erro informado e a sessão atual do usuário."
+                "Verifique o erro e a sessão."
             );
 
 
-            registrarDiagnosticoTeste(
-                "usuario"
-            );
+            registrarDiagnosticoTeste("usuario");
 
 
             return null;
@@ -1598,21 +1434,19 @@
                 "campanha",
                 "erro",
                 "Campanha",
-                "Nenhuma campanha foi encontrada no estado atual da Mesa.",
+                "Nenhuma campanha foi encontrada.",
                 "obterCampanha() retornou null.",
-                "A Mesa não possui uma campanha disponível para sincronização.",
+                "A Mesa não possui campanha disponível.",
                 [
-                    "A campanha ainda não foi carregada.",
-                    "O usuário não pertence a uma campanha.",
-                    "A sincronização inicial ainda não terminou."
+                    "Campanha ainda não carregada.",
+                    "Usuário não pertence a campanha.",
+                    "Sincronização ainda não terminou."
                 ],
-                "Aguarde a sincronização ou verifique o carregamento da campanha."
+                "Aguarde a sincronização."
             );
 
 
-            registrarDiagnosticoTeste(
-                "campanha"
-            );
+            registrarDiagnosticoTeste("campanha");
 
 
             return null;
@@ -1644,16 +1478,15 @@
                 "campanha",
                 "aviso",
                 "Campanha",
-                "Uma campanha foi encontrada, mas ela não possui um ID identificável.",
+                "Uma campanha foi encontrada, mas não possui ID identificável.",
                 `Nome: ${nome}`,
-                "Consultas e sincronizações que dependem do ID podem falhar.",
+                "Consultas dependentes do ID podem falhar.",
                 [
-                    "Objeto da campanha está incompleto.",
-                    "Nome da coluna pode ser diferente do esperado."
+                    "Objeto incompleto.",
+                    "Nome da coluna diferente."
                 ],
-                "Verifique a estrutura do objeto de campanha retornado pelo sistema."
+                "Verifique o objeto da campanha."
             );
-
 
         } else {
 
@@ -1677,9 +1510,7 @@
         }
 
 
-        registrarDiagnosticoTeste(
-            "campanha"
-        );
+        registrarDiagnosticoTeste("campanha");
 
 
         return campanha;
@@ -1702,12 +1533,10 @@
                 "diagnostico-campanha-id"
             );
 
-
         const nome =
             document.getElementById(
                 "diagnostico-campanha-nome"
             );
-
 
         const master =
             document.getElementById(
@@ -1797,9 +1626,7 @@
         );
 
 
-        atualizarSlots(
-            validos
-        );
+        atualizarSlots(validos);
 
 
         const slotsInvalidos =
@@ -1829,43 +1656,47 @@
                 "personagens",
                 "aviso",
                 "Personagens",
-                "Nenhum personagem foi encontrado no estado atual.",
+                "Nenhum personagem foi encontrado.",
                 "Quantidade: 0",
-                "Os cards dos jogadores não possuem dados para exibir.",
+                "Os cards não possuem dados para exibir.",
                 [
-                    "A campanha ainda não foi sincronizada.",
-                    "Não existem personagens vinculados à campanha.",
-                    "A função de carregamento ainda não foi executada."
+                    "Campanha ainda não sincronizada.",
+                    "Não existem personagens.",
+                    "Carregamento ainda não executado."
                 ],
-                "Use o botão de sincronização e verifique novamente."
+                "Execute a sincronização."
             );
 
-        } else if (slotsInvalidos.length) {
+        }
+
+        else if (slotsInvalidos.length) {
 
             definirTeste(
                 "personagens",
                 "aviso",
                 "Personagens",
                 `${validos.length} personagem(ns) encontrado(s), mas existem registros com slot inválido.`,
-                `Slots ocupados: ${ocupados.length}/8 | Registros inválidos: ${slotsInvalidos.length}`,
-                "Alguns personagens podem não aparecer corretamente nos slots.",
+                `Slots ocupados: ${ocupados.length}/8 | Inválidos: ${slotsInvalidos.length}`,
+                "Alguns personagens podem não aparecer corretamente.",
                 [
-                    "Slot nulo ou inexistente.",
-                    "Slot fora do intervalo 1–8.",
-                    "Dados antigos ou inconsistentes no banco."
+                    "Slot nulo.",
+                    "Slot fora de 1–8.",
+                    "Dados inconsistentes."
                 ],
-                "Verifique o slot dos personagens no banco e na sincronização da Mesa."
+                "Verifique os slots no banco."
             );
 
-        } else {
+        }
+
+        else {
 
             definirTeste(
                 "personagens",
                 "sucesso",
                 "Personagens",
-                `${validos.length} personagem(ns) encontrado(s) corretamente.`,
+                `${validos.length} personagem(ns) encontrado(s).`,
                 `Slots ocupados: ${ocupados.length}/8`,
-                "Nenhum problema estrutural detectado nesta etapa.",
+                "Nenhum problema detectado.",
                 [],
                 "Nenhuma ação necessária."
             );
@@ -1873,9 +1704,7 @@
         }
 
 
-        registrarDiagnosticoTeste(
-            "personagens"
-        );
+        registrarDiagnosticoTeste("personagens");
 
 
         if (
@@ -1927,9 +1756,7 @@
             personagem => {
 
                 const slot =
-                    Number(
-                        personagem?.slot
-                    );
+                    Number(personagem?.slot);
 
 
                 if (
@@ -1949,8 +1776,7 @@
         );
 
 
-        let html =
-            "";
+        let html = "";
 
 
         for (
@@ -2061,14 +1887,11 @@
         const estado =
             obterEstadoMesa();
 
-
         const campanha =
             obterCampanha();
 
-
         const possuiMesa =
             !!window.MesaRPG;
-
 
         const possuiFuncaoRealtime =
             !!(
@@ -2076,7 +1899,6 @@
                 typeof window.MesaRPG.iniciarRealtimeMesa ===
                 "function"
             );
-
 
         const detalhes = [];
 
@@ -2123,7 +1945,7 @@
                 "realtime",
                 "sucesso",
                 "Realtime",
-                "A função de inicialização do Realtime está disponível e existe uma campanha para sincronizar.",
+                "A função de inicialização do Realtime está disponível e existe uma campanha.",
                 detalhes.join(" | "),
                 "Nenhum problema estrutural detectado.",
                 [],
@@ -2133,7 +1955,6 @@
 
             Diagnostico.ultimoRealtime =
                 new Date();
-
 
         } else {
 
@@ -2149,13 +1970,13 @@
                 "Realtime",
                 "Não foi possível confirmar uma conexão Realtime ativa.",
                 detalhes.join(" | "),
-                "As alterações em tempo real podem não ser recebidas imediatamente.",
+                "Alterações em tempo real podem não ser recebidas.",
                 [
-                    "Campanha ainda não carregada.",
-                    "Função de inicialização do Realtime ausente.",
-                    "Realtime ainda está sendo inicializado."
+                    "Campanha não carregada.",
+                    "Função ausente.",
+                    "Realtime ainda inicializando."
                 ],
-                "Verifique o carregamento da Mesa e aguarde a sincronização inicial."
+                "Verifique o carregamento da Mesa."
             );
 
         }
@@ -2174,15 +1995,13 @@
         }
 
 
-        registrarDiagnosticoTeste(
-            "realtime"
-        );
+        registrarDiagnosticoTeste("realtime");
 
     }
 
 
     /* =====================================================
-       DIAGNÓSTICO — FUNÇÕES DA MESA
+       FUNÇÕES DA MESA
     ===================================================== */
 
     function diagnosticarFuncoesMesa() {
@@ -2192,7 +2011,8 @@
             estado:
                 !!(
                     window.MesaRPG &&
-                    typeof window.MesaRPG.estado === "function"
+                    typeof window.MesaRPG.estado ===
+                    "function"
                 ),
 
             carregarJogadores:
@@ -2242,15 +2062,15 @@
                 "funcoes",
                 "erro",
                 "Funções da Mesa",
-                "Nenhuma função pública esperada da Mesa foi encontrada.",
-                "Todas as funções testadas estão ausentes.",
-                "O diagnóstico não consegue consultar ou sincronizar o estado da Mesa.",
+                "Nenhuma função pública esperada foi encontrada.",
+                "Todas as funções estão ausentes.",
+                "O diagnóstico não consegue consultar a Mesa.",
                 [
-                    "mesa.js não foi carregado.",
-                    "MesaRPG não foi inicializado.",
-                    "O nome das funções foi alterado."
+                    "mesa.js não carregado.",
+                    "MesaRPG não inicializado.",
+                    "Funções renomeadas."
                 ],
-                "Verifique o carregamento do mesa.js."
+                "Verifique o mesa.js."
             );
 
         } else if (ausentes.length) {
@@ -2259,15 +2079,15 @@
                 "funcoes",
                 "aviso",
                 "Funções da Mesa",
-                "A Mesa possui algumas funções disponíveis, mas outras estão ausentes.",
+                "Algumas funções estão ausentes.",
                 `Encontradas: ${encontradas.join(", ")} | Ausentes: ${ausentes.join(", ")}`,
-                "Alguns recursos do diagnóstico ou sincronização podem não funcionar.",
+                "Alguns recursos podem não funcionar.",
                 [
                     "Versão parcial do mesa.js.",
-                    "Função removida ou renomeada.",
+                    "Função removida.",
                     "Script carregado parcialmente."
                 ],
-                "Verifique se as funções ausentes são esperadas na versão atual da Mesa."
+                "Verifique as funções ausentes."
             );
 
         } else {
@@ -2276,7 +2096,7 @@
                 "funcoes",
                 "sucesso",
                 "Funções da Mesa",
-                "Todas as funções principais esperadas foram encontradas.",
+                "Todas as funções principais foram encontradas.",
                 encontradas.join(", "),
                 "Nenhum problema detectado.",
                 [],
@@ -2286,9 +2106,7 @@
         }
 
 
-        registrarDiagnosticoTeste(
-            "funcoes"
-        );
+        registrarDiagnosticoTeste("funcoes");
 
     }
 
@@ -2310,6 +2128,9 @@
 
 
         diagnosticarSupabaseMesa();
+
+
+        diagnosticarConexaoSupabase();
 
 
         await diagnosticarUsuario(
@@ -2337,6 +2158,8 @@
 
 
         atualizarResumoDiagnostico();
+
+        atualizarRelatorio();
 
     }
 
@@ -2406,7 +2229,7 @@
 
 
     /* =====================================================
-       RELATÓRIO DETALHADO
+       RELATÓRIO
     ===================================================== */
 
     function gerarRelatorio() {
@@ -2434,7 +2257,6 @@
 
                     let classe =
                         "diagnostico-detalhe-info";
-
 
                     let icone =
                         "ℹ️";
@@ -2649,7 +2471,7 @@
 
             registrar(
                 "erro",
-                "Nenhuma função de sincronização foi encontrada. Verifique o diagnóstico de Funções da Mesa."
+                "Nenhuma função de sincronização foi encontrada."
             );
 
 
@@ -2668,14 +2490,14 @@
                 "Sincronização",
                 "A tentativa de sincronização manual falhou.",
                 obterMensagemErro(erro),
-                "Os dados da Mesa podem permanecer desatualizados.",
+                "Os dados podem permanecer desatualizados.",
                 [
-                    "Erro no banco de dados.",
+                    "Erro no banco.",
                     "Sessão inválida.",
                     "Função de sincronização com erro.",
                     "Problema de conexão."
                 ],
-                "Verifique os detalhes do erro e execute o diagnóstico novamente."
+                "Verifique o erro e execute o diagnóstico novamente."
             );
 
 
@@ -2687,7 +2509,7 @@
 
 
     /* =====================================================
-       EVENTOS DA MESA
+       EVENTOS
     ===================================================== */
 
     function registrarEventos() {
@@ -2849,16 +2671,11 @@
 
         window.addEventListener(
             "supabase:entradaPronta",
-            evento => {
-
-                const pagina =
-                    evento?.detail?.pagina ||
-                    "desconhecida";
-
+            () => {
 
                 registrar(
-                    "info",
-                    `SupabaseEntrada pronta. Página: ${pagina}`
+                    "sucesso",
+                    "SupabaseEntrada encontrou e preparou o contexto da Mesa."
                 );
 
 
@@ -2888,14 +2705,10 @@
             "unhandledrejection",
             evento => {
 
-                const erro =
-                    evento?.reason;
-
-
                 registrar(
                     "erro",
                     "Promise rejeitada: " +
-                    obterMensagemErro(erro)
+                    obterMensagemErro(evento?.reason)
                 );
 
             }
@@ -2919,7 +2732,7 @@
         if (!painel) {
 
             console.error(
-                "[MesaDiagnostico] Painel #mesa-diagnostico não encontrado."
+                "[MesaDiagnostico] Painel não encontrado."
             );
 
             return;
@@ -3004,7 +2817,7 @@
 
 
     /* =====================================================
-       CLIQUE DO BOTÃO DE DIAGNÓSTICO
+       BOTÃO DIAGNÓSTICO
     ===================================================== */
 
     function registrarCliqueDiagnostico() {
@@ -3037,7 +2850,7 @@
 
 
     /* =====================================================
-       CLIQUES INTERNOS DO PAINEL
+       CLIQUES DO PAINEL
     ===================================================== */
 
     function registrarCliquesPainel() {
@@ -3256,9 +3069,11 @@
 
         registrar,
 
-        atualizar: atualizarDiagnostico,
+        atualizar:
+            atualizarDiagnostico,
 
-        sincronizar: sincronizarAgora,
+        sincronizar:
+            sincronizarAgora,
 
         relatorio: function () {
 
