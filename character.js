@@ -473,43 +473,6 @@ const CharacterModule = (() => {
 
     }
 
-    function garantirClasseValida() {
-
-        const classeAtual = obterClasseAtual();
-
-        if (classeAtual) {
-            return classeAtual;
-        }
-
-        /*
-           Se a classe atual não for válida,
-           usa a primeira classe disponível.
-        */
-        if (
-            typeof RPGClasses !== "undefined" &&
-            typeof character !== "undefined"
-        ) {
-
-            const nomes = Object.keys(RPGClasses);
-
-            if (nomes.length > 0) {
-
-                character.class = nomes[0];
-                console.log(
-                    "[Character] Classe inválida detectada. Alterado para:",
-                    nomes[0]
-                );
-                return RPGClasses[nomes[0]];
-
-            }
-
-        }
-
-        return null;
-
-    }
-
-
 
     /* =====================================================
        BLOQUEAR DEFINIÇÕES DO PERSONAGEM
@@ -623,9 +586,6 @@ const CharacterModule = (() => {
 
     function configurarEditor() {
 
-
-        garantirClasseValida();
-
         const nameInput =
             get("character-name-input");
 
@@ -634,6 +594,22 @@ const CharacterModule = (() => {
 
         const classSelect =
             get("character-class-select");
+
+        /*
+           Migração: classes antigas no estilo Fate
+           (Saber, Archer, etc.) não existem mais.
+           Se a classe salva não for reconhecida pelo
+           módulo classe.js, volta para Guerreiro.
+        */
+        if (
+            typeof RPGClasses !== "undefined" &&
+            RPGClasses &&
+            character.class &&
+            !RPGClasses[character.class]
+        ) {
+            character.class = "Guerreiro";
+            salvarPersonagem();
+        }
 
         const affinitySelect =
             get("character-affinity-select");
@@ -966,14 +942,6 @@ const CharacterModule = (() => {
        ATUALIZAR IMAGEM
     ===================================================== */
 
-
-    function escaparHTML(texto) {
-        const div = document.createElement("div");
-        div.textContent = texto || "";
-        return div.innerHTML;
-    }
-
-
     function atualizarImagem() {
 
         const container =
@@ -995,7 +963,7 @@ const CharacterModule = (() => {
 
             container.innerHTML = `
                 <img
-                    src="${character.imageURL}"
+                    src="${escaparHTML(character.imageURL)}"
                     alt="Imagem do personagem"
                     class="character-image-display"
                     onerror="this.style.display='none'; this.parentElement.classList.add('image-error');"
@@ -1314,7 +1282,6 @@ const CharacterModule = (() => {
 
         atualizarBloqueioDefinicoes,
 
-        garantirClasseValida,
         personagemConfirmado,
 
         obterDadosSupabase,

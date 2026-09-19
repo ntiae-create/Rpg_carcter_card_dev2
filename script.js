@@ -425,6 +425,19 @@ function carregarPersonagem() {
                 )
             );
 
+        /*
+           Compatibilidade: classes antigas no estilo
+           Fate (Saber, Archer, etc.) não existem mais.
+           Se a classe salva não for reconhecida pelo
+           módulo classe.js, volta para Guerreiro.
+        */
+        if (
+            typeof window.RPGClasses !== "undefined" &&
+            window.RPGClasses &&
+            !window.RPGClasses[personagem.class]
+        ) {
+            personagem.class = "Guerreiro";
+        }
 
         return personagem;
 
@@ -920,26 +933,7 @@ function atualizarInterfaceConfirmacao() {
                             continueButton.style.transform =
                                 "";
 
-                            /* =========================================
-                               Tenta o fluxo oficial de continuar
-                               campanha (valida Supabase, etc.)
-                            ========================================= */
-                            if (
-                                window.rpgMesaEntrada &&
-                                typeof window.rpgMesaEntrada.continuarCampanha === "function"
-                            ) {
-                            
-                                window.rpgMesaEntrada.continuarCampanha();
-                            
-                            } else {
-                            
-                                /* =====================================
-                                   Fallback: vai direto para a mesa
-                                   (funciona sem autenticação/Supabase)
-                                ===================================== */
-                                window.location.href = "mesa.html";
-                            
-                            }
+                            irParaMesa();
 
                         },
                         100
@@ -1411,28 +1405,225 @@ function irParaMesa() {
         criarTransicaoMesa();
 
 
-    /* =================================================
-       Redireciona para a página da mesa após a animação
-    ================================================= */
-    setTimeout(
-        function () {
-
-            transicao.style.opacity =
-                "0";
+    let tentativas =
+        0;
 
 
-            setTimeout(
-                function () {
+    const limite =
+        40;
 
-                    window.location.href = "mesa.html";
 
-                },
-                500
-            );
+    const mesaExistente =
+        get(
+            "online-table-panel"
+        );
 
-        },
-        900
-    );
+
+    if (mesaExistente) {
+
+        setTimeout(
+            function () {
+
+                const sucesso =
+                    mostrarMesaComoTela();
+
+
+                if (!sucesso) {
+
+                    return;
+
+                }
+
+
+                transicao.style.opacity =
+                    "0";
+
+
+                setTimeout(
+                    function () {
+
+                        if (
+                            transicao.parentNode
+                        ) {
+
+                            transicao.remove();
+
+                        }
+
+                    },
+                    500
+                );
+
+            },
+            500
+        );
+
+
+        return;
+
+    }
+
+
+    const procurarMesa =
+        setInterval(
+            function () {
+
+                tentativas++;
+
+
+                const mesa =
+                    get(
+                        "online-table-panel"
+                    );
+
+
+                if (mesa) {
+
+                    clearInterval(
+                        procurarMesa
+                    );
+
+
+                    setTimeout(
+                        function () {
+
+                            const sucesso =
+                                mostrarMesaComoTela();
+
+
+                            if (!sucesso) {
+
+                                return;
+
+                            }
+
+
+                            transicao.style.opacity =
+                                "0";
+
+
+                            setTimeout(
+                                function () {
+
+                                    if (
+                                        transicao.parentNode
+                                    ) {
+
+                                        transicao.remove();
+
+                                    }
+
+                                },
+                                500
+                            );
+
+                        },
+                        900
+                    );
+
+
+                    return;
+
+                }
+
+
+                if (
+                    tentativas >= limite
+                ) {
+
+                    clearInterval(
+                        procurarMesa
+                    );
+
+
+                    transicao.innerHTML = `
+
+                        <div
+                            style="
+                                width:min(90vw,420px);
+                            "
+                        >
+
+                            <div
+                                style="
+                                    font-size:42px;
+                                    margin-bottom:15px;
+                                "
+                            >
+                                ⚠️
+                            </div>
+
+                            <div
+                                style="
+                                    color:#fca5a5;
+                                    font-weight:bold;
+                                    font-size:15px;
+                                "
+                            >
+                                A MESA AINDA NÃO ESTÁ PRONTA
+                            </div>
+
+                            <div
+                                style="
+                                    margin-top:10px;
+                                    color:#8f839d;
+                                    font-size:11px;
+                                    line-height:1.6;
+                                "
+                            >
+                                O personagem foi confirmado,
+                                mas a Mesa não respondeu a tempo.
+                            </div>
+
+                            <button
+                                id="retry-table-button"
+                                type="button"
+                                style="
+                                    margin-top:20px;
+                                    width:100%;
+                                    padding:12px;
+                                    border:1px solid #8b5cf6;
+                                    border-radius:11px;
+                                    background:#1b1424;
+                                    color:#e9d5ff;
+                                    font-weight:bold;
+                                    cursor:pointer;
+                                "
+                            >
+                                TENTAR NOVAMENTE
+                            </button>
+
+                        </div>
+
+                    `;
+
+
+                    const retry =
+                        get(
+                            "retry-table-button"
+                        );
+
+
+                    if (retry) {
+
+                        retry.addEventListener(
+                            "click",
+                            function () {
+
+                                transicao.remove();
+
+                                irParaMesa();
+
+                            }
+                        );
+
+                    }
+
+                }
+
+            },
+            250
+        );
 
 }
 
@@ -2639,8 +2830,6 @@ function atualizarInterface() {
     atualizarInterfaceConfirmacao();
 
 
-    CharacterModule.atualizarImagem();
-
     StatusModule.aplicarEfeitoElemental();
 
 
@@ -2678,63 +2867,48 @@ function definirTexto(
 
 function iniciar() {
 
-    /* =================================================
-       CONFIGURAÇÕES BÁSICAS — SEMPRE EXECUTAM
-    ================================================= */
-    try {
-        configurarNavegacao();
-    } catch (erro) {
-        console.error("❌ Erro ao configurar navegação:", erro);
+    configurarNavegacao();
+
+
+    configurarModoMestre();
+
+
+    CharacterModule.configurarEditor();
+
+
+    configurarConfirmacaoPersonagem();
+
+
+    StatusModule.iniciar();
+
+
+    configurarXP();
+
+
+    configurarReset();
+
+
+    if (
+        typeof CombatModule !==
+        "undefined"
+    ) {
+
+        CombatModule.iniciar();
+
     }
 
-    try {
-        configurarModoMestre();
-    } catch (erro) {
-        console.error("❌ Erro ao configurar modo mestre:", erro);
+
+    if (
+        typeof InventoryModule !==
+        "undefined"
+    ) {
+
+        InventoryModule.iniciar();
+
     }
 
 
-    /* =================================================
-       DEMAIS CONFIGURAÇÕES — COM PROTEÇÃO
-    ================================================= */
-    try {
-
-        CharacterModule.configurarEditor();
-
-
-        configurarConfirmacaoPersonagem();
-
-
-        StatusModule.iniciar();
-
-
-        configurarXP();
-
-
-        configurarReset();
-
-
-        if (
-            typeof CombatModule !==
-            "undefined"
-        ) {
-
-            CombatModule.iniciar();
-
-        }
-
-
-        if (
-            typeof InventoryModule !==
-            "undefined"
-        ) {
-
-            InventoryModule.iniciar();
-
-        }
-
-
-        atualizarInterface();
+    atualizarInterface();
 
 
     console.log(
@@ -2911,11 +3085,6 @@ function iniciar() {
             },
             250
         );
-
-    } catch (erro) {
-        console.error("❌ Erro durante inicialização:", erro);
-        alert("Houve um erro ao carregar o sistema. Verifique o console para detalhes.");
-    }
 
 }
 

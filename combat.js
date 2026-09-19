@@ -71,12 +71,6 @@ const CombatModule = (() => {
                 "Cada tipo diferente de engenhoca utilizada concede 1 Stack de Engenharia. Repetir a mesma engenhoca não gera Stack. Cada Stack concede +2% de Dano das engenhocas e +1% de Defesa. Máximo de 10 Stacks. Ao atingir o máximo, a próxima engenhoca utilizada recebe +50% de potência e consome os Stacks acumulados."
         },
 
-        Artífice: {
-            name: "Engenharia de Combate",
-            description:
-                "Cada tipo diferente de engenhoca utilizada concede 1 Stack de Engenharia. Repetir a mesma engenhoca não gera Stack. Cada Stack concede +2% de Dano das engenhocas e +1% de Defesa. Máximo de 10 Stacks. Ao atingir o máximo, a próxima engenhoca utilizada recebe +50% de potência e consome os Stacks acumulados."
-        },
-
         Arqueiro: {
             name: "Olho de Águia / Precisão",
             description:
@@ -95,19 +89,7 @@ const CombatModule = (() => {
                 "Ao atingir um inimigo, aplica 1 Stack de Marca da Presa. Cada Stack concede +2% de Dano contra aquele inimigo. Máximo de 10 Stacks. Quando a presa marcada morre, a marca é transferida automaticamente para outro alvo, priorizando o inimigo mais próximo ou, entre vários alvos em alcance, o mais ferido."
         },
 
-        Caçador: {
-            name: "Marca da Presa",
-            description:
-                "Ao atingir um inimigo, aplica 1 Stack de Marca da Presa. Cada Stack concede +2% de Dano contra aquele inimigo. Máximo de 10 Stacks. Quando a presa marcada morre, a marca é transferida automaticamente para outro alvo, priorizando o inimigo mais próximo ou, entre vários alvos em alcance, o mais ferido."
-        },
-
         Clerigo: {
-            name: "Graça Divina",
-            description:
-                "Sempre que o Clérigo cura um aliado com menos de 50% de HP, recebe 1 Stack de Graça. Cada Stack concede +2% de Poder de Cura. Máximo de 10 Stacks = +20% de Cura. Ao atingir 10, a próxima cura realizada pelo Clérigo tem seu efeito triplicado e pode atingir todos os aliados dentro do alcance."
-        },
-
-        Clérigo: {
             name: "Graça Divina",
             description:
                 "Sempre que o Clérigo cura um aliado com menos de 50% de HP, recebe 1 Stack de Graça. Cada Stack concede +2% de Poder de Cura. Máximo de 10 Stacks = +20% de Cura. Ao atingir 10, a próxima cura realizada pelo Clérigo tem seu efeito triplicado e pode atingir todos os aliados dentro do alcance."
@@ -144,12 +126,6 @@ const CombatModule = (() => {
         },
 
         Oraculo: {
-            name: "Visão do Destino",
-            description:
-                "Sempre que um aliado sofrer dano ou receber um efeito negativo, o Oráculo recebe 1 Stack de Presságio. Cada Stack concede +1% de Esquiva e +1% de Resistência a efeitos negativos. Máximo de 10 Stacks. Ao atingir 10, durante 1 turno todos os aliados recebem +50% de Esquiva e +50% de Resistência a efeitos negativos. Antes de qualquer batalha, o Oráculo prevê o confronto 1 turno antes, aplicando Preparação a si mesmo e aos aliados. Durante o primeiro turno da batalha, os aliados sob Preparação recebem +20% de Resistência a efeitos negativos e +10% de Esquiva."
-        },
-
-        Oráculo: {
             name: "Visão do Destino",
             description:
                 "Sempre que um aliado sofrer dano ou receber um efeito negativo, o Oráculo recebe 1 Stack de Presságio. Cada Stack concede +1% de Esquiva e +1% de Resistência a efeitos negativos. Máximo de 10 Stacks. Ao atingir 10, durante 1 turno todos os aliados recebem +50% de Esquiva e +50% de Resistência a efeitos negativos. Antes de qualquer batalha, o Oráculo prevê o confronto 1 turno antes, aplicando Preparação a si mesmo e aos aliados. Durante o primeiro turno da batalha, os aliados sob Preparação recebem +20% de Resistência a efeitos negativos e +10% de Esquiva."
