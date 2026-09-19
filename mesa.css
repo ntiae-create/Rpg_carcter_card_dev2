@@ -173,6 +173,9 @@ body {
         28px
         9px;
 
+    max-width:
+        calc(100vw - 140px);
+
     border-radius: 14px;
 
     background:
@@ -314,12 +317,12 @@ body {
         translate(-50%, -50%);
 
     /*
-       A mesa agora ocupa mais espaço.
-       Os jogadores ficam fora dela.
+       A área central agora é maior.
+       Os cards ficam ao redor dela.
     */
 
     width:
-        min(68vw, 980px);
+        min(72vw, 1050px);
 
     height:
         min(70vh, 720px);
@@ -535,16 +538,16 @@ body {
     position: absolute;
 
     /*
-       Pequeno o suficiente para não dominar
-       a tela, mas grande o bastante para
-       mostrar a imagem.
+       Cards compactos.
+       A área principal continua sendo
+       o centro da mesa.
     */
 
     width:
-        clamp(128px, 11vw, 168px);
+        clamp(112px, 9vw, 140px);
 
     height:
-        clamp(158px, 17vh, 190px);
+        clamp(132px, 15vh, 165px);
 
     pointer-events: auto;
 
@@ -640,39 +643,40 @@ body {
 ============================================================ */
 
 /*
-       P1                 P2
+                   P1          P2
 
 
-   P3       ┌──────────────────┐       P4
-            │                  │
-            │       MESA       │
-            │                  │
-            │                  │
-   P5       └──────────────────┘       P6
+              ┌────────────────────┐
+        P3    │                    │    P4
+              │                    │
+              │        MESA        │
+              │                    │
+        P5    │                    │    P6
+              └────────────────────┘
 
 
-       P7                 P8
+                   P7          P8
 */
 
 
 .player-card[data-seat="1"] {
-    top: 14%;
-    left: 5%;
+    top: 7%;
+    left: 32%;
 
     transform:
         rotate(-1.5deg);
 }
 
 .player-card[data-seat="2"] {
-    top: 14%;
-    left: 20%;
+    top: 7%;
+    right: 32%;
 
     transform:
-        rotate(-0.7deg);
+        rotate(1.5deg);
 }
 
 .player-card[data-seat="3"] {
-    top: 40%;
+    top: 30%;
     left: 4%;
 
     transform:
@@ -680,7 +684,7 @@ body {
 }
 
 .player-card[data-seat="4"] {
-    top: 40%;
+    top: 30%;
     right: 4%;
 
     transform:
@@ -688,7 +692,7 @@ body {
 }
 
 .player-card[data-seat="5"] {
-    bottom: 15%;
+    top: 54%;
     left: 4%;
 
     transform:
@@ -696,7 +700,7 @@ body {
 }
 
 .player-card[data-seat="6"] {
-    bottom: 15%;
+    top: 54%;
     right: 4%;
 
     transform:
@@ -705,18 +709,18 @@ body {
 
 .player-card[data-seat="7"] {
     bottom: 6%;
-    left: 20%;
+    left: 32%;
 
     transform:
-        rotate(0.7deg);
+        rotate(1deg);
 }
 
 .player-card[data-seat="8"] {
     bottom: 6%;
-    right: 20%;
+    right: 32%;
 
     transform:
-        rotate(-0.7deg);
+        rotate(-1deg);
 }
 
 
@@ -791,7 +795,7 @@ body {
     width: 100%;
     height: 100%;
 
-    padding: 8px;
+    padding: 7px;
 
     display: flex;
 
@@ -799,7 +803,7 @@ body {
 
     justify-content: space-between;
 
-    gap: 5px;
+    gap: 4px;
 }
 
 
@@ -810,13 +814,19 @@ body {
 .player-card-header {
     display: flex;
 
+    flex-direction: column;
+
     align-items: center;
 
-    justify-content: center;
-
-    min-height: 18px;
+    justify-content: flex-start;
 
     width: 100%;
+
+    min-height: 0;
+
+    flex: 1 1 auto;
+
+    gap: 4px;
 }
 
 
@@ -834,7 +844,7 @@ body {
        60% do card.
     */
 
-    height: 112px;
+    height: 88px;
 
     flex: 1 1 auto;
 
@@ -847,7 +857,7 @@ body {
 
     overflow: hidden;
 
-    border-radius: 10px;
+    border-radius: 9px;
 
     background:
         radial-gradient(
@@ -873,9 +883,9 @@ body {
 }
 
 
-/*
-   Imagem real do personagem.
-*/
+/* ============================================================
+   IMAGEM REAL DO PERSONAGEM
+============================================================ */
 
 .player-avatar img {
     display: block;
@@ -896,12 +906,6 @@ body {
         transform 0.35s ease,
         filter 0.35s ease;
 }
-
-
-/*
-   Pequeno zoom ao passar o mouse
-   sobre o card.
-*/
 
 .player-card:hover
 .player-avatar img {
@@ -932,7 +936,7 @@ body {
     text-align: center;
 
     font-size:
-        clamp(10px, 1vw, 13px);
+        clamp(9px, 0.85vw, 11px);
 
     font-weight: bold;
 
@@ -947,7 +951,7 @@ body {
 
 /* ============================================================
    RAÇA / CLASSE
-   OCULTOS NA NOVA INTERFACE
+   REMOVIDOS DA VISUALIZAÇÃO
 ============================================================ */
 
 .player-info {
@@ -956,8 +960,7 @@ body {
 
 
 /* ============================================================
-   BARRAS ANTIGAS
-   OCULTAS NA NOVA INTERFACE
+   STATUS
 ============================================================ */
 
 .player-bars {
@@ -968,14 +971,14 @@ body {
     gap: 3px;
 
     width: 100%;
+
+    flex: 0 0 auto;
 }
 
 
-/*
-   Os valores continuam disponíveis
-   para o JS, mas agora são exibidos
-   como números simples.
-*/
+/* ============================================================
+   VALORES DE HP / MP
+============================================================ */
 
 .status-values {
     display: flex;
@@ -985,6 +988,8 @@ body {
     justify-content: space-between;
 
     width: 100%;
+
+    min-height: 18px;
 
     padding:
         3px
@@ -1000,7 +1005,7 @@ body {
         sans-serif;
 
     font-size:
-        clamp(8px, 0.75vw, 10px);
+        clamp(7px, 0.68vw, 9px);
 
     line-height: 1;
 
@@ -1031,7 +1036,7 @@ body {
 
 
 /* ============================================================
-   CORES DOS STATUS
+   ÍCONES DOS STATUS
 ============================================================ */
 
 .hp-value::before {
@@ -1875,32 +1880,56 @@ body {
         width: 64vw;
         height: 66vh;
 
-        min-width: 400px;
+        min-width: 360px;
     }
 
     .player-card {
-        width: 125px;
-        height: 158px;
+        width: 108px;
+        height: 130px;
     }
 
     .player-avatar {
-        height: 92px;
+        height: 70px;
     }
 
     .player-card[data-seat="1"] {
-        left: 3%;
+        top: 8%;
+        left: 29%;
     }
 
     .player-card[data-seat="2"] {
-        left: 18%;
+        top: 8%;
+        right: 29%;
+    }
+
+    .player-card[data-seat="3"] {
+        top: 31%;
+        left: 2%;
+    }
+
+    .player-card[data-seat="4"] {
+        top: 31%;
+        right: 2%;
+    }
+
+    .player-card[data-seat="5"] {
+        top: 55%;
+        left: 2%;
+    }
+
+    .player-card[data-seat="6"] {
+        top: 55%;
+        right: 2%;
     }
 
     .player-card[data-seat="7"] {
-        left: 18%;
+        bottom: 7%;
+        left: 29%;
     }
 
     .player-card[data-seat="8"] {
-        right: 18%;
+        bottom: 7%;
+        right: 29%;
     }
 
     .cte-info {
@@ -1923,56 +1952,56 @@ body {
         width: 58vw;
         height: 63vh;
 
-        min-width: 330px;
+        min-width: 320px;
     }
 
     .player-card {
-        width: 112px;
-        height: 145px;
+        width: 98px;
+        height: 120px;
     }
 
     .player-avatar {
-        height: 82px;
+        height: 64px;
     }
 
     .player-card[data-seat="1"] {
-        top: 15%;
-        left: 2%;
+        top: 11%;
+        left: 25%;
     }
 
     .player-card[data-seat="2"] {
-        top: 15%;
-        left: 16%;
+        top: 11%;
+        right: 25%;
     }
 
     .player-card[data-seat="3"] {
-        top: 40%;
-        left: 2%;
+        top: 32%;
+        left: 1%;
     }
 
     .player-card[data-seat="4"] {
-        top: 40%;
-        right: 2%;
+        top: 32%;
+        right: 1%;
     }
 
     .player-card[data-seat="5"] {
-        bottom: 15%;
-        left: 2%;
+        top: 55%;
+        left: 1%;
     }
 
     .player-card[data-seat="6"] {
-        bottom: 15%;
-        right: 2%;
+        top: 55%;
+        right: 1%;
     }
 
     .player-card[data-seat="7"] {
         bottom: 5%;
-        left: 16%;
+        left: 25%;
     }
 
     .player-card[data-seat="8"] {
         bottom: 5%;
-        right: 16%;
+        right: 25%;
     }
 }
 
@@ -2060,7 +2089,7 @@ body {
         left: 50%;
         top: 50%;
 
-        width: 58vw;
+        width: 56vw;
         height: 58vh;
 
         min-width: 0;
@@ -2101,64 +2130,66 @@ body {
     -------------------------------- */
 
     .player-card {
-        width: 94px;
-        height: 128px;
+        width: 82px;
+        height: 108px;
 
-        border-radius: 11px;
+        border-radius: 10px;
     }
 
     .player-card-content {
-        padding: 6px;
+        padding: 5px;
 
-        gap: 4px;
+        gap: 3px;
     }
 
     .player-avatar {
-        height: 76px;
+        height: 59px;
 
-        border-radius: 8px;
+        border-radius: 7px;
 
-        font-size: 21px;
+        font-size: 20px;
     }
 
     .player-name {
-        font-size: 8px;
+        font-size: 7px;
     }
 
     .status-values {
-        padding:
-            3px
-            4px;
+        min-height: 15px;
 
-        font-size: 7px;
+        padding:
+            2px
+            3px;
+
+        font-size: 6px;
     }
 
 
     /* ========================================================
        DISPOSIÇÃO FÍSICA NO CELULAR
-       
-             P1      P2
 
-       P3   ┌──────────┐   P4
-            │          │
-       P5   │   MESA   │   P6
-            │          │
-            └──────────┘
+                    P1      P2
 
-             P7      P8
+              P3   ┌──────────┐   P4
+                   │          │
+              P5   │   MESA   │   P6
+                   │          │
+                   └──────────┘
+
+                    P7      P8
     ======================================================== */
 
     .player-card[data-seat="1"] {
-        top: 15%;
-        left: 3%;
+        top: 13%;
+        left: 24%;
 
         transform:
             rotate(-2deg);
     }
 
     .player-card[data-seat="2"] {
-        top: 15%;
-        right: 3%;
+        top: 13%;
+        right: 24%;
         left: auto;
 
         transform:
@@ -2166,24 +2197,24 @@ body {
     }
 
     .player-card[data-seat="3"] {
-        top: 37%;
-        left: 2%;
+        top: 34%;
+        left: 1%;
 
         transform:
             rotate(-1deg);
     }
 
     .player-card[data-seat="4"] {
-        top: 37%;
-        right: 2%;
+        top: 34%;
+        right: 1%;
 
         transform:
             rotate(1deg);
     }
 
     .player-card[data-seat="5"] {
-        top: 56%;
-        left: 2%;
+        top: 55%;
+        left: 1%;
         bottom: auto;
 
         transform:
@@ -2191,8 +2222,8 @@ body {
     }
 
     .player-card[data-seat="6"] {
-        top: 56%;
-        right: 2%;
+        top: 55%;
+        right: 1%;
         bottom: auto;
 
         transform:
@@ -2201,7 +2232,7 @@ body {
 
     .player-card[data-seat="7"] {
         bottom: 4%;
-        left: 3%;
+        left: 24%;
 
         transform:
             rotate(2deg);
@@ -2209,7 +2240,7 @@ body {
 
     .player-card[data-seat="8"] {
         bottom: 4%;
-        right: 3%;
+        right: 24%;
 
         transform:
             rotate(-2deg);
@@ -2369,7 +2400,7 @@ body {
     -------------------------------- */
 
     .mesa-stage {
-        width: 56vw;
+        width: 53vw;
         height: 54vh;
     }
 
@@ -2379,38 +2410,40 @@ body {
     -------------------------------- */
 
     .player-card {
-        width: 78px;
-        height: 108px;
+        width: 72px;
+        height: 96px;
 
-        border-radius: 9px;
+        border-radius: 8px;
     }
 
     .player-card-content {
-        padding: 5px;
+        padding: 4px;
 
-        gap: 3px;
+        gap: 2px;
     }
 
     .player-avatar {
-        height: 62px;
+        height: 53px;
 
-        border-radius: 7px;
+        border-radius: 6px;
 
-        font-size: 17px;
+        font-size: 16px;
     }
 
     .player-name {
-        font-size: 7px;
+        font-size: 6px;
     }
 
     .status-values {
+        min-height: 13px;
+
         padding:
             2px
-            3px;
+            2px;
 
-        font-size: 6px;
+        font-size: 5.5px;
 
-        border-radius: 5px;
+        border-radius: 4px;
     }
 
 
@@ -2419,43 +2452,43 @@ body {
     -------------------------------- */
 
     .player-card[data-seat="1"] {
-        top: 15%;
-        left: 2%;
+        top: 14%;
+        left: 22%;
     }
 
     .player-card[data-seat="2"] {
-        top: 15%;
-        right: 2%;
+        top: 14%;
+        right: 22%;
     }
 
     .player-card[data-seat="3"] {
-        top: 37%;
-        left: 1%;
+        top: 35%;
+        left: 0.5%;
     }
 
     .player-card[data-seat="4"] {
-        top: 37%;
-        right: 1%;
+        top: 35%;
+        right: 0.5%;
     }
 
     .player-card[data-seat="5"] {
         top: 56%;
-        left: 1%;
+        left: 0.5%;
     }
 
     .player-card[data-seat="6"] {
         top: 56%;
-        right: 1%;
+        right: 0.5%;
     }
 
     .player-card[data-seat="7"] {
         bottom: 3%;
-        left: 2%;
+        left: 22%;
     }
 
     .player-card[data-seat="8"] {
         bottom: 3%;
-        right: 2%;
+        right: 22%;
     }
 
 
