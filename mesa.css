@@ -2546,3 +2546,15 @@ body {
 .master-menu[hidden] {
     display: none !important;
 }
+/* =========================================================
+   OCULTAR BOTÃO "VER FICHA" DOS CARDS
+========================================================= */
+
+.player-card button,
+.player-card .btn-ver-ficha,
+.player-card .ver-ficha,
+.player-card [data-action="ver-ficha"],
+.player-card [data-action="ficha"],
+.player-card [onclick*="ficha"] {
+    display: none !important;
+}
