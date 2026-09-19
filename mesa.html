@@ -1109,20 +1109,14 @@
      0. SUPABASE
 ====================================================== -->
 
-<!-- Módulo específico do Supabase da Mesa -->
+<!-- Biblioteca oficial do Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script
-    src="supabase-mesa.js"
-    defer
-></script>
+<!-- Ponte de entrada -->
+<script src="supabase-entrada.js" defer></script>
 
-
-<!-- Entrada / ponte do Supabase -->
-
-<script
-    src="supabase-entrada.js"
-    defer
-></script>
+<!-- Integração isolada da Mesa -->
+<script src="supabase-mesa.js" defer></script>
 <!-- =====================================================
      1. NÚCLEO DA MESA
 ====================================================== -->
