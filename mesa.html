@@ -966,6 +966,7 @@
                         <strong data-diagnostico="slots">
                             0/8
                         </strong>
+
                     </div>
 
                 </div>
@@ -1108,15 +1109,23 @@
 
 <!-- =====================================================
      0. SUPABASE
-     
-     IMPORTANTE:
-     A biblioteca precisa carregar primeiro.
-     Depois o supabase.js cria o cliente e registra:
-     
-     window.supabaseClient
-     
-     Nenhum novo cliente é criado aqui.
 ====================================================== -->
+
+<!-- Biblioteca oficial do Supabase -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    defer
+></script>
+
+
+<!-- Cliente exclusivo da Mesa -->
+
+<script
+    src="supabase-mesa.js"
+    defer
+></script>
+
 
 
 <!-- =====================================================
