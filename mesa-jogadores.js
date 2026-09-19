@@ -2,7 +2,7 @@
    MESA RPG ONLINE
    mesa-jogadores.js
    SISTEMA DE JOGADORES
-   INTEGRAÇÃO COM PERSONAGENS DA CAMPANHA
+   INTEGRAÇÃO COM PERSONAGENS DA CAMPANHA + REALTIME
 ============================================================ */
 
 "use strict";
@@ -48,6 +48,109 @@ const MesaJogadoresUI = {
 
 
 /* ============================================================
+   CACHE REALTIME DOS PERSONAGENS
+============================================================ */
+
+/*
+    IMPORTANTE:
+
+    Este cache recebe diretamente os personagens
+    carregados pelo mesa.js através do Supabase.
+
+    Enquanto o Realtime ainda não respondeu,
+    usamos os dados do auth.js.
+
+    Depois que o Realtime respondeu uma vez,
+    ele passa a ser a fonte principal.
+*/
+
+let personagensMesaRealtime = [];
+
+let personagensMesaRealtimeAtivo = false;
+
+
+/* ============================================================
+   RECEBER PERSONAGENS DO REALTIME
+============================================================ */
+
+function sincronizarDadosRealtime(
+    personagens = []
+) {
+
+    personagensMesaRealtime =
+        Array.isArray(personagens)
+            ? personagens
+            : [];
+
+
+    /*
+        A partir deste momento sabemos que
+        o carregamento oficial do Supabase
+        já aconteceu.
+
+        Inclusive se o resultado for [].
+
+        Isso é importante para que um jogador
+        que sair da mesa não permaneça preso
+        no cache antigo.
+    */
+
+    personagensMesaRealtimeAtivo =
+        true;
+
+
+    /*
+        Atualiza também o auth para manter
+        compatibilidade com outros sistemas.
+    */
+
+    if (
+        window.rpgAuth
+    ) {
+
+        window.rpgAuth.campaignCharacters =
+            personagensMesaRealtime;
+
+    }
+
+
+    /*
+        Sincroniza os 8 slots.
+    */
+
+    sincronizarPersonagensCampanha();
+
+
+    /*
+        Atualiza os cards imediatamente.
+    */
+
+    atualizarTodosOsCards();
+
+
+    /*
+        Notifica outros sistemas da Mesa.
+    */
+
+    document.dispatchEvent(
+        new CustomEvent(
+            "mesa:jogadoresAtualizados",
+            {
+                detail: {
+
+                    personagens:
+                        personagensMesaRealtime
+
+                }
+
+            }
+        )
+    );
+
+}
+
+
+/* ============================================================
    INICIALIZAÇÃO
 ============================================================ */
 
@@ -81,12 +184,9 @@ async function inicializarMesaJogadores() {
 
 
     /*
-        Primeiro carregamos os personagens
-        reais da campanha.
-
-        O auth.js já colocou esses dados em:
-
-        window.rpgAuth.campaignCharacters
+        Primeiro tentamos sincronizar
+        usando o que já estiver disponível
+        localmente.
     */
 
     sincronizarPersonagensCampanha();
@@ -95,10 +195,94 @@ async function inicializarMesaJogadores() {
     atualizarTodosOsCards();
 
 
+    /* ========================================================
+       REALTIME — PERSONAGENS ATUALIZADOS
+    ======================================================== */
+
+    document.addEventListener(
+        "mesa:jogadoresAtualizados",
+        evento => {
+
+            const personagens =
+                evento.detail?.personagens;
+
+
+            if (
+                Array.isArray(
+                    personagens
+                )
+            ) {
+
+                sincronizarDadosRealtime(
+                    personagens
+                );
+
+            }
+
+        }
+    );
+
+
+    /* ========================================================
+       MESA.JS — PERSONAGENS CARREGADOS
+    ======================================================== */
+
+    document.addEventListener(
+        "mesa:jogadores:realtime",
+        evento => {
+
+            const personagens =
+                evento.detail?.personagens;
+
+
+            if (
+                Array.isArray(
+                    personagens
+                )
+            ) {
+
+                sincronizarDadosRealtime(
+                    personagens
+                );
+
+            }
+
+        }
+    );
+
+
     /*
-        Escutamos alterações feitas
-        por outros sistemas da Mesa.
+        Evento enviado pelo mesa.js
+        depois que a campanha é atualizada.
     */
+
+    document.addEventListener(
+        "mesa:jogadoresAtualizados",
+        evento => {
+
+            const personagens =
+                evento.detail?.personagens;
+
+
+            if (
+                Array.isArray(
+                    personagens
+                )
+            ) {
+
+                sincronizarDadosRealtime(
+                    personagens
+                );
+
+            }
+
+        }
+    );
+
+
+    /* ========================================================
+       EVENTOS EXISTENTES DA MESA
+    ======================================================== */
 
     document.addEventListener(
         "mesa:jogadorAtualizado",
@@ -132,8 +316,7 @@ async function inicializarMesaJogadores() {
 
     /*
         Caso o auth termine de carregar
-        a campanha depois da Mesa ter
-        sido inicializada.
+        a campanha depois da Mesa.
     */
 
     document.addEventListener(
@@ -144,18 +327,41 @@ async function inicializarMesaJogadores() {
 
             atualizarTodosOsCards();
 
+
+            /*
+                Se o mesa.js já estiver disponível,
+                solicitamos uma leitura oficial
+                do Supabase.
+            */
+
+            solicitarCargaRealtime();
+
         }
     );
 
 
-    /*
-        Também fazemos algumas tentativas
-        durante o carregamento inicial.
+    /* ========================================================
+       PRIMEIRA CARGA OFICIAL
+    ======================================================== */
 
-        Isso é útil porque auth.js e
-        mesa-jogadores.js são sistemas
-        independentes.
+    /*
+        Damos um pequeno intervalo para garantir
+        que mesa.js já tenha criado MesaRPG.
     */
+
+    setTimeout(
+        () => {
+
+            solicitarCargaRealtime();
+
+        },
+        150
+    );
+
+
+    /* ========================================================
+       TENTATIVAS DE SEGURANÇA
+    ======================================================== */
 
     let tentativas = 0;
 
@@ -164,6 +370,25 @@ async function inicializarMesaJogadores() {
             () => {
 
                 tentativas++;
+
+
+                /*
+                    Se o Realtime já respondeu,
+                    não precisamos mais fazer
+                    tentativas.
+                */
+
+                if (
+                    personagensMesaRealtimeAtivo
+                ) {
+
+                    clearInterval(
+                        intervalo
+                    );
+
+                    return;
+
+                }
 
 
                 const personagens =
@@ -178,11 +403,15 @@ async function inicializarMesaJogadores() {
 
                     atualizarTodosOsCards();
 
-                    clearInterval(
-                        intervalo
-                    );
-
                 }
+
+
+                /*
+                    Tentamos novamente solicitar
+                    os dados oficiais.
+                */
+
+                solicitarCargaRealtime();
 
 
                 if (
@@ -203,6 +432,77 @@ async function inicializarMesaJogadores() {
     console.log(
         "👥 Sistema de jogadores inicializado."
     );
+
+}
+
+
+/* ============================================================
+   SOLICITAR CARGA REALTIME
+============================================================ */
+
+function solicitarCargaRealtime() {
+
+    /*
+        O mesa.js possui a função oficial
+        que consulta characters no Supabase.
+    */
+
+    if (
+        window.MesaRPG &&
+        typeof window.MesaRPG
+            .carregarJogadoresDaCampanha ===
+            "function"
+    ) {
+
+        try {
+
+            const resultado =
+                window.MesaRPG
+                    .carregarJogadoresDaCampanha();
+
+
+            /*
+                Não precisamos aguardar o resultado
+                para não bloquear a interface.
+
+                O próprio mesa.js disparará
+                os eventos quando terminar.
+            */
+
+            if (
+                resultado &&
+                typeof resultado.then ===
+                "function"
+            ) {
+
+                resultado.catch(
+                    erro => {
+
+                        console.warn(
+                            "⚠️ Falha ao carregar jogadores da campanha:",
+                            erro
+                        );
+
+                    }
+                );
+
+            }
+
+            return true;
+
+        } catch (erro) {
+
+            console.warn(
+                "⚠️ Erro solicitando jogadores ao MesaRPG:",
+                erro
+            );
+
+        }
+
+    }
+
+
+    return false;
 
 }
 
@@ -257,34 +557,26 @@ function registrarEventosJogadores() {
    PERSONAGENS DA CAMPANHA
 ============================================================ */
 
-/*
-    O auth.js já carrega:
-
-    window.rpgAuth.campaignCharacters
-
-    Portanto não precisamos consultar
-    o Supabase novamente aqui.
-*/
-
 function obterPersonagensCampanha() {
 
+    /*
+        PRIMEIRA PRIORIDADE:
+        dados oficiais recebidos pelo Realtime.
+    */
+
     if (
-        typeof window.obterPersonagensCampanha ===
-        "function"
+        personagensMesaRealtimeAtivo
     ) {
 
-        const personagens =
-            window.obterPersonagensCampanha();
-
-
-        return Array.isArray(
-            personagens
-        )
-            ? personagens
-            : [];
+        return personagensMesaRealtime;
 
     }
 
+
+    /*
+        SEGUNDA PRIORIDADE:
+        dados carregados pelo auth.js.
+    */
 
     if (
         window.rpgAuth &&
@@ -294,6 +586,43 @@ function obterPersonagensCampanha() {
     ) {
 
         return window.rpgAuth.campaignCharacters;
+
+    }
+
+
+    /*
+        TERCEIRA PRIORIDADE:
+        função global antiga,
+        caso outro arquivo ainda a forneça.
+    */
+
+    if (
+        typeof window.obterPersonagensCampanha ===
+        "function" &&
+        window.obterPersonagensCampanha !==
+        obterPersonagensCampanha
+    ) {
+
+        try {
+
+            const personagens =
+                window.obterPersonagensCampanha();
+
+
+            return Array.isArray(
+                personagens
+            )
+                ? personagens
+                : [];
+
+        } catch (erro) {
+
+            console.warn(
+                "⚠️ Erro obtendo personagens da campanha:",
+                erro
+            );
+
+        }
 
     }
 
@@ -332,11 +661,23 @@ function obterPersonagemPorSlot(
 
     return (
         personagens.find(
-            personagem =>
-                Number(
-                    personagem.slot
-                ) ===
-                numeroSlot
+            personagem => {
+
+                const slotPersonagem =
+                    Number(
+                        personagem?.slot
+                    );
+
+
+                return (
+                    Number.isInteger(
+                        slotPersonagem
+                    ) &&
+                    slotPersonagem ===
+                    numeroSlot
+                );
+
+            }
         ) ||
         null
     );
@@ -433,12 +774,6 @@ function converterPersonagemParaJogador(
             : manaMaximo;
 
 
-    /*
-        Criamos uma cópia para preservar
-        todas as estruturas que o mesa.js
-        já possa ter criado.
-    */
-
     return {
 
         ...(jogadorBase || {}),
@@ -451,11 +786,13 @@ function converterPersonagemParaJogador(
 
 
         characterId:
-            personagem.id || null,
+            personagem.id ||
+            null,
 
 
         userId:
-            personagem.user_id || null,
+            personagem.user_id ||
+            null,
 
 
         slot:
@@ -466,24 +803,28 @@ function converterPersonagemParaJogador(
 
         nome:
             personagem.name ||
+            personagem.nome ||
             jogadorBase?.nome ||
             `Player ${personagem.slot}`,
 
 
         raca:
             personagem.race ||
+            personagem.raca ||
             jogadorBase?.raca ||
             "Raça",
 
 
         classe:
             personagem.class ||
+            personagem.classe ||
             jogadorBase?.classe ||
             "Classe",
 
 
         afinidade:
             personagem.affinity ||
+            personagem.afinidade ||
             jogadorBase?.afinidade ||
             null,
 
@@ -510,32 +851,76 @@ function converterPersonagemParaJogador(
             jogadorBase?.avatar ||
             null,
 
+
         atributos:
             personagem.atributos ||
             personagem.attributes ||
             {
-                atk: personagem.atk,
-                atkMgc: personagem.atk_mgc || personagem.atkMgc,
-                def: personagem.def,
-                res: personagem.res,
-                agi: personagem.agi,
-                int: personagem.int
+                atk:
+                    personagem.atk,
+
+                atkMgc:
+                    personagem.atk_mgc ||
+                    personagem.atkMgc,
+
+                def:
+                    personagem.def,
+
+                res:
+                    personagem.res,
+
+                agi:
+                    personagem.agi,
+
+                int:
+                    personagem.int
             },
+
+
         recursos:
             personagem.recursos ||
             personagem.resources ||
             {
-                est: personagem.est,
-                sanidade: personagem.sanidade
+                est:
+                    personagem.est,
+
+                sanidade:
+                    personagem.sanidade
             },
+
+
+        /*
+            Mantemos o inventário do personagem
+            se ele existir no banco.
+
+            Caso não exista, preservamos
+            o inventário já existente na Mesa.
+        */
+
         inventario:
-            Array.isArray(personagem.inventario)
+            Array.isArray(
+                personagem.inventario
+            )
                 ? personagem.inventario
                 : (
-                    personagem.inventory &&
-                    Array.isArray(personagem.inventory.items)
-                        ? personagem.inventory.items
-                        : []
+                    Array.isArray(
+                        personagem.inventory
+                    )
+                        ? personagem.inventory
+                        : (
+                            personagem.inventory &&
+                            Array.isArray(
+                                personagem.inventory.items
+                            )
+                                ? personagem.inventory.items
+                                : (
+                                    Array.isArray(
+                                        jogadorBase?.inventario
+                                    )
+                                        ? jogadorBase.inventario
+                                        : []
+                                )
+                        )
                 ),
 
 
@@ -560,14 +945,6 @@ function converterPersonagemParaJogador(
 
         },
 
-
-        /*
-            Os campos abaixo pertencem ao
-            estado da Mesa.
-
-            Se já existirem, preservamos.
-            Se não existirem, inicializamos.
-        */
 
         status:
             Array.isArray(
@@ -627,14 +1004,6 @@ function converterPersonagemParaJogador(
             null,
 
 
-        inventario:
-            Array.isArray(
-                jogadorBase?.inventario
-            )
-                ? jogadorBase.inventario
-                : [],
-
-
         conectado:
             jogadorBase?.conectado !== false,
 
@@ -682,12 +1051,72 @@ function sincronizarPersonagensCampanha() {
 
 
     /*
+        IMPORTANTE:
+
+        Se ainda não recebemos os dados oficiais
+        do Supabase e não há personagens locais,
+        NÃO destruímos os jogadores existentes.
+
+        Isso evita que a primeira sincronização
+        transforme os 8 slots em vazios antes
+        do Realtime terminar.
+    */
+
+    if (
+        !personagensMesaRealtimeAtivo &&
+        personagens.length === 0
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+        Criamos um mapa dos personagens por slot.
+
+        Isso torna a sincronização mais segura.
+    */
+
+    const personagensPorSlot =
+        new Map();
+
+
+    personagens.forEach(
+        personagem => {
+
+            const slot =
+                Number(
+                    personagem?.slot
+                );
+
+
+            if (
+                Number.isInteger(slot) &&
+                slot >= 1 &&
+                slot <= 8
+            ) {
+
+                personagensPorSlot.set(
+                    slot,
+                    personagem
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
         Os 8 jogadores continuam existindo
         no estado da Mesa.
 
-        Nós apenas substituímos os dados
-        dos slots ocupados pelos personagens
-        reais.
+        Os slots ocupados recebem
+        os personagens reais.
+
+        Os slots sem personagem ficam
+        realmente livres.
     */
 
     for (
@@ -701,13 +1130,15 @@ function sincronizarPersonagensCampanha() {
 
 
         const jogadorBase =
-            estado.jogadores[indice];
+            estado.jogadores[indice] ||
+            {};
 
 
         const personagem =
-            obterPersonagemPorSlot(
+            personagensPorSlot.get(
                 slot
-            );
+            ) ||
+            null;
 
 
         if (
@@ -727,8 +1158,8 @@ function sincronizarPersonagensCampanha() {
             /*
                 Slot vazio.
 
-                Mantemos o jogador base,
-                mas marcamos como vazio.
+                Mantemos somente os dados estruturais
+                necessários para o funcionamento do sistema.
             */
 
             estado.jogadores[indice] = {
@@ -771,10 +1202,6 @@ function sincronizarPersonagensCampanha() {
     }
 
 
-    /*
-        Atualiza a interface imediatamente.
-    */
-
     atualizarTodosOsCards();
 
 
@@ -815,7 +1242,9 @@ function obterJogadorLocal(
 
     return estado.jogadores.find(
         jogador =>
-            jogador.id ===
+            Number(
+                jogador.id
+            ) ===
             Number(playerId)
     );
 
@@ -978,13 +1407,7 @@ function atualizarCardJogadorCompleto(
 
 
         /*
-            Avatar:
-
-            Se houver uma URL de imagem,
-            usamos a imagem.
-
-            Caso contrário mantemos o
-            emoji 👤 já existente.
+            Avatar
         */
 
         if (
@@ -1062,6 +1485,8 @@ function atualizarCardJogadorCompleto(
 
         if (avatar) {
 
+            avatar.innerHTML = "";
+
             avatar.textContent =
                 "👤";
 
@@ -1112,15 +1537,6 @@ function atualizarCardJogadorCompleto(
 
     card.dataset.playerId =
         jogador.id;
-
-
-    /*
-        Futuramente o CSS poderá usar:
-
-        [data-ocupado="false"]
-        [data-conectado="false"]
-        [data-em-batalha="true"]
-    */
 
 }
 
@@ -3263,6 +3679,17 @@ window.MesaJogadores = {
     },
 
 
+    sincronizarRealtime(
+        personagens
+    ) {
+
+        sincronizarDadosRealtime(
+            personagens
+        );
+
+    },
+
+
     personagemPorSlot(
         slot
     ) {
@@ -3730,6 +4157,14 @@ window.atualizarCardJogadorCompleto =
 
 window.sincronizarPersonagensMesa =
     sincronizarPersonagensCampanha;
+
+
+window.obterPersonagensCampanhaMesa =
+    obterPersonagensCampanha;
+
+
+window.sincronizarPersonagensRealtimeMesa =
+    sincronizarDadosRealtime;
 
 
 /* ============================================================
