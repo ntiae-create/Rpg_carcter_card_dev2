@@ -22,7 +22,9 @@
                        PERSONAGEM
                          CONFIRMADO
                               ↓
-                           SLOT
+                    FUNÇÃO SQL DO BANCO
+                              ↓
+                   CAMPAIGN_ID + SLOT
                               ↓
                      CAMPANHA ATIVA
                               ↓
@@ -869,6 +871,106 @@
 
 
     /* =====================================================
+       NOVO FLUXO — ENTRAR JOGADOR PELA FUNÇÃO SQL
+       ===================================================== */
+
+    async function entrarJogadorCampanha(
+        personagem,
+        campanha
+    ) {
+
+        const supabase =
+            obterSupabase();
+
+        if (!supabase) {
+
+            throw new Error(
+                "Supabase não está disponível."
+            );
+
+        }
+
+
+        if (!personagem?.id) {
+
+            throw new Error(
+                "Personagem inválido."
+            );
+
+        }
+
+
+        if (!campanha?.id) {
+
+            throw new Error(
+                "Campanha inválida."
+            );
+
+        }
+
+
+        const {
+            data,
+            error
+        } =
+            await supabase.rpc(
+                "entrar_jogador_campanha",
+                {
+                    p_character_id:
+                        personagem.id,
+
+                    p_campaign_id:
+                        campanha.id
+                }
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (!data?.success) {
+
+            throw new Error(
+                "Não foi possível vincular o personagem à campanha."
+            );
+
+        }
+
+
+        const slot =
+            Number(data.slot);
+
+
+        if (
+            !Number.isInteger(slot) ||
+            slot < 1 ||
+            slot > MAX_JOGADORES
+        ) {
+
+            throw new Error(
+                "A campanha foi vinculada, mas o slot retornado é inválido."
+            );
+
+        }
+
+
+        return {
+            ...personagem,
+            campaign_id:
+                data.campaign_id ||
+                campanha.id,
+            campaignId:
+                data.campaign_id ||
+                campanha.id,
+            slot
+        };
+
+    }
+
+
+    /* =====================================================
        SALVAR MESA ATIVA
        ===================================================== */
 
@@ -1169,6 +1271,7 @@
 
         /*
          * Garantia final.
+
          */
 
         if (
@@ -1387,68 +1490,30 @@
 
 
             /* =============================================
-               5. MEMBRO
+               5. VINCULAR JOGADOR PELO BANCO
             ============================================= */
 
-            await adicionarMembro(
-                campanha.id,
-                usuario.id
+            const personagemAtualizado =
+                await entrarJogadorCampanha(
+                    personagem,
+                    campanha
+                );
+
+
+            Object.assign(
+                personagem,
+                personagemAtualizado
             );
 
 
-            /* =============================================
-               6. SLOT EXISTENTE
-            ============================================= */
-
-            let slot =
-                obterSlotPersonagem(
-                    personagem
+            const slot =
+                Number(
+                    personagem.slot
                 );
 
 
             /* =============================================
-               7. NOVO SLOT
-            ============================================= */
-
-            if (!slot) {
-
-                slot =
-                    await encontrarPrimeiroSlot(
-                        campanha.id
-                    );
-
-
-                if (!slot) {
-
-                    throw new Error(
-                        "A mesa já está cheia. O limite é de 8 jogadores."
-                    );
-
-                }
-
-
-                const personagemAtualizado =
-                    await associarPersonagem(
-                        personagem,
-                        campanha,
-                        slot
-                    );
-
-
-                if (personagemAtualizado) {
-
-                    Object.assign(
-                        personagem,
-                        personagemAtualizado
-                    );
-
-                }
-
-            }
-
-
-            /* =============================================
-               8. GARANTIR DADOS LOCAIS
+               6. GARANTIR DADOS LOCAIS
             ============================================= */
 
             personagem.campaign_id =
@@ -1462,7 +1527,7 @@
 
 
             /* =============================================
-               9. SALVAR MESA
+               7. SALVAR MESA
             ============================================= */
 
             salvarMesaAtiva(
@@ -1473,7 +1538,7 @@
 
 
             /* =============================================
-               10. SINCRONIZAR AUTH
+               8. SINCRONIZAR AUTH
             ============================================= */
 
             await atualizarAuth(
@@ -1485,7 +1550,7 @@
 
 
             /* =============================================
-               11. MESA
+               9. MESA
             ============================================= */
 
             mostrarMensagem(
@@ -1769,7 +1834,7 @@
 
 
             /* =============================================
-               4. SLOT
+               4. VINCULAR/RECUPERAR PERSONAGEM
             ============================================= */
 
             let slot =
@@ -1778,64 +1843,13 @@
                 );
 
 
-            if (!slot) {
-
-                const slotSalvo =
-                    Number(
-                        salvo.slot
-                    );
-
-
-                if (
-                    Number.isInteger(
-                        slotSalvo
-                    ) &&
-                    slotSalvo >= 1 &&
-                    slotSalvo <= MAX_JOGADORES
-                ) {
-
-                    const ocupado =
-                        await slotPertenceOutroPersonagem(
-                            campanha.id,
-                            slotSalvo,
-                            personagem.id
-                        );
-
-
-                    if (!ocupado) {
-
-                        slot =
-                            slotSalvo;
-
-                    }
-
-                }
-
-            }
-
-
-            if (!slot) {
-
-                slot =
-                    await encontrarPrimeiroSlot(
-                        campanha.id
-                    );
-
-            }
-
-
-            if (!slot) {
-
-                throw new Error(
-                    "Não há slots disponíveis nessa mesa."
-                );
-
-            }
-
-
-            /* =============================================
-               5. VINCULAR PERSONAGEM
-            ============================================= */
+            /*
+             * Se o personagem já possui campanha e slot,
+             * usamos os dados existentes.
+             *
+             * Caso contrário, o banco fará o vínculo completo
+             * e atribuirá um slot através da função SQL.
+             */
 
             if (
                 String(
@@ -1844,34 +1858,39 @@
                 String(
                     campanha.id
                 ) ||
-                Number(
-                    personagem.slot
-                ) !==
-                Number(slot)
+                !slot
             ) {
 
                 personagem =
-                    await associarPersonagem(
+                    await entrarJogadorCampanha(
                         personagem,
-                        campanha,
-                        slot
+                        campanha
+                    );
+
+                slot =
+                    Number(
+                        personagem.slot
                     );
 
             }
 
 
             /* =============================================
-               6. GARANTIR MEMBRO
+               5. GARANTIR DADOS LOCAIS
             ============================================= */
 
-            await adicionarMembro(
-                campanha.id,
-                usuario.id
-            );
+            personagem.campaign_id =
+                campanha.id;
+
+            personagem.campaignId =
+                campanha.id;
+
+            personagem.slot =
+                Number(slot);
 
 
             /* =============================================
-               7. SALVAR
+               6. SALVAR
             ============================================= */
 
             salvarMesaAtiva(
@@ -1882,7 +1901,7 @@
 
 
             /* =============================================
-               8. AUTH
+               7. AUTH
             ============================================= */
 
             await atualizarAuth(
@@ -1894,7 +1913,7 @@
 
 
             /* =============================================
-               9. MESA
+               8. MESA
             ============================================= */
 
             entrarNaMesa();
