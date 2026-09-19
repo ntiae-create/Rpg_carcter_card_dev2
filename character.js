@@ -26,7 +26,7 @@ const CharacterModule = (() => {
 
         "Humano": {
 
-            "Bufão":
+            "Bufao":
                 "https://bjkbfxcmyihdruqrwsdf.supabase.co/storage/v1/object/public/character-art/classes/bufao/bufao_humano.png"
 
         }
