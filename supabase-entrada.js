@@ -2,137 +2,338 @@
 
 /*
 ==============================================================
- SUPABASE — ENTRADA DA MESA
+ SUPABASE — ENTRADA
  -------------------------------------------------------------
- Este arquivo funciona como uma ponte entre a aplicação
- e o módulo específico do Supabase da Mesa.
+ Ponte entre a página da Mesa e o módulo supabase-mesa.js.
 
- IMPORTANTE:
- - Não altera mesa.js
- - Não altera auth.js
- - Não altera campaign.js
- - Não cria outro projeto Supabase
- - Não executa consultas diretamente
+ Responsabilidade:
+ - localizar o contexto salvo da Mesa
+ - preparar os dados
+ - entregar o contexto ao SupabaseMesa
+
+ Não executa consultas ao banco.
 ==============================================================
 */
 
 (function () {
 
-    console.log("[Supabase Entrada] Inicializando...");
-
-    /*
-    ----------------------------------------------------------
-    CONTROLE DE SEGURANÇA
-    ----------------------------------------------------------
-    Se precisarmos desativar toda a integração nova,
-    basta mudar para false.
-    ----------------------------------------------------------
-    */
-
-    const ATIVO = true;
-
-    if (!ATIVO) {
-
-        console.warn(
-            "[Supabase Entrada] Integração da Mesa desativada."
-        );
-
-        window.SupabaseEntrada = {
-            ativo: false,
-            disponivel: false
-        };
-
-        return;
-    }
+    console.log(
+        "[Supabase Entrada] Carregando..."
+    );
 
 
     /*
-    ----------------------------------------------------------
-    VERIFICA SE O MÓDULO DA MESA EXISTE
-    ----------------------------------------------------------
+    ==========================================================
+     ESTADO
+    ==========================================================
     */
 
-    function verificarModuloMesa() {
-
-        if (
-            !window.SupabaseMesa ||
-            typeof window.SupabaseMesa.inicializar !== "function"
-        ) {
-
-            console.warn(
-                "[Supabase Entrada] supabase-mesa.js ainda não está disponível."
-            );
-
-            return false;
-        }
-
-        return true;
-    }
-
-
-    /*
-    ----------------------------------------------------------
-    INICIALIZAÇÃO
-    ----------------------------------------------------------
-    */
-
-    function iniciar() {
-
-        if (!verificarModuloMesa()) {
-            return;
-        }
-
-        try {
-
-            window.SupabaseMesa.inicializar();
-
-            console.log(
-                "[Supabase Entrada] Supabase da Mesa conectado ao módulo."
-            );
-
-        } catch (erro) {
-
-            console.error(
-                "[Supabase Entrada] Erro ao iniciar Supabase da Mesa:",
-                erro
-            );
-
-        }
-    }
-
-
-    /*
-    ----------------------------------------------------------
-    API PÚBLICA
-    ----------------------------------------------------------
-    */
-
-    window.SupabaseEntrada = {
+    const estado = {
 
         ativo: true,
 
-        iniciar,
+        contexto: null,
 
-        verificarModuloMesa
+        pronto: false
 
     };
 
 
     /*
-    ----------------------------------------------------------
-    EXPÕE O EVENTO DE ENTRADA
-    ----------------------------------------------------------
+    ==========================================================
+     LÊ O CONTEXTO DA MESA
+    ==========================================================
     */
 
-    window.dispatchEvent(
-        new CustomEvent("supabase:entradaDisponivel")
+    function obterContextoMesa() {
+
+        try {
+
+            const salvo =
+                localStorage.getItem(
+                    "rpg_mesa_ativa"
+                );
+
+
+            if (!salvo) {
+
+                console.warn(
+                    "[Supabase Entrada] Nenhum contexto de Mesa encontrado."
+                );
+
+                return null;
+            }
+
+
+            const dados =
+                JSON.parse(salvo);
+
+
+            if (!dados || typeof dados !== "object") {
+
+                console.warn(
+                    "[Supabase Entrada] Contexto inválido."
+                );
+
+                return null;
+            }
+
+
+            return dados;
+
+        } catch (erro) {
+
+            console.error(
+                "[Supabase Entrada] Erro ao ler contexto:",
+                erro
+            );
+
+            return null;
+        }
+    }
+
+
+    /*
+    ==========================================================
+     MONTA O CONTEXTO
+    ==========================================================
+    */
+
+    function prepararContexto() {
+
+        const dados =
+            obterContextoMesa();
+
+
+        if (!dados) {
+
+            return null;
+        }
+
+
+        const contexto = {
+
+            campanha: {
+
+                id:
+                    dados.campaignId ||
+                    dados.campanhaId ||
+                    null,
+
+                nome:
+                    dados.campaignName ||
+                    dados.campanhaNome ||
+                    null,
+
+                masterId:
+                    dados.masterId ||
+                    null
+
+            },
+
+            usuario: {
+
+                id:
+                    dados.userId ||
+                    null,
+
+                nome:
+                    dados.userName ||
+                    null,
+
+                email:
+                    dados.userEmail ||
+                    null
+
+            },
+
+            personagem: {
+
+                id:
+                    dados.characterId ||
+                    null,
+
+                slot:
+                    dados.slot ||
+                    null
+
+            }
+
+        };
+
+
+        estado.contexto =
+            contexto;
+
+
+        return contexto;
+    }
+
+
+    /*
+    ==========================================================
+     ENVIA PARA O SUPABASE-MESA
+    ==========================================================
+    */
+
+    function enviarContexto() {
+
+        if (
+            !window.SupabaseMesa ||
+            typeof window.SupabaseMesa.receberContexto !==
+                "function"
+        ) {
+
+            console.warn(
+                "[Supabase Entrada] SupabaseMesa ainda não está disponível."
+            );
+
+            return false;
+        }
+
+
+        const contexto =
+            prepararContexto();
+
+
+        if (!contexto) {
+
+            return false;
+        }
+
+
+        const recebido =
+            window.SupabaseMesa.receberContexto(
+                contexto
+            );
+
+
+        if (recebido) {
+
+            estado.pronto = true;
+
+
+            console.log(
+                "[Supabase Entrada] Contexto enviado ao SupabaseMesa."
+            );
+
+        }
+
+
+        return recebido;
+    }
+
+
+    /*
+    ==========================================================
+     INICIALIZAÇÃO
+    ==========================================================
+    */
+
+    function iniciar() {
+
+        console.log(
+            "[Supabase Entrada] Iniciando ponte..."
+        );
+
+
+        /*
+        ------------------------------------------------------
+        Verifica o módulo
+        ------------------------------------------------------
+        */
+
+        if (!window.SupabaseMesa) {
+
+            console.warn(
+                "[Supabase Entrada] SupabaseMesa não encontrado."
+            );
+
+            return;
+        }
+
+
+        /*
+        ------------------------------------------------------
+        Inicializa o módulo
+        ------------------------------------------------------
+        */
+
+        if (
+            typeof window.SupabaseMesa.inicializar ===
+            "function"
+        ) {
+
+            window.SupabaseMesa.inicializar();
+
+        }
+
+
+        /*
+        ------------------------------------------------------
+        Entrega o contexto
+        ------------------------------------------------------
+        */
+
+        enviarContexto();
+
+
+        /*
+        ------------------------------------------------------
+        Evento
+        ------------------------------------------------------
+        */
+
+        window.dispatchEvent(
+            new CustomEvent(
+                "supabase:entradaPronta",
+                {
+                    detail: {
+
+                        contexto:
+                            estado.contexto,
+
+                        pronto:
+                            estado.pronto
+
+                    }
+                }
+            )
+        );
+
+    }
+
+
+    /*
+    ==========================================================
+     API PÚBLICA
+    ==========================================================
+    */
+
+    window.SupabaseEntrada = {
+
+        iniciar,
+
+        obterContextoMesa,
+
+        prepararContexto,
+
+        enviarContexto,
+
+        estado
+
+    };
+
+
+    console.log(
+        "[Supabase Entrada] Módulo disponível."
     );
 
 
     /*
-    ----------------------------------------------------------
-    TENTA INICIAR QUANDO A PÁGINA ESTIVER PRONTA
-    ----------------------------------------------------------
+    ==========================================================
+     INICIALIZA APÓS O DOM
+    ==========================================================
     */
 
     if (document.readyState === "loading") {
@@ -148,6 +349,5 @@
         iniciar();
 
     }
-
 
 })();
