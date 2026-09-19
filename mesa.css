@@ -134,13 +134,25 @@ body {
    CABEÇALHO
 ============================================================ */
 
+/*
+   IMPORTANTE:
+   O cabeçalho agora ocupa toda a largura.
+
+   Antes o transform: translateX(-50%) fazia com que
+   os botões fixed dentro dele fossem calculados em
+   relação ao cabeçalho.
+
+   Agora o título continua centralizado e os botões
+   podem ocupar livremente os cantos da tela.
+*/
+
 .mesa-header {
     position: absolute;
 
     top: 22px;
-    left: 50%;
+    left: 0;
 
-    transform: translateX(-50%);
+    width: 100%;
 
     z-index: 15;
 
@@ -148,7 +160,6 @@ body {
     align-items: center;
     justify-content: center;
 
-   
     pointer-events: none;
 }
 
@@ -284,10 +295,6 @@ body {
     top: 50%;
 
     transform: translate(-50%, -50%);
-
-    /*
-       ÁREA CENTRAL AMPLIADA
-    */
 
     width: min(64vw, 850px);
     height: min(66vh, 700px);
@@ -543,8 +550,21 @@ body {
 
 
 /* ============================================================
-   POSIÇÕES DOS 8 JOGADORES
+   POSIÇÕES DOS 8 JOGADORES — DESKTOP
 ============================================================ */
+
+/*
+   Organização:
+   
+   1  2  3  4
+   ┌───────────┐
+   │   MESA    │
+   └───────────┘
+   5  6  7  8
+
+   Em telas grandes mantemos a disposição original,
+   pois há espaço suficiente.
+*/
 
 .player-card[data-seat="1"] {
     top: 11%;
@@ -1577,11 +1597,7 @@ body {
 @media (max-width: 900px) {
 
     .mesa-stage {
-        /*
-           PALCO CENTRAL AMPLIADO NO TABLET
-        */
-
-        width: 64vw;
+        width: 60vw;
         height: 62vh;
 
         min-width: 340px;
@@ -1638,15 +1654,24 @@ body {
         border-radius: 15px;
     }
 
+
+    /* --------------------------------
+       CABEÇALHO MOBILE
+    -------------------------------- */
+
     .mesa-header {
         top: 12px;
+
+        width: 100%;
     }
 
     .mesa-title {
         padding:
             5px
-            15px
+            11px
             6px;
+
+        border-radius: 11px;
     }
 
     .mesa-title h1 {
@@ -1658,9 +1683,14 @@ body {
         letter-spacing: 1.4px;
     }
 
+
+    /* --------------------------------
+       CONFIGURAÇÕES
+    -------------------------------- */
+
     .mesa-settings-btn {
         top: 11px;
-        right: 12px;
+        right: 9px;
 
         width: 35px;
         height: 35px;
@@ -1671,17 +1701,16 @@ body {
 
     /* --------------------------------
        PALCO CENTRAL
+       
+       Mais estreito para criar espaço
+       para os jogadores nas laterais.
     -------------------------------- */
 
     .mesa-stage {
         left: 50%;
         top: 50%;
 
-        /*
-           PALCO CENTRAL MAIOR NO CELULAR
-        */
-
-        width: 62vw;
+        width: 56vw;
         height: 58vh;
 
         min-width: 0;
@@ -1718,12 +1747,16 @@ body {
 
 
     /* --------------------------------
-       CARDS
+       CARDS MOBILE
+       
+       Os cards agora ficam menores,
+       porém com espaço suficiente para
+       mostrar o botão de personagem.
     -------------------------------- */
 
     .player-card {
-        width: 130px;
-        height: 91px;
+        width: 125px;
+        height: 92px;
 
         border-radius: 11px;
     }
@@ -1760,48 +1793,79 @@ body {
     }
 
 
-    /* --------------------------------
-       POSIÇÕES MOBILE
-    -------------------------------- */
+    /* ========================================================
+       MESA FÍSICA — JOGADORES AO REDOR
+       
+       1, 2, 3, 4 = lado esquerdo
+       5, 6, 7, 8 = lado direito
+    ======================================================== */
 
     .player-card[data-seat="1"] {
-        top: 14%;
-        left: 2%;
+        top: 17%;
+        left: 1%;
+        right: auto;
+
+        transform: rotate(-1deg);
     }
 
     .player-card[data-seat="2"] {
-        top: 10%;
-        left: 20%;
+        top: 36%;
+        left: 1%;
+        right: auto;
+
+        transform: rotate(-0.5deg);
     }
 
     .player-card[data-seat="3"] {
-        top: 10%;
-        right: 20%;
+        top: 55%;
+        left: 1%;
+        right: auto;
+
+        transform: rotate(0.5deg);
     }
 
     .player-card[data-seat="4"] {
-        top: 14%;
-        right: 2%;
+        top: 74%;
+        left: 1%;
+        right: auto;
+
+        transform: rotate(1deg);
     }
 
     .player-card[data-seat="5"] {
-        bottom: 13%;
-        left: 2%;
+        top: 17%;
+        right: 1%;
+        left: auto;
+        bottom: auto;
+
+        transform: rotate(1deg);
     }
 
     .player-card[data-seat="6"] {
-        bottom: 9%;
-        left: 20%;
+        top: 36%;
+        right: 1%;
+        left: auto;
+        bottom: auto;
+
+        transform: rotate(0.5deg);
     }
 
     .player-card[data-seat="7"] {
-        bottom: 9%;
-        right: 20%;
+        top: 55%;
+        right: 1%;
+        left: auto;
+        bottom: auto;
+
+        transform: rotate(-0.5deg);
     }
 
     .player-card[data-seat="8"] {
-        bottom: 13%;
-        right: 2%;
+        top: 74%;
+        right: 1%;
+        left: auto;
+        bottom: auto;
+
+        transform: rotate(-1deg);
     }
 
 
@@ -1928,9 +1992,46 @@ body {
 
 @media (max-width: 430px) {
 
+    /* --------------------------------
+       CABEÇALHO
+    -------------------------------- */
+
+    .mesa-title {
+        padding:
+            4px
+            8px
+            5px;
+    }
+
+    .mesa-title h1 {
+        font-size: 13px;
+    }
+
+    .mesa-title span {
+        font-size: 6px;
+        letter-spacing: 1px;
+    }
+
+
+    /* --------------------------------
+       PALCO
+    -------------------------------- */
+
+    .mesa-stage {
+        width: 53vw;
+        height: 55vh;
+    }
+
+
+    /* --------------------------------
+       CARDS
+    -------------------------------- */
+
     .player-card {
-        width: 112px;
+        width: 88px;
         height: 82px;
+
+        border-radius: 10px;
     }
 
     .player-card-content {
@@ -1964,23 +2065,49 @@ body {
         height: 3px;
     }
 
-    .mesa-stage {
-        /*
-           PALCO CENTRAL MAIOR EM TELAS PEQUENAS
-        */
 
-        width: 60vw;
-        height: 55vh;
+    /* --------------------------------
+       POSIÇÕES DOS PLAYERS
+    -------------------------------- */
+
+    .player-card[data-seat="1"] {
+        top: 17%;
+        left: 1%;
     }
 
-    .player-card[data-seat="2"],
+    .player-card[data-seat="2"] {
+        top: 36%;
+        left: 1%;
+    }
+
     .player-card[data-seat="3"] {
-        top: 11%;
+        top: 55%;
+        left: 1%;
     }
 
-    .player-card[data-seat="6"],
+    .player-card[data-seat="4"] {
+        top: 74%;
+        left: 1%;
+    }
+
+    .player-card[data-seat="5"] {
+        top: 17%;
+        right: 1%;
+    }
+
+    .player-card[data-seat="6"] {
+        top: 36%;
+        right: 1%;
+    }
+
     .player-card[data-seat="7"] {
-        bottom: 10%;
+        top: 55%;
+        right: 1%;
+    }
+
+    .player-card[data-seat="8"] {
+        top: 74%;
+        right: 1%;
     }
 
 
@@ -2018,8 +2145,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
 
     *,
-    *::before,
-    *::after {
+    *::before {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
