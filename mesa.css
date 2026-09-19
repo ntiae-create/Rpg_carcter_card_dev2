@@ -2258,7 +2258,7 @@ body {
     }
 
     .player-card[data-seat="7"] {
-        bottom: 7%;
+        bottom: 9%;
         left: 22%;
 
         transform:
@@ -2266,7 +2266,7 @@ body {
     }
 
     .player-card[data-seat="8"] {
-        bottom: 7%;
+        bottom: 9%;
         right: 22%;
 
         transform:
