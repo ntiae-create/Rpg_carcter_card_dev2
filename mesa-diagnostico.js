@@ -68,30 +68,21 @@ function obterEstadoMesa() {
 }  
 
 
-function obterSupabase() {  
+function obterSupabase() {
 
-    if (window.supabaseClient) {  
+    const cliente =
+        window.supabaseClient;
 
-        return window.supabaseClient;  
+    if (
+        cliente &&
+        typeof cliente.from === "function" &&
+        cliente.auth
+    ) {
+        return cliente;
+    }
 
-    }  
-
-    if (window.supabase) {  
-
-        if (  
-            typeof window.supabase.auth === "object" ||  
-            typeof window.supabase.auth === "function"  
-        ) {  
-
-            return window.supabase;  
-
-        }  
-
-    }  
-
-    return null;  
-
-}  
+    return null;
+}
 
 
 function obterSupabaseMesa() {  
