@@ -915,6 +915,11 @@ const CharacterModule = (() => {
                         function (dataURL) {
                             character.imageURL = dataURL;
                             atualizarImagem();
+                            alert(
+                                "✅ Imagem enviada! Tamanho: " +
+                                Math.round(dataURL.length / 1024) +
+                                " KB. Se não aparecer na tela, recarregue a página."
+                            );
                             try {
                                 salvarPersonagem();
                             } catch (erro) {
@@ -962,33 +967,52 @@ const CharacterModule = (() => {
         const leitor = new FileReader();
         leitor.onload = function (e) {
             const img = new Image();
+            const dataURLOriginal = e.target.result;
+            let chamado = false;
+            const finalizar = function (url) {
+                if (chamado) return;
+                chamado = true;
+                callback(url);
+            };
             img.onload = function () {
-                let largura = img.width;
-                let altura = img.height;
-                if (largura > altura && largura > TAMANHO_MAX) {
-                    altura = Math.round((altura * TAMANHO_MAX) / largura);
-                    largura = TAMANHO_MAX;
-                } else if (altura > TAMANHO_MAX) {
-                    largura = Math.round((largura * TAMANHO_MAX) / altura);
-                    altura = TAMANHO_MAX;
+                try {
+                    let largura = img.width;
+                    let altura = img.height;
+                    if (largura > altura && largura > TAMANHO_MAX) {
+                        altura = Math.round((altura * TAMANHO_MAX) / largura);
+                        largura = TAMANHO_MAX;
+                    } else if (altura > TAMANHO_MAX) {
+                        largura = Math.round((largura * TAMANHO_MAX) / altura);
+                        altura = TAMANHO_MAX;
+                    }
+                    const canvas = document.createElement("canvas");
+                    canvas.width = largura;
+                    canvas.height = altura;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, largura, altura);
+                    const temTransparencia =
+                        arquivo.type === "image/png" ||
+                        arquivo.type === "image/webp";
+                    const dataURL = temTransparencia
+                        ? canvas.toDataURL("image/png")
+                        : canvas.toDataURL("image/jpeg", 0.75);
+                    finalizar(dataURL);
+                } catch (erro) {
+                    console.warn(
+                        "[Imagem] Redimensionamento falhou, usando original:",
+                        erro
+                    );
+                    finalizar(dataURLOriginal);
                 }
-                const canvas = document.createElement("canvas");
-                canvas.width = largura;
-                canvas.height = altura;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(img, 0, 0, largura, altura);
-                const temTransparencia =
-                    arquivo.type === "image/png" ||
-                    arquivo.type === "image/webp";
-                const dataURL = temTransparencia
-                    ? canvas.toDataURL("image/png")
-                    : canvas.toDataURL("image/jpeg", 0.75);
-                callback(dataURL);
             };
             img.onerror = function () {
-                alert("Erro ao processar a imagem. Tente outro arquivo.");
+                finalizar(dataURLOriginal);
             };
-            img.src = e.target.result;
+            img.src = dataURLOriginal;
+            // Timeout: se travar no mobile, usa a imagem original.
+            setTimeout(function () {
+                finalizar(dataURLOriginal);
+            }, 8000);
         };
         leitor.onerror = function () {
             alert("Erro ao carregar a imagem. Tente novamente.");
