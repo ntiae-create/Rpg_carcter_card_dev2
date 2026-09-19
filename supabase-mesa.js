@@ -1,17 +1,33 @@
 "use strict";
 
-/* =========================================================
-   SUPABASE MESA
-   Cliente principal + contexto da Mesa RPG
-========================================================= */
+/*
+==============================================================
+ SUPABASE — MESA
+ -------------------------------------------------------------
+ Módulo isolado de integração da Mesa com o Supabase.
+
+ Este arquivo NÃO deve:
+ - alterar mesa.js
+ - alterar auth.js
+ - alterar campaign.js
+ - carregar personagens automaticamente
+ - iniciar Realtime automaticamente
+
+ Ele apenas prepara o cliente e recebe o contexto
+ fornecido pelo supabase-entrada.js.
+==============================================================
+*/
 
 (function () {
 
     console.log("[Supabase Mesa] Carregando módulo...");
 
-    /* =====================================================
-       CONFIGURAÇÃO
-    ===================================================== */
+
+    /*
+    ==========================================================
+     CONFIGURAÇÃO
+    ==========================================================
+    */
 
     const CONFIG = {
 
@@ -24,56 +40,74 @@
     };
 
 
-    /* =====================================================
-       ESTADO
-    ===================================================== */
+    /*
+    ==========================================================
+     ESTADO INTERNO
+    ==========================================================
+    */
 
     const estado = {
 
-        inicializado:
-            false,
+        inicializado: false,
 
-        bibliotecaDisponivel:
-            false,
+        bibliotecaDisponivel: false,
 
-        cliente:
-            null,
+        cliente: null,
 
-        origemCliente:
-            null,
+        origemCliente: null,
 
-        mesmoClienteGlobal:
-            true,
+        mesmoClienteGlobal: false,
 
-        contextoRecebido:
-            false,
+        contextoRecebido: false,
 
-        contexto:
-            null
+        contexto: null
 
     };
 
 
-    /* =====================================================
-       VERIFICAR BIBLIOTECA
-    ===================================================== */
+    /*
+    ==========================================================
+     VERIFICA A BIBLIOTECA DO SUPABASE
+    ==========================================================
+    */
 
     function verificarBiblioteca() {
 
-        estado.bibliotecaDisponivel =
-            !!(
-                window.supabase &&
-                typeof window.supabase.createClient === "function"
-            );
+        estado.bibliotecaDisponivel = !!(
+            window.supabase &&
+            typeof window.supabase.createClient === "function"
+        );
 
         return estado.bibliotecaDisponivel;
-
     }
 
 
-    /* =====================================================
-       CRIAR CLIENTE PRINCIPAL
-    ===================================================== */
+    /*
+    ==========================================================
+     OBTÉM O CLIENTE SUPABASE GLOBAL
+    ==========================================================
+    */
+
+    function obterClienteGlobal() {
+
+        if (
+            window.supabaseClient &&
+            typeof window.supabaseClient.from === "function"
+        ) {
+
+            return window.supabaseClient;
+
+        }
+
+        return null;
+    }
+
+
+    /*
+    ==========================================================
+     INICIALIZAÇÃO
+    ==========================================================
+    */
 
     function inicializar() {
 
@@ -82,14 +116,13 @@
         );
 
 
-        /* ---------------------------------------------
-           Já inicializado
-        --------------------------------------------- */
+        /*
+        ------------------------------------------------------
+        Evita inicializar novamente
+        ------------------------------------------------------
+        */
 
-        if (
-            estado.inicializado &&
-            estado.cliente
-        ) {
+        if (estado.inicializado) {
 
             console.log(
                 "[Supabase Mesa] Cliente já inicializado."
@@ -100,72 +133,36 @@
         }
 
 
-        /* ---------------------------------------------
-           Verificar biblioteca
-        --------------------------------------------- */
+        /*
+        ------------------------------------------------------
+        PRIMEIRA OPÇÃO:
+        reutilizar o cliente oficial já criado pelo supabase.js
+        ------------------------------------------------------
+        */
 
-        if (!verificarBiblioteca()) {
-
-            console.error(
-                "[Supabase Mesa] Biblioteca oficial do Supabase não encontrada."
-            );
-
-            estado.inicializado =
-                false;
-
-            estado.cliente =
-                null;
-
-            return null;
-
-        }
+        const clienteGlobal =
+            obterClienteGlobal();
 
 
-        /* ---------------------------------------------
-           Criar cliente
-        --------------------------------------------- */
-
-        try {
+        if (clienteGlobal) {
 
             estado.cliente =
-                window.supabase.createClient(
-                    CONFIG.url,
-                    CONFIG.key
-                );
-
+                clienteGlobal;
 
             estado.origemCliente =
-                "supabase-mesa.js";
-
+                "supabase.js";
 
             estado.mesmoClienteGlobal =
                 true;
 
-
             estado.inicializado =
                 true;
 
 
-            /* -----------------------------------------
-               Disponibilizar globalmente
-            ----------------------------------------- */
-
-            window.supabaseClient =
-                estado.cliente;
-
-
             console.log(
-                "[Supabase Mesa] Cliente principal criado."
+                "[Supabase Mesa] Cliente global reutilizado."
             );
 
-            console.log(
-                "[Supabase Mesa] window.supabaseClient disponível."
-            );
-
-
-            /* -----------------------------------------
-               Evento de pronto
-            ----------------------------------------- */
 
             window.dispatchEvent(
 
@@ -181,7 +178,86 @@
                                 estado.origemCliente,
 
                             mesmoClienteGlobal:
-                                true
+                                estado.mesmoClienteGlobal
+
+                        }
+                    }
+                )
+
+            );
+
+
+            return estado.cliente;
+
+        }
+
+
+        /*
+        ------------------------------------------------------
+        FALLBACK:
+        caso o cliente global ainda não exista.
+        ------------------------------------------------------
+        */
+
+        console.warn(
+            "[Supabase Mesa] Cliente global não encontrado. Tentando criar cliente próprio."
+        );
+
+
+        if (!verificarBiblioteca()) {
+
+            console.warn(
+                "[Supabase Mesa] Biblioteca oficial do Supabase não encontrada."
+            );
+
+            return null;
+
+        }
+
+
+        try {
+
+            estado.cliente =
+
+                window.supabase.createClient(
+
+                    CONFIG.url,
+
+                    CONFIG.key
+
+                );
+
+
+            estado.origemCliente =
+                "cliente-próprio";
+
+            estado.mesmoClienteGlobal =
+                false;
+
+            estado.inicializado =
+                true;
+
+
+            console.log(
+                "[Supabase Mesa] Cliente próprio criado como fallback."
+            );
+
+
+            window.dispatchEvent(
+
+                new CustomEvent(
+                    "supabase:mesaPronto",
+                    {
+                        detail: {
+
+                            cliente:
+                                estado.cliente,
+
+                            origem:
+                                estado.origemCliente,
+
+                            mesmoClienteGlobal:
+                                estado.mesmoClienteGlobal
 
                         }
                     }
@@ -207,8 +283,12 @@
             estado.origemCliente =
                 null;
 
+            estado.mesmoClienteGlobal =
+                false;
+
             estado.inicializado =
                 false;
+
 
             return null;
 
@@ -217,9 +297,11 @@
     }
 
 
-    /* =====================================================
-       RECEBER CONTEXTO DA MESA
-    ===================================================== */
+    /*
+    ==========================================================
+     RECEBE O CONTEXTO DA ENTRADA
+    ==========================================================
+    */
 
     function receberContexto(contexto) {
 
@@ -237,16 +319,13 @@
         estado.contexto = {
 
             campanha:
-                contexto.campanha ||
-                null,
+                contexto.campanha || null,
 
             usuario:
-                contexto.usuario ||
-                null,
+                contexto.usuario || null,
 
             personagem:
-                contexto.personagem ||
-                null
+                contexto.personagem || null
 
         };
 
@@ -283,9 +362,11 @@
     }
 
 
-    /* =====================================================
-       OBTER CLIENTE
-    ===================================================== */
+    /*
+    ==========================================================
+     OBTÉM O CLIENTE
+    ==========================================================
+    */
 
     function obterCliente() {
 
@@ -294,9 +375,11 @@
     }
 
 
-    /* =====================================================
-       OBTER CONTEXTO
-    ===================================================== */
+    /*
+    ==========================================================
+     OBTÉM O CONTEXTO
+    ==========================================================
+    */
 
     function obterContexto() {
 
@@ -305,15 +388,18 @@
     }
 
 
-    /* =====================================================
-       VERIFICAR DISPONIBILIDADE
-    ===================================================== */
+    /*
+    ==========================================================
+     STATUS
+    ==========================================================
+    */
 
     function estaDisponivel() {
 
         return (
 
             estado.inicializado &&
+
             !!estado.cliente
 
         );
@@ -321,83 +407,39 @@
     }
 
 
-    /* =====================================================
-       DIAGNÓSTICO
-    ===================================================== */
+    /*
+    ==========================================================
+     DIAGNÓSTICO
+    ==========================================================
+    */
 
     function diagnostico() {
 
-        const clientePrincipal =
-            window.supabaseClient || null;
-
-
-        const clienteMesa =
-            estado.cliente || null;
-
-
         return {
-
-            /* Biblioteca */
 
             biblioteca:
                 estado.bibliotecaDisponivel,
 
-
-            /* Inicialização */
-
             inicializado:
                 estado.inicializado,
 
-
-            /* Clientes */
-
             cliente:
-                !!clienteMesa,
-
-            clienteMesa:
-                !!clienteMesa,
-
-            clientePrincipal:
-                !!clientePrincipal,
-
-
-            /* Origem */
+                !!estado.cliente,
 
             origemCliente:
                 estado.origemCliente,
 
-
-            /* Referência */
-
             mesmoClienteGlobal:
-                !!(
-                    clientePrincipal &&
-                    clienteMesa &&
-                    clientePrincipal === clienteMesa
-                ),
-
-
-            clientesDiferentes:
-                !!(
-                    clientePrincipal &&
-                    clienteMesa &&
-                    clientePrincipal !== clienteMesa
-                ),
-
-
-            /* Contexto */
+                estado.mesmoClienteGlobal,
 
             contextoRecebido:
                 estado.contextoRecebido,
 
-
             campanha:
                 !!estado.contexto?.campanha,
 
-
             usuario:
                 !!estado.contexto?.usuario,
-
 
             personagem:
                 !!estado.contexto?.personagem
@@ -407,9 +449,11 @@
     }
 
 
-    /* =====================================================
-       EXPOR MÓDULO
-    ===================================================== */
+    /*
+    ==========================================================
+     API PÚBLICA
+    ==========================================================
+    */
 
     window.SupabaseMesa = {
 
@@ -428,33 +472,8 @@
     };
 
 
-    /* =====================================================
-       DISPONIBILIZAR IMEDIATAMENTE
-    ===================================================== */
-
     console.log(
         "[Supabase Mesa] Módulo disponível."
     );
-
-
-    /* =====================================================
-       INICIALIZAÇÃO
-    ===================================================== */
-
-    if (
-        document.readyState === "loading"
-    ) {
-
-        document.addEventListener(
-            "DOMContentLoaded",
-            inicializar,
-            { once: true }
-        );
-
-    } else {
-
-        inicializar();
-
-    }
 
 })();
