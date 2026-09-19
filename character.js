@@ -14,6 +14,27 @@ const CharacterModule = (() => {
 
 
     /* =====================================================
+       ARTES AUTOMÁTICAS DOS PERSONAGENS
+       
+       A combinação RAÇA + CLASSE determina a arte padrão.
+
+       As artes automáticas não impedem o jogador de usar
+       uma imagem própria através de URL ou dispositivo.
+    ===================================================== */
+
+    const CHARACTER_ART = {
+
+        "Humano": {
+
+            "Bufão":
+                "https://bjkbfxcmyihdruqrwsdf.supabase.co/storage/v1/object/public/character-art/classes/bufao/bufao_humano.png"
+
+        }
+
+    };
+
+
+    /* =====================================================
        RAÇAS
     ===================================================== */
 
@@ -339,6 +360,114 @@ const CharacterModule = (() => {
 
 
     /* =====================================================
+       OBTER ARTE AUTOMÁTICA
+       
+       Procura a arte através da combinação:
+       RAÇA + CLASSE
+    ===================================================== */
+
+    function obterArteAutomatica() {
+
+        if (
+            typeof character === "undefined"
+        ) {
+
+            return "";
+
+        }
+
+
+        const raca =
+            character.race;
+
+        const classe =
+            character.class;
+
+
+        if (
+            !raca ||
+            !classe
+        ) {
+
+            return "";
+
+        }
+
+
+        if (
+            !CHARACTER_ART[raca]
+        ) {
+
+            return "";
+
+        }
+
+
+        return (
+            CHARACTER_ART[raca][classe] ||
+            ""
+        );
+
+    }
+
+
+    /* =====================================================
+       APLICAR ARTE AUTOMÁTICA
+       
+       Só altera a imagem quando:
+       - não existe imagem manual
+       OU
+       - a imagem atual é marcada como automática.
+
+       Imagens colocadas manualmente pelo jogador
+       permanecem protegidas.
+    ===================================================== */
+
+    function aplicarArteAutomatica() {
+
+        const arte =
+            obterArteAutomatica();
+
+
+        if (!arte) {
+
+            return false;
+
+        }
+
+
+        /*
+           Se o jogador colocou uma imagem manual,
+           não substituímos.
+        */
+
+        if (
+            character.imageURL &&
+            character.imageAuto === false
+        ) {
+
+            return false;
+
+        }
+
+
+        character.imageURL =
+            arte;
+
+
+        character.imageAuto =
+            true;
+
+
+        atualizarImagem();
+
+
+        return true;
+
+    }
+
+
+    /* =====================================================
        ALTERAR RAÇA
     ===================================================== */
 
@@ -405,6 +534,21 @@ const CharacterModule = (() => {
 
         character.attributes.int =
             race.int;
+
+
+        /*
+           Se o personagem estiver usando
+           uma arte automática, atualiza a arte
+           conforme a nova combinação.
+        */
+
+        if (
+            character.imageAuto !== false
+        ) {
+
+            aplicarArteAutomatica();
+
+        }
 
 
         atualizarInterface();
@@ -599,21 +743,28 @@ const CharacterModule = (() => {
         const classSelect =
             get("character-class-select");
 
+
         /*
            Migração: classes antigas no estilo Fate
            (Saber, Archer, etc.) não existem mais.
            Se a classe salva não for reconhecida pelo
            módulo classe.js, volta para Guerreiro.
         */
+
         if (
             typeof RPGClasses !== "undefined" &&
             RPGClasses &&
             character.class &&
             !RPGClasses[character.class]
         ) {
-            character.class = "Guerreiro";
+
+            character.class =
+                "Guerreiro";
+
             salvarPersonagem();
+
         }
+
 
         const affinitySelect =
             get("character-affinity-select");
@@ -741,6 +892,22 @@ const CharacterModule = (() => {
                     );
 
 
+                    /*
+                       Atualiza a arte automática
+                       para a nova combinação,
+                       desde que o jogador não esteja
+                       usando uma imagem manual.
+                    */
+
+                    if (
+                        character.imageAuto !== false
+                    ) {
+
+                        aplicarArteAutomatica();
+
+                    }
+
+
                     atualizarInterface();
 
                     salvarPersonagem();
@@ -753,10 +920,6 @@ const CharacterModule = (() => {
 
         /* -------------------------------------------------
            AFINIDADE
-           -------------------------------------------------
-           
-           O módulo passa a reconhecer a afinidade
-           caso o elemento exista no HTML.
         ------------------------------------------------- */
 
         if (affinitySelect) {
@@ -805,14 +968,18 @@ const CharacterModule = (() => {
            URL DA IMAGEM
         ------------------------------------------------- */
 
-        const imageURL =
+        const imageURLInput =
             get("character-image-url");
 
 
-        if (imageURL) {
+        if (imageURLInput) {
 
-            imageURL.value =
-                character.imageURL || "";
+            imageURLInput.value =
+                character.imageAuto === true
+                    ? ""
+                    : (
+                        character.imageURL || ""
+                    );
 
         }
 
@@ -821,19 +988,101 @@ const CharacterModule = (() => {
             get("apply-image-url");
 
 
-        if (applyImage) {
+        if (applyImage && imageURLInput) {
 
             applyImage.addEventListener(
                 "click",
                 () => {
 
-                    character.imageURL =
-                        imageURL.value.trim();
+                    const url =
+                        imageURLInput.value.trim();
 
 
-                    atualizarImagem();
+                    if (!url) {
 
-                    salvarPersonagem();
+                        alert(
+                            "Digite uma URL de imagem."
+                        );
+
+                        return;
+
+                    }
+
+
+                    /*
+                       Verificação básica da URL.
+                    */
+
+                    let urlValida = false;
+
+                    try {
+
+                        const urlObj =
+                            new URL(url);
+
+                        urlValida =
+                            urlObj.protocol === "http:" ||
+                            urlObj.protocol === "https:";
+
+                    } catch (erro) {
+
+                        urlValida = false;
+
+                    }
+
+
+                    if (!urlValida) {
+
+                        alert(
+                            "A URL informada não é válida."
+                        );
+
+                        return;
+
+                    }
+
+
+                    /*
+                       Primeiro testa a imagem.
+                       Só salva se ela realmente
+                       conseguir carregar.
+                    */
+
+                    testarImagemURL(
+                        url,
+                        function (sucesso) {
+
+                            if (!sucesso) {
+
+                                alert(
+                                    "⚠️ Não foi possível carregar essa imagem. " +
+                                    "Verifique se a URL é pública e aponta diretamente para uma imagem."
+                                );
+
+                                return;
+
+                            }
+
+
+                            character.imageURL =
+                                url;
+
+
+                            character.imageAuto =
+                                false;
+
+
+                            atualizarImagem();
+
+                            salvarPersonagem();
+
+
+                            alert(
+                                "✅ Imagem aplicada com sucesso!"
+                            );
+
+                        }
+                    );
 
                 }
             );
@@ -855,15 +1104,28 @@ const CharacterModule = (() => {
                 "click",
                 () => {
 
-                    character.imageURL = "";
+                    /*
+                       Remove a imagem manual e volta
+                       para a arte automática da
+                       combinação raça + classe.
+                    */
+
+                    character.imageURL =
+                        "";
+
+                    character.imageAuto =
+                        true;
 
 
-                    if (imageURL) {
+                    if (imageURLInput) {
 
-                        imageURL.value = "";
+                        imageURLInput.value =
+                            "";
 
                     }
 
+
+                    aplicarArteAutomatica();
 
                     atualizarImagem();
 
@@ -873,7 +1135,6 @@ const CharacterModule = (() => {
             );
 
         }
-
 
 
         /* -------------------------------------------------
@@ -886,63 +1147,165 @@ const CharacterModule = (() => {
         const fileInput =
             get("image-file-input");
 
+
         if (uploadButton && fileInput) {
 
             uploadButton.addEventListener(
                 "click",
                 () => {
+
                     fileInput.click();
+
                 }
             );
+
 
             fileInput.addEventListener(
                 "change",
                 (evento) => {
 
-                    const arquivo = evento.target.files[0];
+                    const arquivo =
+                        evento.target.files[0];
+
 
                     if (!arquivo) {
+
                         return;
+
                     }
 
-                    if (!arquivo.type.startsWith("image/")) {
-                        alert("Por favor, selecione um arquivo de imagem.");
+
+                    /*
+                       Verifica se realmente é imagem.
+                    */
+
+                    if (
+                        !arquivo.type ||
+                        !arquivo.type.startsWith("image/")
+                    ) {
+
+                        alert(
+                            "Por favor, selecione um arquivo de imagem."
+                        );
+
+
+                        fileInput.value = "";
+
                         return;
+
                     }
+
+
+                    /*
+                       Redimensiona a imagem para
+                       evitar problemas de armazenamento.
+                    */
 
                     redimensionarImagem(
                         arquivo,
                         function (dataURL) {
-                            character.imageURL = dataURL;
-                            atualizarImagem();
-                            alert(
-                                "✅ Imagem enviada! Tamanho: " +
-                                Math.round(dataURL.length / 1024) +
-                                " KB. Se não aparecer na tela, recarregue a página."
-                            );
-                            try {
-                                salvarPersonagem();
-                            } catch (erro) {
+
+                            if (!dataURL) {
+
                                 alert(
-                                    "Não foi possível salvar a imagem: " +
-                                    "armazenamento cheio. Tente uma imagem menor."
+                                    "Não foi possível processar a imagem."
                                 );
-                                console.error(erro);
+
+                                return;
+
                             }
+
+
+                            character.imageURL =
+                                dataURL;
+
+
+                            character.imageAuto =
+                                false;
+
+
+                            atualizarImagem();
+
+
+                            /*
+                               Atualiza o campo de URL.
+                               Como é uma imagem local,
+                               não colocamos o dataURL no
+                               campo visível para não deixar
+                               a interface enorme.
+                            */
+
+                            if (imageURLInput) {
+
+                                imageURLInput.value =
+                                    "";
+
+                            }
+
+
+                            try {
+
+                                salvarPersonagem();
+
+
+                                alert(
+                                    "✅ Imagem enviada com sucesso!"
+                                );
+
+                            } catch (erro) {
+
+                                console.error(
+                                    "Erro ao salvar imagem:",
+                                    erro
+                                );
+
+
+                                alert(
+                                    "⚠️ A imagem foi carregada, " +
+                                    "mas não foi possível salvá-la. " +
+                                    "Tente uma imagem menor."
+                                );
+
+                            }
+
+
                             console.log(
                                 "📷 Imagem carregada do dispositivo:",
                                 arquivo.name
                             );
+
                         }
                     );
 
-                    /* Limpa o input para permitir selecionar o mesmo arquivo novamente */
+
+                    /*
+                       Limpa o input para permitir
+                       selecionar o mesmo arquivo novamente.
+                    */
+
                     fileInput.value = "";
 
                 }
             );
 
         }
+
+
+        /*
+           Se ainda não existe uma imagem manual,
+           tenta aplicar automaticamente a arte
+           correspondente à raça + classe.
+        */
+
+        if (
+            !character.imageURL ||
+            character.imageAuto === true
+        ) {
+
+            aplicarArteAutomatica();
+
+        }
+
 
         /*
            Aplica o estado inicial do bloqueio.
@@ -954,84 +1317,364 @@ const CharacterModule = (() => {
 
 
     /* =====================================================
+       TESTAR URL DE IMAGEM
+       
+       Confirma que uma URL realmente consegue
+       carregar uma imagem antes de salvá-la.
+    ===================================================== */
+
+    function testarImagemURL(url, callback) {
+
+        const imagem =
+            new Image();
+
+
+        let finalizado =
+            false;
+
+
+        function finalizar(resultado) {
+
+            if (finalizado) {
+
+                return;
+
+            }
+
+
+            finalizado = true;
+
+            callback(resultado);
+
+        }
+
+
+        imagem.onload =
+            function () {
+
+                finalizar(true);
+
+            };
+
+
+        imagem.onerror =
+            function () {
+
+                finalizar(false);
+
+            };
+
+
+        /*
+           Evita que uma URL problemática
+           fique travando o processo.
+        */
+
+        setTimeout(
+            function () {
+
+                finalizar(false);
+
+            },
+            10000
+        );
+
+
+        imagem.src =
+            url;
+
+    }
+
+
+    /* =====================================================
        ATUALIZAR IMAGEM
     ===================================================== */
 
     /* =====================================================
-       REDIMENSIONAR IMAGEM (evita estourar cota do localStorage)
-       Imagens grandes geram data URLs que ultrapassam ~5MB
-       e o salvamento falha silenciosamente. Aqui comprimimos.
+       REDIMENSIONAR IMAGEM
+       
+       Evita estourar a cota do localStorage.
     ===================================================== */
-    function redimensionarImagem(arquivo, callback) {
-        const TAMANHO_MAX = 600;
-        const leitor = new FileReader();
-        leitor.onload = function (e) {
-            const img = new Image();
-            const dataURLOriginal = e.target.result;
-            let chamado = false;
-            const finalizar = function (url) {
-                if (chamado) return;
-                chamado = true;
-                callback(url);
+
+    function redimensionarImagem(
+        arquivo,
+        callback
+    ) {
+
+        const TAMANHO_MAX =
+            600;
+
+
+        const leitor =
+            new FileReader();
+
+
+        leitor.onload =
+            function (e) {
+
+                const img =
+                    new Image();
+
+
+                const dataURLOriginal =
+                    e.target.result;
+
+
+                let chamado =
+                    false;
+
+
+                const finalizar =
+                    function (url) {
+
+                        if (chamado) {
+
+                            return;
+
+                        }
+
+
+                        chamado =
+                            true;
+
+
+                        callback(url);
+
+                    };
+
+
+                img.onload =
+                    function () {
+
+                        try {
+
+                            let largura =
+                                img.width;
+
+
+                            let altura =
+                                img.height;
+
+
+                            /*
+                               Mantém proporção.
+                            */
+
+                            if (
+                                largura > altura &&
+                                largura > TAMANHO_MAX
+                            ) {
+
+                                altura =
+                                    Math.round(
+                                        (
+                                            altura *
+                                            TAMANHO_MAX
+                                        ) /
+                                        largura
+                                    );
+
+
+                                largura =
+                                    TAMANHO_MAX;
+
+                            } else if (
+                                altura > TAMANHO_MAX
+                            ) {
+
+                                largura =
+                                    Math.round(
+                                        (
+                                            largura *
+                                            TAMANHO_MAX
+                                        ) /
+                                        altura
+                                    );
+
+
+                                altura =
+                                    TAMANHO_MAX;
+
+                            }
+
+
+                            const canvas =
+                                document.createElement(
+                                    "canvas"
+                                );
+
+
+                            canvas.width =
+                                largura;
+
+
+                            canvas.height =
+                                altura;
+
+
+                            const ctx =
+                                canvas.getContext(
+                                    "2d"
+                                );
+
+
+                            if (!ctx) {
+
+                                finalizar(
+                                    dataURLOriginal
+                                );
+
+                                return;
+
+                            }
+
+
+                            /*
+                               Desenha a imagem.
+                            */
+
+                            ctx.drawImage(
+                                img,
+                                0,
+                                0,
+                                largura,
+                                altura
+                            );
+
+
+                            /*
+                               PNG/WebP continuam
+                               com transparência.
+                            */
+
+                            const temTransparencia =
+                                arquivo.type === "image/png" ||
+                                arquivo.type === "image/webp";
+
+
+                            const dataURL =
+                                temTransparencia
+
+                                    ? canvas.toDataURL(
+                                        "image/png"
+                                    )
+
+                                    : canvas.toDataURL(
+                                        "image/jpeg",
+                                        0.75
+                                    );
+
+
+                            finalizar(
+                                dataURL
+                            );
+
+                        } catch (erro) {
+
+                            console.warn(
+                                "[Imagem] Redimensionamento falhou, usando original:",
+                                erro
+                            );
+
+
+                            finalizar(
+                                dataURLOriginal
+                            );
+
+                        }
+
+                    };
+
+
+                img.onerror =
+                    function () {
+
+                        finalizar(
+                            dataURLOriginal
+                        );
+
+                    };
+
+
+                img.src =
+                    dataURLOriginal;
+
+
+                /*
+                   Timeout de segurança para
+                   dispositivos móveis.
+                */
+
+                setTimeout(
+                    function () {
+
+                        finalizar(
+                            dataURLOriginal
+                        );
+
+                    },
+                    8000
+                );
+
             };
-            img.onload = function () {
-                try {
-                    let largura = img.width;
-                    let altura = img.height;
-                    if (largura > altura && largura > TAMANHO_MAX) {
-                        altura = Math.round((altura * TAMANHO_MAX) / largura);
-                        largura = TAMANHO_MAX;
-                    } else if (altura > TAMANHO_MAX) {
-                        largura = Math.round((largura * TAMANHO_MAX) / altura);
-                        altura = TAMANHO_MAX;
-                    }
-                    const canvas = document.createElement("canvas");
-                    canvas.width = largura;
-                    canvas.height = altura;
-                    const ctx = canvas.getContext("2d");
-                    ctx.drawImage(img, 0, 0, largura, altura);
-                    const temTransparencia =
-                        arquivo.type === "image/png" ||
-                        arquivo.type === "image/webp";
-                    const dataURL = temTransparencia
-                        ? canvas.toDataURL("image/png")
-                        : canvas.toDataURL("image/jpeg", 0.75);
-                    finalizar(dataURL);
-                } catch (erro) {
-                    console.warn(
-                        "[Imagem] Redimensionamento falhou, usando original:",
-                        erro
-                    );
-                    finalizar(dataURLOriginal);
-                }
+
+
+        leitor.onerror =
+            function () {
+
+                alert(
+                    "Erro ao carregar a imagem. Tente novamente."
+                );
+
             };
-            img.onerror = function () {
-                finalizar(dataURLOriginal);
-            };
-            img.src = dataURLOriginal;
-            // Timeout: se travar no mobile, usa a imagem original.
-            setTimeout(function () {
-                finalizar(dataURLOriginal);
-            }, 8000);
-        };
-        leitor.onerror = function () {
-            alert("Erro ao carregar a imagem. Tente novamente.");
-        };
-        leitor.readAsDataURL(arquivo);
+
+
+        leitor.readAsDataURL(
+            arquivo
+        );
+
     }
 
+
     /* =====================================================
-       ESCAPAR HTML (utilitário local — antes não existia
-       neste módulo e causava ReferenceError na imagem)
+       ESCAPAR HTML
     ===================================================== */
+
     function escaparHTML(texto) {
+
         return String(texto)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
+
+            .replaceAll(
+                "&",
+                "&amp;"
+            )
+
+            .replaceAll(
+                "<",
+                "&lt;"
+            )
+
+            .replaceAll(
+                ">",
+                "&gt;"
+            )
+
+            .replaceAll(
+                '"',
+                "&quot;"
+            )
+
+            .replaceAll(
+                "'",
+                "&#039;"
+            );
+
     }
+
+
+    /* =====================================================
+       ATUALIZAR IMAGEM
+    ===================================================== */
 
     function atualizarImagem() {
 
@@ -1048,24 +1691,71 @@ const CharacterModule = (() => {
         }
 
 
+        /*
+           Se não houver imagem, tenta encontrar
+           a arte automática.
+        */
+
+        if (
+            !character.imageURL
+        ) {
+
+            const arte =
+                obterArteAutomatica();
+
+
+            if (arte) {
+
+                character.imageURL =
+                    arte;
+
+
+                character.imageAuto =
+                    true;
+
+            }
+
+        }
+
+
         if (
             character.imageURL
         ) {
 
-            container.classList.add("has-image");
+            container.classList.add(
+                "has-image"
+            );
+
+
             container.innerHTML = `
+
                 <img
                     src="${escaparHTML(character.imageURL)}"
                     alt="Imagem do personagem"
                     class="character-image-display"
-                    style="width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:3;"
-                    onerror="this.parentElement.innerHTML='<div style=&quot;padding:40px 20px;text-align:center;color:#f87171;font-size:12px;&quot;>⚠️ Não foi possível carregar a imagem. Tente reenviar.</div>';"
+                    style="
+                        width:100%;
+                        height:100%;
+                        object-fit:cover;
+                        display:block;
+                        position:relative;
+                        z-index:3;
+                    "
+                    onerror="
+                        this.parentElement.innerHTML=
+                        '<div style=&quot;padding:40px 20px;text-align:center;color:#f87171;font-size:12px;&quot;>⚠️ Não foi possível carregar a imagem.</div>';
+                    "
                 >
+
             `;
 
         } else {
 
-            container.classList.remove("has-image");
+            container.classList.remove(
+                "has-image"
+            );
+
+
             container.innerHTML = `
 
                 <div class="image-placeholder">
@@ -1153,8 +1843,17 @@ const CharacterModule = (() => {
             document.activeElement !== imageURL
         ) {
 
+            /*
+               Não coloca o link automático
+               no campo de URL.
+            */
+
             imageURL.value =
-                character.imageURL || "";
+                character.imageAuto === true
+                    ? ""
+                    : (
+                        character.imageURL || ""
+                    );
 
         }
 
@@ -1358,6 +2057,8 @@ const CharacterModule = (() => {
 
         MAX_LEVEL,
 
+        CHARACTER_ART,
+
         obterXPNecessario,
 
         adicionarXP,
@@ -1367,6 +2068,10 @@ const CharacterModule = (() => {
         alterarRaca,
 
         obterClasseAtual,
+
+        obterArteAutomatica,
+
+        aplicarArteAutomatica,
 
         configurarEditor,
 
