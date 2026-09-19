@@ -1,5 +1,6 @@
 /* =========================================================
    MESA RPG — SISTEMA DE DIAGNÓSTICO
+   VERSÃO DETALHADA
 ========================================================= */
 
 (function () {
@@ -17,13 +18,17 @@
 
         logs: [],
 
-        maxLogs: 100,
+        maxLogs: 150,
 
         ultimoRealtime: null,
 
         ultimaQuantidadePersonagens: null,
 
-        inicializado: false
+        inicializado: false,
+
+        testes: {},
+
+        ultimoDiagnostico: null
 
     };
 
@@ -49,8 +54,8 @@
 
             registrar(
                 "erro",
-                "Erro ao obter estado da Mesa: " +
-                erro.message
+                "Falha ao obter o estado interno da Mesa: " +
+                obterMensagemErro(erro)
             );
 
         }
@@ -62,11 +67,32 @@
 
     function obterSupabase() {
 
-        return (
-            window.supabaseClient ||
-            window.supabase ||
-            null
-        );
+        if (window.supabaseClient) {
+
+            return window.supabaseClient;
+
+        }
+
+        if (window.supabase) {
+
+            /*
+             * Algumas versões da biblioteca Supabase
+             * podem expor o objeto global da biblioteca,
+             * e não necessariamente o cliente da aplicação.
+             */
+
+            if (
+                typeof window.supabase.auth === "object" ||
+                typeof window.supabase.auth === "function"
+            ) {
+
+                return window.supabase;
+
+            }
+
+        }
+
+        return null;
 
     }
 
@@ -80,7 +106,9 @@
 
     function obterPersonagens() {
 
-        const auth = obterAuth();
+        const auth =
+            obterAuth();
+
 
         if (
             auth &&
@@ -91,7 +119,10 @@
 
         }
 
-        const estado = obterEstadoMesa();
+
+        const estado =
+            obterEstadoMesa();
+
 
         if (
             estado &&
@@ -102,6 +133,7 @@
 
         }
 
+
         return [];
 
     }
@@ -109,23 +141,146 @@
 
     function obterCampanha() {
 
-        const estado = obterEstadoMesa();
+        const estado =
+            obterEstadoMesa();
 
-        if (estado && estado.campanha) {
+
+        if (
+            estado &&
+            estado.campanha
+        ) {
 
             return estado.campanha;
 
         }
 
-        const auth = obterAuth();
 
-        if (auth && auth.campaign) {
+        const auth =
+            obterAuth();
+
+
+        if (
+            auth &&
+            auth.campaign
+        ) {
 
             return auth.campaign;
 
         }
 
+
         return null;
+
+    }
+
+
+    function obterMensagemErro(erro) {
+
+        if (!erro) {
+
+            return "Erro desconhecido.";
+
+        }
+
+
+        if (erro.message) {
+
+            return erro.message;
+
+        }
+
+
+        if (typeof erro === "string") {
+
+            return erro;
+
+        }
+
+
+        try {
+
+            return JSON.stringify(erro);
+
+        } catch (_) {
+
+            return String(erro);
+
+        }
+
+    }
+
+
+    function definirTeste(
+        chave,
+        status,
+        titulo,
+        descricao,
+        detalhes,
+        impacto,
+        causas,
+        recomendacao
+    ) {
+
+        Diagnostico.testes[chave] = {
+
+            chave,
+
+            status,
+
+            titulo,
+
+            descricao,
+
+            detalhes,
+
+            impacto,
+
+            causas: Array.isArray(causas)
+                ? causas
+                : [],
+
+            recomendacao
+
+        };
+
+    }
+
+
+    function registrarDiagnosticoTeste(chave) {
+
+        const teste =
+            Diagnostico.testes[chave];
+
+
+        if (!teste) return;
+
+
+        let tipo = "info";
+
+
+        if (teste.status === "sucesso") {
+
+            tipo = "sucesso";
+
+        }
+
+        if (teste.status === "aviso") {
+
+            tipo = "aviso";
+
+        }
+
+        if (teste.status === "erro") {
+
+            tipo = "erro";
+
+        }
+
+
+        registrar(
+            tipo,
+            `${teste.titulo}: ${teste.descricao}`
+        );
 
     }
 
@@ -136,7 +291,9 @@
 
     function registrar(tipo, mensagem) {
 
-        const agora = new Date();
+        const agora =
+            new Date();
+
 
         const hora =
             agora.toLocaleTimeString(
@@ -182,6 +339,7 @@
                 "diagnostico-log"
             );
 
+
         if (!elemento) return;
 
 
@@ -208,7 +366,9 @@
                         "diagnostico-log-info";
 
 
-                    if (item.tipo === "sucesso") {
+                    if (
+                        item.tipo === "sucesso"
+                    ) {
 
                         classe =
                             "diagnostico-log-sucesso";
@@ -216,7 +376,9 @@
                     }
 
 
-                    if (item.tipo === "aviso") {
+                    if (
+                        item.tipo === "aviso"
+                    ) {
 
                         classe =
                             "diagnostico-log-aviso";
@@ -224,7 +386,9 @@
                     }
 
 
-                    if (item.tipo === "erro") {
+                    if (
+                        item.tipo === "erro"
+                    ) {
 
                         classe =
                             "diagnostico-log-erro";
@@ -265,7 +429,7 @@
 
 
     /* =====================================================
-       STATUS
+       STATUS DA INTERFACE
     ===================================================== */
 
     function definirStatus(chave, texto) {
@@ -275,68 +439,336 @@
                 `[data-diagnostico="${chave}"]`
             );
 
+
         if (!elemento) return;
 
-        elemento.textContent = texto;
+
+        elemento.textContent =
+            texto;
 
     }
 
 
-    function atualizarStatusSupabase() {
+    /* =====================================================
+       DIAGNÓSTICO — SCRIPTS E AMBIENTE
+    ===================================================== */
+
+    function diagnosticarAmbiente() {
+
+        const mesa =
+            !!window.MesaRPG;
+
+        const auth =
+            !!window.rpgAuth;
+
+        const supabaseClient =
+            !!window.supabaseClient;
+
+        const supabaseGlobal =
+            !!window.supabase;
+
+
+        const elementosMesa =
+            !!document.getElementById(
+                "mesa-diagnostico"
+            );
+
+
+        const detalhes = [];
+
+
+        detalhes.push(
+            `MesaRPG: ${mesa ? "encontrado" : "ausente"}`
+        );
+
+
+        detalhes.push(
+            `rpgAuth: ${auth ? "encontrado" : "ausente"}`
+        );
+
+
+        detalhes.push(
+            `window.supabaseClient: ${
+                supabaseClient
+                    ? "encontrado"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `window.supabase: ${
+                supabaseGlobal
+                    ? "encontrado"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `Painel de diagnóstico: ${
+                elementosMesa
+                    ? "encontrado"
+                    : "ausente"
+            }`
+        );
+
+
+        if (
+            mesa ||
+            auth ||
+            supabaseClient ||
+            supabaseGlobal
+        ) {
+
+            definirTeste(
+                "ambiente",
+                "sucesso",
+                "Ambiente da Mesa",
+                "Os componentes principais da aplicação foram localizados.",
+                detalhes.join(" | "),
+                "Nenhum impacto identificado.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+        } else {
+
+            definirTeste(
+                "ambiente",
+                "erro",
+                "Ambiente da Mesa",
+                "Nenhum componente principal da Mesa foi localizado.",
+                detalhes.join(" | "),
+                "A Mesa provavelmente não conseguirá inicializar seus sistemas.",
+                [
+                    "Scripts da Mesa não foram carregados.",
+                    "A ordem dos scripts no HTML pode estar incorreta.",
+                    "Algum arquivo JavaScript pode ter falhado durante o carregamento."
+                ],
+                "Verifique os arquivos JavaScript incluídos no mesa.html."
+            );
+
+        }
+
+
+        registrarDiagnosticoTeste(
+            "ambiente"
+        );
+
+    }
+
+
+    /* =====================================================
+       DIAGNÓSTICO — SUPABASE
+    ===================================================== */
+
+    function diagnosticarSupabase() {
+
+        const client =
+            window.supabaseClient;
+
+
+        const globalSupabase =
+            window.supabase;
+
+
+        const detalhes = [];
+
+
+        detalhes.push(
+            `window.supabaseClient: ${
+                client
+                    ? "ENCONTRADO"
+                    : "AUSENTE"
+            }`
+        );
+
+
+        detalhes.push(
+            `window.supabase: ${
+                globalSupabase
+                    ? "ENCONTRADO"
+                    : "AUSENTE"
+            }`
+        );
+
+
+        if (!client && !globalSupabase) {
+
+            definirStatus(
+                "supabase",
+                "🔴 Ausente"
+            );
+
+
+            definirTeste(
+                "supabase",
+                "erro",
+                "Supabase",
+                "Nenhum cliente Supabase foi encontrado.",
+                detalhes.join(" | "),
+                "A Mesa não consegue consultar o banco de dados, autenticação ou Realtime através do Supabase.",
+                [
+                    "config-mesa.js não foi carregado.",
+                    "O cliente Supabase não foi inicializado.",
+                    "Os scripts foram carregados na ordem errada.",
+                    "O cliente pode estar usando outro nome de variável global."
+                ],
+                "Verifique a inicialização do Supabase no config-mesa.js e a ordem dos scripts no mesa.html."
+            );
+
+
+            registrarDiagnosticoTeste(
+                "supabase"
+            );
+
+
+            return null;
+
+        }
+
 
         const supabase =
             obterSupabase();
 
 
-        if (supabase) {
+        if (!supabase) {
+
+            definirStatus(
+                "supabase",
+                "🟡 Detectado"
+            );
+
+
+            definirTeste(
+                "supabase",
+                "aviso",
+                "Supabase",
+                "Foi encontrado um objeto relacionado ao Supabase, mas ele não aparenta ser um cliente válido.",
+                detalhes.join(" | "),
+                "Algumas funções da Mesa podem não funcionar.",
+                [
+                    "O objeto encontrado pode ser apenas a biblioteca Supabase.",
+                    "O cliente pode não ter sido criado.",
+                    "A variável pode estar sendo sobrescrita."
+                ],
+                "Verifique se o createClient foi executado e se o resultado foi atribuído ao cliente usado pela Mesa."
+            );
+
+
+            registrarDiagnosticoTeste(
+                "supabase"
+            );
+
+
+            return null;
+
+        }
+
+
+        const possuiAuth =
+            !!supabase.auth;
+
+
+        const possuiFrom =
+            typeof supabase.from === "function";
+
+
+        const possuiChannel =
+            typeof supabase.channel === "function";
+
+
+        detalhes.push(
+            `auth: ${
+                possuiAuth
+                    ? "disponível"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `from(): ${
+                possuiFrom
+                    ? "disponível"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `channel(): ${
+                possuiChannel
+                    ? "disponível"
+                    : "ausente"
+            }`
+        );
+
+
+        if (
+            !possuiAuth ||
+            !possuiFrom
+        ) {
+
+            definirStatus(
+                "supabase",
+                "🟡 Parcial"
+            );
+
+
+            definirTeste(
+                "supabase",
+                "aviso",
+                "Supabase",
+                "O cliente Supabase foi encontrado, mas algumas funções esperadas estão ausentes.",
+                detalhes.join(" | "),
+                "Autenticação ou consultas ao banco podem não funcionar corretamente.",
+                [
+                    "Cliente incorreto foi atribuído à variável.",
+                    "A inicialização do Supabase está incompleta."
+                ],
+                "Verifique o objeto atribuído a window.supabaseClient."
+            );
+
+
+        } else {
 
             definirStatus(
                 "supabase",
                 "🟢 Conectado"
             );
 
-            return true;
 
-        }
-
-
-        definirStatus(
-            "supabase",
-            "🔴 Ausente"
-        );
-
-        return false;
-
-    }
-
-
-    function atualizarStatusCampanha() {
-
-        const campanha =
-            obterCampanha();
-
-
-        if (!campanha) {
-
-            definirStatus(
-                "campanha",
-                "🔴 Nenhuma"
+            definirTeste(
+                "supabase",
+                "sucesso",
+                "Supabase",
+                "Cliente Supabase encontrado e com as funções básicas disponíveis.",
+                detalhes.join(" | "),
+                "Nenhum problema estrutural detectado nesta etapa.",
+                [],
+                "Nenhuma ação necessária."
             );
 
-            return;
-
         }
 
 
-        definirStatus(
-            "campanha",
-            "🟢 OK"
+        registrarDiagnosticoTeste(
+            "supabase"
         );
+
+
+        return supabase;
 
     }
 
 
-    async function atualizarStatusUsuario() {
+    /* =====================================================
+       DIAGNÓSTICO — AUTENTICAÇÃO
+    ===================================================== */
+
+    async function diagnosticarUsuario(supabase) {
 
         const auth =
             obterAuth();
@@ -357,117 +789,292 @@
                 "usuario",
                 id
                     ? "🟢 " + id.slice(0, 8) + "..."
-                    : "🟢 OK"
+                    : "🟢 Autenticado"
             );
 
-            return;
+
+            definirTeste(
+                "usuario",
+                "sucesso",
+                "Autenticação",
+                "O sistema local da Mesa possui um usuário autenticado.",
+                id
+                    ? `ID do usuário: ${id}`
+                    : "ID não informado.",
+                "Nenhum impacto identificado.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+
+            registrarDiagnosticoTeste(
+                "usuario"
+            );
+
+
+            return auth.user;
 
         }
 
 
-        const supabase =
-            obterSupabase();
-
-
         if (
-            supabase &&
-            supabase.auth &&
-            typeof supabase.auth.getUser === "function"
+            !supabase ||
+            !supabase.auth ||
+            typeof supabase.auth.getUser !== "function"
         ) {
 
-            try {
-
-                const resposta =
-                    await supabase.auth.getUser();
-
-
-                const usuario =
-                    resposta?.data?.user;
+            definirStatus(
+                "usuario",
+                "🟡 Desconhecido"
+            );
 
 
-                if (usuario) {
+            definirTeste(
+                "usuario",
+                "aviso",
+                "Autenticação",
+                "Não foi possível consultar o usuário autenticado.",
+                "O cliente Supabase ou o método auth.getUser() não está disponível.",
+                "Não é possível confirmar a sessão atual.",
+                [
+                    "Supabase ausente.",
+                    "Cliente Supabase incompleto.",
+                    "Sistema de autenticação ainda não inicializado."
+                ],
+                "Corrija primeiro o diagnóstico do Supabase."
+            );
 
-                    definirStatus(
-                        "usuario",
-                        "🟢 " +
-                        usuario.id.slice(0, 8) +
-                        "..."
-                    );
 
-                    return;
+            registrarDiagnosticoTeste(
+                "usuario"
+            );
 
-                }
 
-            } catch (erro) {
+            return null;
 
-                registrar(
-                    "aviso",
-                    "Não foi possível verificar o usuário."
+        }
+
+
+        try {
+
+            const resposta =
+                await supabase.auth.getUser();
+
+
+            const usuario =
+                resposta?.data?.user;
+
+
+            if (usuario) {
+
+                definirStatus(
+                    "usuario",
+                    "🟢 " +
+                    usuario.id.slice(0, 8) +
+                    "..."
                 );
 
-            }
 
-        }
-
-
-        definirStatus(
-            "usuario",
-            "🟡 Desconhecido"
-        );
-
-    }
-
-
-    function atualizarStatusRealtime() {
-
-        const estado =
-            obterEstadoMesa();
-
-        const campanha =
-            obterCampanha();
+                definirTeste(
+                    "usuario",
+                    "sucesso",
+                    "Autenticação",
+                    "Usuário autenticado encontrado pelo Supabase.",
+                    `ID: ${usuario.id}`,
+                    "Nenhum impacto identificado.",
+                    [],
+                    "Nenhuma ação necessária."
+                );
 
 
-        let status =
-            "🟡 Aguardando";
+                registrarDiagnosticoTeste(
+                    "usuario"
+                );
 
 
-        if (
-            window.MesaRPG &&
-            typeof window.MesaRPG.iniciarRealtimeMesa ===
-            "function"
-        ) {
-
-            if (campanha) {
-
-                status =
-                    "🟢 Ativo";
+                return usuario;
 
             }
 
+
+            definirStatus(
+                "usuario",
+                "🔴 Não autenticado"
+            );
+
+
+            definirTeste(
+                "usuario",
+                "erro",
+                "Autenticação",
+                "O Supabase respondeu, mas não existe usuário autenticado.",
+                "supabase.auth.getUser() não retornou um usuário.",
+                "A Mesa não consegue associar as ações atuais a um usuário autenticado.",
+                [
+                    "Sessão expirada.",
+                    "Usuário não realizou login.",
+                    "Sessão não foi restaurada corretamente."
+                ],
+                "Verifique o login e a restauração da sessão do usuário."
+            );
+
+
+            registrarDiagnosticoTeste(
+                "usuario"
+            );
+
+
+            return null;
+
+        } catch (erro) {
+
+            definirStatus(
+                "usuario",
+                "🔴 Erro"
+            );
+
+
+            definirTeste(
+                "usuario",
+                "erro",
+                "Autenticação",
+                "O Supabase encontrou um erro ao consultar o usuário.",
+                obterMensagemErro(erro),
+                "A sessão do usuário não pôde ser confirmada.",
+                [
+                    "Sessão inválida.",
+                    "Problema de configuração do Supabase.",
+                    "Falha temporária na comunicação."
+                ],
+                "Verifique o erro informado e a sessão atual do usuário."
+            );
+
+
+            registrarDiagnosticoTeste(
+                "usuario"
+            );
+
+
+            return null;
+
         }
-
-
-        if (
-            estado &&
-            estado.campanha
-        ) {
-
-            status =
-                "🟢 Ativo";
-
-        }
-
-
-        definirStatus(
-            "realtime",
-            status
-        );
 
     }
 
 
     /* =====================================================
-       CAMPANHA
+       DIAGNÓSTICO — CAMPANHA
+    ===================================================== */
+
+    function diagnosticarCampanha() {
+
+        const campanha =
+            obterCampanha();
+
+
+        if (!campanha) {
+
+            definirStatus(
+                "campanha",
+                "🔴 Nenhuma"
+            );
+
+
+            definirTeste(
+                "campanha",
+                "erro",
+                "Campanha",
+                "Nenhuma campanha foi encontrada no estado atual da Mesa.",
+                "obterCampanha() retornou null.",
+                "A Mesa não possui uma campanha disponível para sincronização.",
+                [
+                    "A campanha ainda não foi carregada.",
+                    "O usuário não pertence a uma campanha.",
+                    "A sincronização inicial ainda não terminou."
+                ],
+                "Aguarde a sincronização ou verifique o carregamento da campanha."
+            );
+
+
+            registrarDiagnosticoTeste(
+                "campanha"
+            );
+
+
+            return null;
+
+        }
+
+
+        const id =
+            campanha.id ||
+            campanha.campaign_id ||
+            campanha.campaignId;
+
+
+        const nome =
+            campanha.name ||
+            campanha.nome ||
+            "Sem nome";
+
+
+        if (!id) {
+
+            definirStatus(
+                "campanha",
+                "🟡 Sem ID"
+            );
+
+
+            definirTeste(
+                "campanha",
+                "aviso",
+                "Campanha",
+                "Uma campanha foi encontrada, mas ela não possui um ID identificável.",
+                `Nome: ${nome}`,
+                "Consultas e sincronizações que dependem do ID podem falhar.",
+                [
+                    "Objeto da campanha está incompleto.",
+                    "Nome da coluna pode ser diferente do esperado."
+                ],
+                "Verifique a estrutura do objeto de campanha retornado pelo sistema."
+            );
+
+
+        } else {
+
+            definirStatus(
+                "campanha",
+                "🟢 OK"
+            );
+
+
+            definirTeste(
+                "campanha",
+                "sucesso",
+                "Campanha",
+                "Campanha encontrada corretamente.",
+                `Nome: ${nome} | ID: ${id}`,
+                "Nenhum impacto identificado.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+        }
+
+
+        registrarDiagnosticoTeste(
+            "campanha"
+        );
+
+
+        return campanha;
+
+    }
+
+
+    /* =====================================================
+       DADOS DA CAMPANHA
     ===================================================== */
 
     function atualizarDadosCampanha() {
@@ -496,11 +1103,29 @@
 
         if (!campanha) {
 
-            if (id) id.textContent = "—";
+            if (id) {
 
-            if (nome) nome.textContent = "—";
+                id.textContent =
+                    "—";
 
-            if (master) master.textContent = "—";
+            }
+
+
+            if (nome) {
+
+                nome.textContent =
+                    "—";
+
+            }
+
+
+            if (master) {
+
+                master.textContent =
+                    "—";
+
+            }
+
 
             return;
 
@@ -510,7 +1135,10 @@
         if (id) {
 
             id.textContent =
-                campanha.id || "—";
+                campanha.id ||
+                campanha.campaign_id ||
+                campanha.campaignId ||
+                "—";
 
         }
 
@@ -538,10 +1166,10 @@
 
 
     /* =====================================================
-       PERSONAGENS / SLOTS
+       DIAGNÓSTICO — PERSONAGENS
     ===================================================== */
 
-    function atualizarPersonagens() {
+    function diagnosticarPersonagens() {
 
         const personagens =
             obterPersonagens();
@@ -578,6 +1206,82 @@
         );
 
 
+        const slotsInvalidos =
+            validos.filter(
+                personagem => {
+
+                    const slot =
+                        Number(personagem?.slot);
+
+
+                    return (
+                        personagem &&
+                        (
+                            !Number.isInteger(slot) ||
+                            slot < 1 ||
+                            slot > 8
+                        )
+                    );
+
+                }
+            );
+
+
+        if (!validos.length) {
+
+            definirTeste(
+                "personagens",
+                "aviso",
+                "Personagens",
+                "Nenhum personagem foi encontrado no estado atual.",
+                "Quantidade: 0",
+                "Os cards dos jogadores não possuem dados para exibir.",
+                [
+                    "A campanha ainda não foi sincronizada.",
+                    "Não existem personagens vinculados à campanha.",
+                    "A função de carregamento ainda não foi executada."
+                ],
+                "Use o botão de sincronização e verifique novamente."
+            );
+
+        } else if (slotsInvalidos.length) {
+
+            definirTeste(
+                "personagens",
+                "aviso",
+                "Personagens",
+                `${validos.length} personagem(ns) encontrado(s), mas existem registros com slot inválido.`,
+                `Slots ocupados: ${ocupados.length}/8 | Registros inválidos: ${slotsInvalidos.length}`,
+                "Alguns personagens podem não aparecer corretamente nos slots.",
+                [
+                    "Slot nulo ou inexistente.",
+                    "Slot fora do intervalo 1–8.",
+                    "Dados antigos ou inconsistentes no banco."
+                ],
+                "Verifique o slot dos personagens no banco e na sincronização da Mesa."
+            );
+
+        } else {
+
+            definirTeste(
+                "personagens",
+                "sucesso",
+                "Personagens",
+                `${validos.length} personagem(ns) encontrado(s) corretamente.`,
+                `Slots ocupados: ${ocupados.length}/8`,
+                "Nenhum problema estrutural detectado nesta etapa.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+        }
+
+
+        registrarDiagnosticoTeste(
+            "personagens"
+        );
+
+
         if (
             Diagnostico.ultimaQuantidadePersonagens !==
             validos.length
@@ -590,7 +1294,7 @@
 
                 registrar(
                     "info",
-                    `Personagens sincronizados: ${validos.length}`
+                    `Quantidade de personagens alterada: ${validos.length}`
                 );
 
             }
@@ -603,6 +1307,10 @@
 
     }
 
+
+    /* =====================================================
+       SLOTS
+    ===================================================== */
 
     function atualizarSlots(personagens) {
 
@@ -619,29 +1327,34 @@
             new Map();
 
 
-        personagens.forEach(personagem => {
+        personagens.forEach(
+            personagem => {
 
-            const slot =
-                Number(personagem?.slot);
+                const slot =
+                    Number(
+                        personagem?.slot
+                    );
 
 
-            if (
-                Number.isInteger(slot) &&
-                slot >= 1 &&
-                slot <= 8
-            ) {
+                if (
+                    Number.isInteger(slot) &&
+                    slot >= 1 &&
+                    slot <= 8
+                ) {
 
-                mapa.set(
-                    slot,
-                    personagem
-                );
+                    mapa.set(
+                        slot,
+                        personagem
+                    );
+
+                }
 
             }
+        );
 
-        });
 
-
-        let html = "";
+        let html =
+            "";
 
 
         for (
@@ -744,22 +1457,536 @@
 
 
     /* =====================================================
+       DIAGNÓSTICO — REALTIME
+    ===================================================== */
+
+    function diagnosticarRealtime() {
+
+        const estado =
+            obterEstadoMesa();
+
+
+        const campanha =
+            obterCampanha();
+
+
+        const possuiMesa =
+            !!window.MesaRPG;
+
+
+        const possuiFuncaoRealtime =
+            !!(
+                window.MesaRPG &&
+                typeof window.MesaRPG.iniciarRealtimeMesa ===
+                "function"
+            );
+
+
+        const detalhes = [];
+
+
+        detalhes.push(
+            `MesaRPG: ${
+                possuiMesa
+                    ? "disponível"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `iniciarRealtimeMesa(): ${
+                possuiFuncaoRealtime
+                    ? "disponível"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `Campanha: ${
+                campanha
+                    ? "encontrada"
+                    : "ausente"
+            }`
+        );
+
+
+        if (
+            possuiFuncaoRealtime &&
+            campanha
+        ) {
+
+            definirStatus(
+                "realtime",
+                "🟢 Ativo"
+            );
+
+
+            definirTeste(
+                "realtime",
+                "sucesso",
+                "Realtime",
+                "A função de inicialização do Realtime está disponível e existe uma campanha para sincronizar.",
+                detalhes.join(" | "),
+                "Nenhum problema estrutural detectado.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+
+            Diagnostico.ultimoRealtime =
+                new Date();
+
+
+        } else {
+
+            definirStatus(
+                "realtime",
+                "🟡 Aguardando"
+            );
+
+
+            definirTeste(
+                "realtime",
+                "aviso",
+                "Realtime",
+                "Não foi possível confirmar uma conexão Realtime ativa.",
+                detalhes.join(" | "),
+                "As alterações em tempo real podem não ser recebidas imediatamente.",
+                [
+                    "Campanha ainda não carregada.",
+                    "Função de inicialização do Realtime ausente.",
+                    "Realtime ainda está sendo inicializado."
+                ],
+                "Verifique o carregamento da Mesa e aguarde a sincronização inicial."
+            );
+
+        }
+
+
+        if (
+            estado &&
+            estado.campanha
+        ) {
+
+            definirStatus(
+                "realtime",
+                "🟢 Ativo"
+            );
+
+        }
+
+
+        registrarDiagnosticoTeste(
+            "realtime"
+        );
+
+    }
+
+
+    /* =====================================================
+       DIAGNÓSTICO — FUNÇÕES DA MESA
+    ===================================================== */
+
+    function diagnosticarFuncoesMesa() {
+
+        const funcoes = {
+
+            estado:
+                !!(
+                    window.MesaRPG &&
+                    typeof window.MesaRPG.estado === "function"
+                ),
+
+            carregarJogadores:
+                !!(
+                    window.MesaRPG &&
+                    typeof window.MesaRPG.carregarJogadoresDaCampanha ===
+                    "function"
+                ),
+
+            realtime:
+                !!(
+                    window.MesaRPG &&
+                    typeof window.MesaRPG.iniciarRealtimeMesa ===
+                    "function"
+                ),
+
+            sincronizar:
+                typeof window.sincronizarPersonagensMesa ===
+                "function"
+
+        };
+
+
+        const encontradas =
+            Object.entries(funcoes)
+                .filter(
+                    ([_, valor]) => valor
+                )
+                .map(
+                    ([chave]) => chave
+                );
+
+
+        const ausentes =
+            Object.entries(funcoes)
+                .filter(
+                    ([_, valor]) => !valor
+                )
+                .map(
+                    ([chave]) => chave
+                );
+
+
+        if (!encontradas.length) {
+
+            definirTeste(
+                "funcoes",
+                "erro",
+                "Funções da Mesa",
+                "Nenhuma função pública esperada da Mesa foi encontrada.",
+                "Todas as funções testadas estão ausentes.",
+                "O diagnóstico não consegue consultar ou sincronizar o estado da Mesa.",
+                [
+                    "mesa.js não foi carregado.",
+                    "MesaRPG não foi inicializado.",
+                    "O nome das funções foi alterado."
+                ],
+                "Verifique o carregamento do mesa.js."
+            );
+
+        } else if (ausentes.length) {
+
+            definirTeste(
+                "funcoes",
+                "aviso",
+                "Funções da Mesa",
+                "A Mesa possui algumas funções disponíveis, mas outras estão ausentes.",
+                `Encontradas: ${encontradas.join(", ")} | Ausentes: ${ausentes.join(", ")}`,
+                "Alguns recursos do diagnóstico ou sincronização podem não funcionar.",
+                [
+                    "Versão parcial do mesa.js.",
+                    "Função removida ou renomeada.",
+                    "Script carregado parcialmente."
+                ],
+                "Verifique se as funções ausentes são esperadas na versão atual da Mesa."
+            );
+
+        } else {
+
+            definirTeste(
+                "funcoes",
+                "sucesso",
+                "Funções da Mesa",
+                "Todas as funções principais esperadas foram encontradas.",
+                encontradas.join(", "),
+                "Nenhum problema detectado.",
+                [],
+                "Nenhuma ação necessária."
+            );
+
+        }
+
+
+        registrarDiagnosticoTeste(
+            "funcoes"
+        );
+
+    }
+
+
+    /* =====================================================
        ATUALIZAÇÃO COMPLETA
     ===================================================== */
 
     async function atualizarDiagnostico() {
 
-        atualizarStatusSupabase();
+        Diagnostico.testes = {};
 
-        atualizarStatusCampanha();
 
-        atualizarStatusRealtime();
+        diagnosticarAmbiente();
+
+
+        const supabase =
+            diagnosticarSupabase();
+
+
+        await diagnosticarUsuario(
+            supabase
+        );
+
+
+        diagnosticarCampanha();
+
+
+        diagnosticarPersonagens();
+
+
+        diagnosticarRealtime();
+
+
+        diagnosticarFuncoesMesa();
+
 
         atualizarDadosCampanha();
 
-        atualizarPersonagens();
 
-        await atualizarStatusUsuario();
+        Diagnostico.ultimoDiagnostico =
+            new Date();
+
+
+        atualizarResumoDiagnostico();
+
+    }
+
+
+    /* =====================================================
+       RESUMO
+    ===================================================== */
+
+    function atualizarResumoDiagnostico() {
+
+        const testes =
+            Object.values(
+                Diagnostico.testes
+            );
+
+
+        const erros =
+            testes.filter(
+                teste =>
+                    teste.status === "erro"
+            );
+
+
+        const avisos =
+            testes.filter(
+                teste =>
+                    teste.status === "aviso"
+            );
+
+
+        const sucessos =
+            testes.filter(
+                teste =>
+                    teste.status === "sucesso"
+            );
+
+
+        const resumo =
+            document.getElementById(
+                "diagnostico-resumo"
+            );
+
+
+        if (!resumo) return;
+
+
+        resumo.innerHTML = `
+
+            <div class="diagnostico-resumo-item">
+                <strong>${sucessos.length}</strong>
+                <span>OK</span>
+            </div>
+
+            <div class="diagnostico-resumo-item">
+                <strong>${avisos.length}</strong>
+                <span>Avisos</span>
+            </div>
+
+            <div class="diagnostico-resumo-item">
+                <strong>${erros.length}</strong>
+                <span>Erros</span>
+            </div>
+
+        `;
+
+    }
+
+
+    /* =====================================================
+       RELATÓRIO DETALHADO
+    ===================================================== */
+
+    function gerarRelatorio() {
+
+        const testes =
+            Object.values(
+                Diagnostico.testes
+            );
+
+
+        if (!testes.length) {
+
+            return `
+                <div class="diagnostico-relatorio-vazio">
+                    Nenhum diagnóstico executado ainda.
+                </div>
+            `;
+
+        }
+
+
+        return testes
+            .map(
+                teste => {
+
+                    let classe =
+                        "diagnostico-detalhe-info";
+
+
+                    let icone =
+                        "ℹ️";
+
+
+                    if (
+                        teste.status === "sucesso"
+                    ) {
+
+                        classe =
+                            "diagnostico-detalhe-sucesso";
+
+                        icone =
+                            "🟢";
+
+                    }
+
+
+                    if (
+                        teste.status === "aviso"
+                    ) {
+
+                        classe =
+                            "diagnostico-detalhe-aviso";
+
+                        icone =
+                            "🟡";
+
+                    }
+
+
+                    if (
+                        teste.status === "erro"
+                    ) {
+
+                        classe =
+                            "diagnostico-detalhe-erro";
+
+                        icone =
+                            "🔴";
+
+                    }
+
+
+                    const causas =
+                        teste.causas.length
+                            ? `
+                                <ul>
+                                    ${
+                                        teste.causas
+                                            .map(
+                                                causa =>
+                                                    `<li>${escaparHTML(causa)}</li>`
+                                            )
+                                            .join("")
+                                    }
+                                </ul>
+                            `
+                            : `
+                                <div class="diagnostico-sem-causas">
+                                    Nenhuma causa suspeita.
+                                </div>
+                            `;
+
+
+                    return `
+
+                        <article class="diagnostico-detalhe ${classe}">
+
+                            <div class="diagnostico-detalhe-cabecalho">
+
+                                <strong>
+                                    ${icone}
+                                    ${escaparHTML(teste.titulo)}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="diagnostico-detalhe-descricao">
+
+                                ${escaparHTML(teste.descricao)}
+
+                            </div>
+
+
+                            <div class="diagnostico-detalhe-bloco">
+
+                                <strong>🔎 Detalhes</strong>
+
+                                <div>
+                                    ${escaparHTML(teste.detalhes)}
+                                </div>
+
+                            </div>
+
+
+                            <div class="diagnostico-detalhe-bloco">
+
+                                <strong>⚠️ Impacto</strong>
+
+                                <div>
+                                    ${escaparHTML(teste.impacto)}
+                                </div>
+
+                            </div>
+
+
+                            <div class="diagnostico-detalhe-bloco">
+
+                                <strong>🧩 Possíveis causas</strong>
+
+                                ${causas}
+
+                            </div>
+
+
+                            <div class="diagnostico-detalhe-bloco">
+
+                                <strong>🛠️ Recomendação</strong>
+
+                                <div>
+                                    ${escaparHTML(teste.recomendacao)}
+                                </div>
+
+                            </div>
+
+                        </article>
+
+                    `;
+
+                }
+            )
+            .join("");
+
+    }
+
+
+    function atualizarRelatorio() {
+
+        const elemento =
+            document.getElementById(
+                "diagnostico-detalhes"
+            );
+
+
+        if (!elemento) return;
+
+
+        elemento.innerHTML =
+            gerarRelatorio();
 
     }
 
@@ -789,7 +2016,7 @@
 
                 registrar(
                     "sucesso",
-                    "Sincronização concluída."
+                    "Sincronização da campanha concluída."
                 );
 
 
@@ -805,7 +2032,7 @@
                 "function"
             ) {
 
-                window.sincronizarPersonagensMesa();
+                await window.sincronizarPersonagensMesa();
 
 
                 registrar(
@@ -823,16 +2050,37 @@
 
             registrar(
                 "erro",
-                "Nenhuma função de sincronização foi encontrada."
+                "Nenhuma função de sincronização foi encontrada. Verifique o diagnóstico de Funções da Mesa."
             );
+
 
         } catch (erro) {
 
             registrar(
                 "erro",
-                "Erro na sincronização: " +
-                erro.message
+                "Erro durante a sincronização: " +
+                obterMensagemErro(erro)
             );
+
+
+            definirTeste(
+                "sincronizacao",
+                "erro",
+                "Sincronização",
+                "A tentativa de sincronização manual falhou.",
+                obterMensagemErro(erro),
+                "Os dados da Mesa podem permanecer desatualizados.",
+                [
+                    "Erro no banco de dados.",
+                    "Sessão inválida.",
+                    "Função de sincronização com erro.",
+                    "Problema de conexão."
+                ],
+                "Verifique os detalhes do erro e execute o diagnóstico novamente."
+            );
+
+
+            atualizarRelatorio();
 
         }
 
@@ -857,6 +2105,10 @@
                     Array.isArray(personagens)
                         ? personagens.length
                         : 0;
+
+
+                Diagnostico.ultimoRealtime =
+                    new Date();
 
 
                 registrar(
@@ -957,8 +2209,10 @@
 
                 registrar(
                     "erro",
-                    evento?.message ||
-                    "Erro JavaScript detectado."
+                    `Erro JavaScript: ${
+                        evento?.message ||
+                        "Erro desconhecido."
+                    }`
                 );
 
             }
@@ -976,10 +2230,7 @@
                 registrar(
                     "erro",
                     "Promise rejeitada: " +
-                    (
-                        erro?.message ||
-                        String(erro)
-                    )
+                    obterMensagemErro(erro)
                 );
 
             }
@@ -1016,13 +2267,40 @@
         Diagnostico.aberto = true;
 
 
-        atualizarDiagnostico();
-
-
         registrar(
-            "sucesso",
-            "Painel de diagnóstico aberto."
+            "info",
+            "Executando diagnóstico completo..."
         );
+
+
+        atualizarDiagnostico()
+            .then(
+                () => {
+
+                    atualizarRelatorio();
+
+                    registrar(
+                        "sucesso",
+                        "Diagnóstico completo concluído."
+                    );
+
+                    atualizarRelatorio();
+
+                }
+            )
+            .catch(
+                erro => {
+
+                    registrar(
+                        "erro",
+                        "Falha durante o diagnóstico: " +
+                        obterMensagemErro(erro)
+                    );
+
+                    atualizarRelatorio();
+
+                }
+            );
 
     }
 
@@ -1062,8 +2340,6 @@
 
     /* =====================================================
        CLIQUE DO BOTÃO DE DIAGNÓSTICO
-       Delegação de evento para garantir funcionamento
-       mesmo que a estrutura da mesa seja recriada.
     ===================================================== */
 
     function registrarCliqueDiagnostico() {
@@ -1174,7 +2450,33 @@
 
                     evento.stopPropagation();
 
-                    atualizarDiagnostico();
+
+                    atualizarDiagnostico()
+                        .then(
+                            () => {
+
+                                atualizarRelatorio();
+
+                                registrar(
+                                    "sucesso",
+                                    "Diagnóstico atualizado."
+                                );
+
+                            }
+                        )
+                        .catch(
+                            erro => {
+
+                                registrar(
+                                    "erro",
+                                    "Erro ao atualizar diagnóstico: " +
+                                    obterMensagemErro(erro)
+                                );
+
+                                atualizarRelatorio();
+
+                            }
+                        );
 
                 }
 
@@ -1191,26 +2493,22 @@
 
     function inicializar() {
 
-        if (Diagnostico.inicializado) {
+        if (
+            Diagnostico.inicializado
+        ) {
 
             return;
 
         }
 
 
-        Diagnostico.inicializado = true;
+        Diagnostico.inicializado =
+            true;
 
-
-        /*
-         * Os cliques principais usam delegação.
-         * Isso evita problemas caso outro script
-         * recrie ou altere o cabeçalho.
-         */
 
         registrarCliqueDiagnostico();
 
         registrarCliquesPainel();
-
 
         registrarEventos();
 
@@ -1221,36 +2519,61 @@
         );
 
 
-        /*
-         * Primeira leitura.
-         */
-
         setTimeout(
             () => {
 
-                atualizarDiagnostico();
+                atualizarDiagnostico()
+                    .then(
+                        () => atualizarRelatorio()
+                    )
+                    .catch(
+                        erro => {
+
+                            registrar(
+                                "erro",
+                                "Falha na leitura inicial: " +
+                                obterMensagemErro(erro)
+                            );
+
+                            atualizarRelatorio();
+
+                        }
+                    );
 
             },
             300
         );
 
 
-        /*
-         * Atualização periódica enquanto
-         * o painel estiver aberto.
-         */
-
         setInterval(
             () => {
 
-                if (Diagnostico.aberto) {
+                if (
+                    Diagnostico.aberto
+                ) {
 
-                    atualizarDiagnostico();
+                    atualizarDiagnostico()
+                        .then(
+                            () => atualizarRelatorio()
+                        )
+                        .catch(
+                            erro => {
+
+                                registrar(
+                                    "erro",
+                                    "Erro na atualização automática: " +
+                                    obterMensagemErro(erro)
+                                );
+
+                                atualizarRelatorio();
+
+                            }
+                        );
 
                 }
 
             },
-            2000
+            5000
         );
 
     }
@@ -1270,7 +2593,13 @@
 
         atualizar: atualizarDiagnostico,
 
-        sincronizar: sincronizarAgora
+        sincronizar: sincronizarAgora,
+
+        relatorio: function () {
+
+            return Diagnostico.testes;
+
+        }
 
     };
 
