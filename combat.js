@@ -298,6 +298,10 @@ const CombatModule = (() => {
         salvarPersonagem();
 
 
+        if (typeof window.SistemaDano !== "undefined") {
+            window.SistemaDano.registrarDano("fisico", name);
+        }
+
         aplicarEfeitoAtaque();
 
     }
@@ -340,6 +344,10 @@ const CombatModule = (() => {
 
         salvarPersonagem();
 
+
+        if (typeof window.SistemaDano !== "undefined") {
+            window.SistemaDano.registrarDano("fisico", "Contra-ataque");
+        }
 
         aplicarEfeitoContraAtaque();
 
@@ -465,6 +473,10 @@ const CombatModule = (() => {
 
         salvarPersonagem();
 
+
+        if (typeof window.SistemaDano !== "undefined") {
+            window.SistemaDano.registrarDano("magico", name);
+        }
 
         aplicarEfeitoHabilidade();
 

@@ -242,6 +242,10 @@ const CharacterModule = (() => {
 
         salvarPersonagem();
 
+        if (typeof window.RacasOcultas !== "undefined") {
+            window.RacasOcultas.verificar();
+        }
+
     }
 
 
