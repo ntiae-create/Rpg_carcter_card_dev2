@@ -342,7 +342,7 @@ button {
 .character-image {
     position: relative;
 
-    height: 360px;
+    height: 520px;
 
     margin: 15px;
 
@@ -1854,7 +1854,7 @@ button {
     }
 
     .character-image {
-        height: 320px;
+        height: 460px;
 
         margin: 12px;
     }
@@ -1899,7 +1899,7 @@ button {
     }
 
     .character-image {
-        height: 285px;
+        height: 400px;
     }
 
     .identity {
@@ -1915,6 +1915,8 @@ button {
             repeat(4, 1fr);
     }
 }
+
+
 /* =========================================================
    CAMPANHA
 ========================================================= */
