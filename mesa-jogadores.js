@@ -510,6 +510,34 @@ function converterPersonagemParaJogador(
             jogadorBase?.avatar ||
             null,
 
+        atributos:
+            personagem.atributos ||
+            personagem.attributes ||
+            {
+                atk: personagem.atk,
+                atkMgc: personagem.atk_mgc || personagem.atkMgc,
+                def: personagem.def,
+                res: personagem.res,
+                agi: personagem.agi,
+                int: personagem.int
+            },
+        recursos:
+            personagem.recursos ||
+            personagem.resources ||
+            {
+                est: personagem.est,
+                sanidade: personagem.sanidade
+            },
+        inventario:
+            Array.isArray(personagem.inventario)
+                ? personagem.inventario
+                : (
+                    personagem.inventory &&
+                    Array.isArray(personagem.inventory.items)
+                        ? personagem.inventory.items
+                        : []
+                ),
+
 
         hp: {
 

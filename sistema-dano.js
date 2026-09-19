@@ -183,3 +183,132 @@
     };
     console.log("[SistemaDano] Carregado.");
 })();
+
+/* =========================================================
+   CURA AUTOMÁTICA + PAINEL VISUAL DE STACKS
+========================================================= */
+(function () {
+    function bonusCuraPercentual() {
+        let total = 0;
+        const detalhes = [];
+        if (!window.PassivasStacks || !window.PassivasDados) {
+            return { total: total, detalhes: detalhes };
+        }
+        const classe =
+            (typeof character !== "undefined" && character.class) || "";
+        window.PassivasDados.listar().forEach(function (p) {
+            if (
+                !p ||
+                p.classe !== classe ||
+                (p.tipo !== "stack" && p.tipo !== "stack_alvo")
+            ) {
+                return;
+            }
+            const st = window.PassivasStacks.obter(
+                window.SistemaDano.JOGADOR_ID,
+                p.id
+            );
+            if (!st || st.valor <= 0) return;
+            const e = p.efeitoPorStack || {};
+            const pct = Number(e.poderCura || e.cura || 0);
+            if (pct <= 0) return;
+            const valor = pct * st.valor;
+            total += valor;
+            detalhes.push("+" + valor + "% " + p.nome + " (" + st.valor + "x)");
+        });
+        return { total: total, detalhes: detalhes };
+    }
+
+    function curar() {
+        if (typeof character === "undefined") return;
+        const base = Math.max(
+            1,
+            Number(character.attributes.atkMgc) +
+            Math.floor(Number(character.attributes.int) / 2)
+        );
+        const bonus = bonusCuraPercentual();
+        const variacao = 0.9 + Math.random() * 0.2;
+        let valor = Math.round(base * (1 + bonus.total / 100) * variacao);
+        valor = Math.max(1, valor);
+        let msg = "💚 Cura → +" + valor + " HP (base " + base + ")";
+        if (bonus.detalhes.length) {
+            msg += " [" + bonus.detalhes.join(", ") + "]";
+        }
+        if (
+            typeof CombatModule !== "undefined" &&
+            CombatModule.registrar
+        ) {
+            CombatModule.registrar(msg);
+        }
+        renderizarPainelStacks();
+    }
+
+    function renderizarPainelStacks() {
+        const painel = document.getElementById("stacks-panel");
+        if (!painel) return;
+        if (!window.PassivasStacks || !window.PassivasDados) {
+            painel.innerHTML = "";
+            return;
+        }
+        const stacks = window.PassivasStacks.obterTodas(
+            window.SistemaDano.JOGADOR_ID
+        );
+        const ids = Object.keys(stacks).filter(function (id) {
+            return stacks[id] && stacks[id].valor > 0;
+        });
+        if (!ids.length) {
+            painel.innerHTML =
+                '<div style="color:#75687f;font-size:10px;letter-spacing:1px;text-align:center;padding:6px;">NENHUMA STACK ATIVA</div>';
+            return;
+        }
+        let html =
+            '<div style="color:#c084fc;font-size:10px;letter-spacing:2px;margin-bottom:8px;text-align:center;">⚡ STACKS ATIVAS</div>';
+        ids.forEach(function (id) {
+            const st = stacks[id];
+            const def = window.PassivasDados.obter(id);
+            const nome = def ? def.nome : id;
+            const temMax =
+                st.maximo !== null && st.maximo !== undefined;
+            const pct = temMax ? Math.min(100, (st.valor / st.maximo) * 100) : 100;
+            const maxTxt = temMax ? "/" + st.maximo : "";
+            html +=
+                '<div style="margin-bottom:7px;">' +
+                '<div style="display:flex;justify-content:space-between;font-size:9px;color:#b9a9c8;margin-bottom:3px;">' +
+                "<span>" + nome + "</span><span>" + st.valor + maxTxt + "</span></div>" +
+                '<div style="height:5px;border-radius:5px;background:#211a29;overflow:hidden;">' +
+                '<div style="height:100%;width:' + pct +
+                '%;background:linear-gradient(90deg,#6d28d9,#c084fc);transition:width .3s;"></div>' +
+                "</div></div>";
+        });
+        painel.innerHTML = html;
+    }
+
+    function inicializar() {
+        const btn = document.getElementById("auto-heal-button");
+        if (btn && !btn.dataset.healConfigured) {
+            btn.dataset.healConfigured = "true";
+            btn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                curar();
+            });
+        }
+        renderizarPainelStacks();
+        window.addEventListener(
+            "passiva:stacksAlterada",
+            renderizarPainelStacks
+        );
+    }
+
+    if (window.SistemaDano) {
+        window.SistemaDano.curar = curar;
+        window.SistemaDano.bonusCuraPercentual = bonusCuraPercentual;
+        window.SistemaDano.renderizarPainelStacks = renderizarPainelStacks;
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", inicializar);
+    } else {
+        inicializar();
+    }
+    setTimeout(renderizarPainelStacks, 600);
+})();
