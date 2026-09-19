@@ -1688,17 +1688,24 @@ function confirmarPersonagem() {
     ) {
 
         mostrarResultadoSupabase(
-            "✓ PERSONAGEM CONFIRMADO — PREPARANDO A MESA...",
+            "✓ PERSONAGEM CONFIRMADO! Digite o código da campanha para entrar na mesa.",
             "sucesso"
         );
 
     }
 
+    // NÃO redireciona mais para a mesa automaticamente.
+    // Exibe o painel de código da campanha; o jogador só
+    // entra na mesa após digitar um código válido (que
+    // salva o campaignId e permite "continuar campanha").
+    if (
+        typeof mostrarMesaComoTela ===
+        "function"
+    ) {
 
-    setTimeout(
-        irParaMesa,
-        250
-    );
+        mostrarMesaComoTela();
+
+    }
 
 }
 

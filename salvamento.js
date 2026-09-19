@@ -127,7 +127,9 @@ async function salvarPersonagemSupabase() {
             est:
                 Number(
                     character.resources?.est
-                ) || 0
+                ) || 0,
+            image_url:
+                character.imageURL || null
 
         };
 
