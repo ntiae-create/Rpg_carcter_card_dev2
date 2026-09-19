@@ -438,8 +438,19 @@ const CarregamentoRPG = (() => {
         campanha
     ) {
 
+        /*
+           character é uma variável global
+           criada pelo script.js.
+
+           Não usamos window.character,
+           pois variáveis globais declaradas
+           com let/const não precisam existir
+           como propriedade de window.
+        */
+
         if (
-            !window.character
+            typeof character === "undefined" ||
+            !character
         ) {
 
             console.warn(
@@ -659,33 +670,70 @@ const CarregamentoRPG = (() => {
 
 
             /*
-               Veremos depois se é uma arte
-               manual ou automática.
+               Verifica se a imagem salva no Supabase
+               corresponde à arte automática atual
+               da raça + classe.
 
-               Por enquanto marcamos como
-               não-manual para permitir que
-               CharacterModule controle a arte.
+               Se corresponder:
+               imageAuto = true
+
+               Se for diferente:
+               imageAuto = false
+               (imagem manual)
             */
 
-            character.imageAuto = true;
+            let arteAutomatica = null;
+
+
+            if (
+                typeof CharacterModule !==
+                "undefined" &&
+                typeof CharacterModule
+                    .obterArteAutomatica ===
+                    "function"
+            ) {
+
+                arteAutomatica =
+                    CharacterModule
+                        .obterArteAutomatica();
+
+            }
+
+
+            if (
+                arteAutomatica &&
+                character.imageURL ===
+                    arteAutomatica
+            ) {
+
+                character.imageAuto = true;
+
+            }
+
+            else {
+
+                character.imageAuto = false;
+
+            }
 
         }
 
         else {
 
-            character.imageURL =
-                character.imageURL || "";
+            character.imageURL = "";
+
+            character.imageAuto = true;
 
         }
 
 
         /* =================================================
            COMBATE
-           
+
            Caso futuramente existam colunas
            JSONB "combat" e "inventory",
            elas serão restauradas automaticamente.
-           
+
            Se não existirem, nada acontece.
         ================================================= */
 
@@ -928,33 +976,33 @@ const CarregamentoRPG = (() => {
         */
 
         if (
-            window.CharacterModule &&
-            typeof
-                window.CharacterModule
-                    .atualizarImagem ===
-                "function"
+            typeof CharacterModule !==
+            "undefined"
         ) {
 
-            /*
-               A arte automática é determinada
-               pela raça + classe.
-            */
-
             if (
-                typeof
-                    window.CharacterModule
-                        .aplicarArteAutomatica ===
+                typeof CharacterModule
+                    .aplicarArteAutomatica ===
                     "function"
             ) {
 
-                window.CharacterModule
+                /*
+                   A arte automática é determinada
+                   pela raça + classe.
+                */
+
+                CharacterModule
                     .aplicarArteAutomatica();
 
             }
 
-            else {
+            else if (
+                typeof CharacterModule
+                    .atualizarImagem ===
+                    "function"
+            ) {
 
-                window.CharacterModule
+                CharacterModule
                     .atualizarImagem();
 
             }
@@ -967,14 +1015,14 @@ const CarregamentoRPG = (() => {
         */
 
         if (
-            window.CombatModule &&
-            typeof
-                window.CombatModule
-                    .atualizar ===
+            typeof CombatModule !==
+                "undefined" &&
+            typeof CombatModule
+                .atualizar ===
                 "function"
         ) {
 
-            window.CombatModule
+            CombatModule
                 .atualizar();
 
         }
@@ -985,14 +1033,14 @@ const CarregamentoRPG = (() => {
         */
 
         if (
-            window.InventoryModule &&
-            typeof
-                window.InventoryModule
-                    .atualizar ===
+            typeof InventoryModule !==
+                "undefined" &&
+            typeof InventoryModule
+                .atualizar ===
                 "function"
         ) {
 
-            window.InventoryModule
+            InventoryModule
                 .atualizar();
 
         }
@@ -1005,12 +1053,11 @@ const CarregamentoRPG = (() => {
         */
 
         if (
-            typeof
-                window.atualizarInterface ===
+            typeof atualizarInterface ===
                 "function"
         ) {
 
-            window.atualizarInterface();
+            atualizarInterface();
 
         }
 
