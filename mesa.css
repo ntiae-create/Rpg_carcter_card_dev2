@@ -227,6 +227,21 @@ body {
 
 
 /* ============================================================
+   ÁREA DOS BOTÕES DO CABEÇALHO
+============================================================ */
+
+.mesa-header-actions {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 10000;
+
+    pointer-events: none;
+}
+
+
+/* ============================================================
    CONFIGURAÇÕES
 ============================================================ */
 
@@ -317,15 +332,15 @@ body {
         translate(-50%, -50%);
 
     /*
-       A área central agora é maior.
-       Os cards ficam ao redor dela.
+       Área central dominante.
+       Os cards ficam distribuídos ao redor.
     */
 
     width:
-        min(72vw, 1050px);
+        min(74vw, 1080px);
 
     height:
-        min(70vh, 720px);
+        min(72vh, 740px);
 
     min-width: 430px;
     min-height: 340px;
@@ -335,7 +350,7 @@ body {
 
 
 /* ============================================================
-   MOLDURA
+   MOLDURA DA MESA
 ============================================================ */
 
 .mesa-stage::before {
@@ -538,16 +553,15 @@ body {
     position: absolute;
 
     /*
-       Cards compactos.
-       A área principal continua sendo
-       o centro da mesa.
+       Cards propositalmente compactos.
+       A mesa central continua sendo o elemento dominante.
     */
 
     width:
-        clamp(112px, 9vw, 140px);
+        clamp(104px, 8vw, 132px);
 
     height:
-        clamp(132px, 15vh, 165px);
+        clamp(142px, 17vh, 168px);
 
     pointer-events: auto;
 
@@ -643,81 +657,82 @@ body {
 ============================================================ */
 
 /*
-                   P1          P2
+                         P1        P2
 
 
-              ┌────────────────────┐
-        P3    │                    │    P4
-              │                    │
-              │        MESA        │
-              │                    │
-        P5    │                    │    P6
-              └────────────────────┘
+                 ┌───────────────────────┐
+                 │                       │
+           P3    │                       │    P4
+                 │                       │
+           P5    │         MESA          │    P6
+                 │                       │
+                 │                       │
+                 └───────────────────────┘
 
 
-                   P7          P8
+                         P7        P8
 */
 
 
 .player-card[data-seat="1"] {
-    top: 7%;
-    left: 32%;
+    top: 5%;
+    left: 29%;
 
     transform:
         rotate(-1.5deg);
 }
 
 .player-card[data-seat="2"] {
-    top: 7%;
-    right: 32%;
+    top: 5%;
+    right: 29%;
 
     transform:
         rotate(1.5deg);
 }
 
 .player-card[data-seat="3"] {
-    top: 30%;
-    left: 4%;
+    top: 29%;
+    left: 2%;
 
     transform:
         rotate(-1deg);
 }
 
 .player-card[data-seat="4"] {
-    top: 30%;
-    right: 4%;
+    top: 29%;
+    right: 2%;
 
     transform:
         rotate(1deg);
 }
 
 .player-card[data-seat="5"] {
-    top: 54%;
-    left: 4%;
+    top: 56%;
+    left: 2%;
 
     transform:
         rotate(1deg);
 }
 
 .player-card[data-seat="6"] {
-    top: 54%;
-    right: 4%;
+    top: 56%;
+    right: 2%;
 
     transform:
         rotate(-1deg);
 }
 
 .player-card[data-seat="7"] {
-    bottom: 6%;
-    left: 32%;
+    bottom: 5%;
+    left: 29%;
 
     transform:
         rotate(1deg);
 }
 
 .player-card[data-seat="8"] {
-    bottom: 6%;
-    right: 32%;
+    bottom: 5%;
+    right: 29%;
 
     transform:
         rotate(-1deg);
@@ -730,7 +745,7 @@ body {
 
 .player-card:hover {
     transform:
-        translateY(-7px)
+        translateY(-6px)
         scale(1.035)
         rotate(0deg);
 
@@ -795,7 +810,7 @@ body {
     width: 100%;
     height: 100%;
 
-    padding: 7px;
+    padding: 6px;
 
     display: flex;
 
@@ -808,7 +823,7 @@ body {
 
 
 /* ============================================================
-   CABEÇALHO
+   CABEÇALHO / ÁREA DA IMAGEM + NOME
 ============================================================ */
 
 .player-card-header {
@@ -822,16 +837,18 @@ body {
 
     width: 100%;
 
+    height: 72%;
+
     min-height: 0;
 
-    flex: 1 1 auto;
+    flex: 0 0 72%;
 
     gap: 4px;
 }
 
 
 /* ============================================================
-   AVATAR / IMAGEM DO PERSONAGEM
+   AVATAR / IMAGEM
 ============================================================ */
 
 .player-avatar {
@@ -839,12 +856,11 @@ body {
 
     width: 100%;
 
-    /*
-       A imagem ocupa aproximadamente
-       60% do card.
-    */
+    height: auto;
 
-    height: 88px;
+    /*
+       A imagem domina visualmente o card.
+    */
 
     flex: 1 1 auto;
 
@@ -936,7 +952,7 @@ body {
     text-align: center;
 
     font-size:
-        clamp(9px, 0.85vw, 11px);
+        clamp(8px, 0.78vw, 10px);
 
     font-weight: bold;
 
@@ -972,7 +988,11 @@ body {
 
     width: 100%;
 
-    flex: 0 0 auto;
+    height: 25%;
+
+    flex: 0 0 25%;
+
+    justify-content: flex-end;
 }
 
 
@@ -984,7 +1004,6 @@ body {
     display: flex;
 
     align-items: center;
-
     justify-content: space-between;
 
     width: 100%;
@@ -1877,59 +1896,60 @@ body {
 @media (max-width: 1100px) {
 
     .mesa-stage {
-        width: 64vw;
-        height: 66vh;
+        width: 66vw;
+        height: 67vh;
 
-        min-width: 360px;
+        min-width: 350px;
     }
 
     .player-card {
-        width: 108px;
-        height: 130px;
+        width: 100px;
+        height: 138px;
     }
 
-    .player-avatar {
-        height: 70px;
+    .player-card-header {
+        height: 72%;
+        flex-basis: 72%;
     }
 
     .player-card[data-seat="1"] {
-        top: 8%;
-        left: 29%;
+        top: 7%;
+        left: 27%;
     }
 
     .player-card[data-seat="2"] {
-        top: 8%;
-        right: 29%;
+        top: 7%;
+        right: 27%;
     }
 
     .player-card[data-seat="3"] {
-        top: 31%;
-        left: 2%;
+        top: 30%;
+        left: 1.5%;
     }
 
     .player-card[data-seat="4"] {
-        top: 31%;
-        right: 2%;
+        top: 30%;
+        right: 1.5%;
     }
 
     .player-card[data-seat="5"] {
         top: 55%;
-        left: 2%;
+        left: 1.5%;
     }
 
     .player-card[data-seat="6"] {
         top: 55%;
-        right: 2%;
+        right: 1.5%;
     }
 
     .player-card[data-seat="7"] {
-        bottom: 7%;
-        left: 29%;
+        bottom: 6%;
+        left: 27%;
     }
 
     .player-card[data-seat="8"] {
-        bottom: 7%;
-        right: 29%;
+        bottom: 6%;
+        right: 27%;
     }
 
     .cte-info {
@@ -1949,49 +1969,53 @@ body {
 @media (max-width: 850px) {
 
     .mesa-stage {
-        width: 58vw;
+        width: 60vw;
         height: 63vh;
 
-        min-width: 320px;
+        min-width: 310px;
     }
 
     .player-card {
-        width: 98px;
-        height: 120px;
+        width: 92px;
+        height: 126px;
+    }
+
+    .player-card-content {
+        padding: 5px;
     }
 
     .player-avatar {
-        height: 64px;
+        border-radius: 8px;
     }
 
     .player-card[data-seat="1"] {
-        top: 11%;
+        top: 9%;
         left: 25%;
     }
 
     .player-card[data-seat="2"] {
-        top: 11%;
+        top: 9%;
         right: 25%;
     }
 
     .player-card[data-seat="3"] {
         top: 32%;
-        left: 1%;
+        left: 0.5%;
     }
 
     .player-card[data-seat="4"] {
         top: 32%;
-        right: 1%;
+        right: 0.5%;
     }
 
     .player-card[data-seat="5"] {
-        top: 55%;
-        left: 1%;
+        top: 56%;
+        left: 0.5%;
     }
 
     .player-card[data-seat="6"] {
-        top: 55%;
-        right: 1%;
+        top: 56%;
+        right: 0.5%;
     }
 
     .player-card[data-seat="7"] {
@@ -2089,7 +2113,7 @@ body {
         left: 50%;
         top: 50%;
 
-        width: 56vw;
+        width: 57vw;
         height: 58vh;
 
         min-width: 0;
@@ -2130,8 +2154,8 @@ body {
     -------------------------------- */
 
     .player-card {
-        width: 82px;
-        height: 108px;
+        width: 78px;
+        height: 106px;
 
         border-radius: 10px;
     }
@@ -2142,9 +2166,12 @@ body {
         gap: 3px;
     }
 
-    .player-avatar {
-        height: 59px;
+    .player-card-header {
+        height: 72%;
+        flex-basis: 72%;
+    }
 
+    .player-avatar {
         border-radius: 7px;
 
         font-size: 20px;
@@ -2181,7 +2208,7 @@ body {
 
     .player-card[data-seat="1"] {
         top: 13%;
-        left: 24%;
+        left: 22%;
 
         transform:
             rotate(-2deg);
@@ -2189,7 +2216,7 @@ body {
 
     .player-card[data-seat="2"] {
         top: 13%;
-        right: 24%;
+        right: 22%;
         left: auto;
 
         transform:
@@ -2198,7 +2225,7 @@ body {
 
     .player-card[data-seat="3"] {
         top: 34%;
-        left: 1%;
+        left: 0.5%;
 
         transform:
             rotate(-1deg);
@@ -2206,7 +2233,7 @@ body {
 
     .player-card[data-seat="4"] {
         top: 34%;
-        right: 1%;
+        right: 0.5%;
 
         transform:
             rotate(1deg);
@@ -2214,7 +2241,7 @@ body {
 
     .player-card[data-seat="5"] {
         top: 55%;
-        left: 1%;
+        left: 0.5%;
         bottom: auto;
 
         transform:
@@ -2223,7 +2250,7 @@ body {
 
     .player-card[data-seat="6"] {
         top: 55%;
-        right: 1%;
+        right: 0.5%;
         bottom: auto;
 
         transform:
@@ -2232,7 +2259,7 @@ body {
 
     .player-card[data-seat="7"] {
         bottom: 4%;
-        left: 24%;
+        left: 22%;
 
         transform:
             rotate(2deg);
@@ -2240,7 +2267,7 @@ body {
 
     .player-card[data-seat="8"] {
         bottom: 4%;
-        right: 24%;
+        right: 22%;
 
         transform:
             rotate(-2deg);
@@ -2400,7 +2427,7 @@ body {
     -------------------------------- */
 
     .mesa-stage {
-        width: 53vw;
+        width: 54vw;
         height: 54vh;
     }
 
@@ -2410,8 +2437,8 @@ body {
     -------------------------------- */
 
     .player-card {
-        width: 72px;
-        height: 96px;
+        width: 70px;
+        height: 94px;
 
         border-radius: 8px;
     }
@@ -2422,9 +2449,12 @@ body {
         gap: 2px;
     }
 
-    .player-avatar {
-        height: 53px;
+    .player-card-header {
+        height: 72%;
+        flex-basis: 72%;
+    }
 
+    .player-avatar {
         border-radius: 6px;
 
         font-size: 16px;
@@ -2453,12 +2483,12 @@ body {
 
     .player-card[data-seat="1"] {
         top: 14%;
-        left: 22%;
+        left: 20%;
     }
 
     .player-card[data-seat="2"] {
         top: 14%;
-        right: 22%;
+        right: 20%;
     }
 
     .player-card[data-seat="3"] {
@@ -2483,12 +2513,12 @@ body {
 
     .player-card[data-seat="7"] {
         bottom: 3%;
-        left: 22%;
+        left: 20%;
     }
 
     .player-card[data-seat="8"] {
         bottom: 3%;
-        right: 22%;
+        right: 20%;
     }
 
 
@@ -2546,9 +2576,11 @@ body {
 .master-menu[hidden] {
     display: none !important;
 }
-/* =========================================================
+
+
+/* ============================================================
    OCULTAR BOTÃO "VER FICHA" DOS CARDS
-========================================================= */
+============================================================ */
 
 .player-card button,
 .player-card .btn-ver-ficha,
