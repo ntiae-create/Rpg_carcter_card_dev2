@@ -1,67 +1,83 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 
-<head>
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+>
 
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    >
-
-    <title>Mesa RPG</title>
+<title>Mesa RPG</title>
 
 
-    <!-- =====================================================
-         CSS DA MESA
-    ====================================================== -->
+<!-- =====================================================
+     CSS DA MESA
+====================================================== -->
 
-    <link
-        rel="stylesheet"
-        href="mesa.css"
-    >
+<link
+    rel="stylesheet"
+    href="mesa.css"
+>
 
-    <link
-        rel="stylesheet"
-        href="passivas.css"
-    >
+<link
+    rel="stylesheet"
+    href="passivas.css"
+>
 
-</head>
+<!-- =====================================================
+     CSS DO DIAGNÓSTICO
+====================================================== -->
+
+<link
+    rel="stylesheet"
+    href="mesa-diagnostico.css"
+>
+
+</head><body><!-- =====================================================
+     MESA RPG
+====================================================== -->
+
+<main
+    id="online-table-panel"
+    class="mesa-container"
+>
 
 
-<body>
+    <!-- =================================================
+         CABEÇALHO
+    ================================================== -->
 
-    <!-- =====================================================
-         MESA RPG
-    ====================================================== -->
+    <header class="mesa-header">
 
-    <main
-        id="online-table-panel"
-        class="mesa-container"
-    >
+        <div class="mesa-title">
+
+            <h1>🎲 Mesa RPG</h1>
+
+            <span id="nome-campanha">
+                Campanha
+            </span>
+
+        </div>
 
 
         <!-- =================================================
-             CABEÇALHO
+             CONTROLES DO CABEÇALHO
         ================================================== -->
 
-        <header class="mesa-header">
+        <div class="mesa-header-actions">
 
-            <div class="mesa-title">
+            <!-- DIAGNÓSTICO -->
 
-                <h1>🎲 Mesa RPG</h1>
+            <button
+                id="btn-diagnostico"
+                class="mesa-diagnostico-btn"
+                type="button"
+                aria-label="Diagnóstico da Mesa"
+                title="Diagnóstico da Mesa"
+            >
+                🔧
+            </button>
 
-                <span id="nome-campanha">
-                    Campanha
-                </span>
 
-            </div>
-
-
-            <!-- =================================================
-                 CONFIGURAÇÕES
-            ================================================== -->
+            <!-- CONFIGURAÇÕES -->
 
             <button
                 id="btn-configuracoes"
@@ -73,934 +89,926 @@
                 ⚙️
             </button>
 
-        </header>
+        </div>
+
+    </header>
 
 
 
-        <!-- =================================================
-             ÁREA PRINCIPAL
-        ================================================== -->
+    <!-- =================================================
+         ÁREA PRINCIPAL
+    ================================================== -->
 
-        <section class="mesa-layout">
+    <section class="mesa-layout">
 
 
-            <!-- =============================================
-                 JOGADORES
-            ============================================== -->
+        <!-- =============================================
+             JOGADORES
+        ============================================== -->
 
-            <section
-                id="jogadores"
-                class="jogadores-grid"
-                aria-label="Jogadores da Mesa"
+        <section
+            id="jogadores"
+            class="jogadores-grid"
+            aria-label="Jogadores da Mesa"
+        >
+
+
+            <!-- PLAYER 1 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="1"
+                data-seat="1"
             >
 
+                <div class="player-card-content">
 
-                <!-- =========================================
-                     PLAYER 1
-                ========================================== -->
+                    <div class="player-card-header">
 
-                <article
-                    class="jogador-card player-card"
-                    data-player="1"
-                    data-seat="1"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 1
-                            </div>
-
+                        <div class="player-avatar">
+                            👤
                         </div>
 
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
-                            </span>
-
-                            <span class="player-classe">
-                                Classe
-                            </span>
-
-                        </div>
-
-
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
+                        <div class="player-name">
+                            Player 1
                         </div>
 
                     </div>
 
-                </article>
+                    <div class="player-info">
 
+                        <span class="player-raca">
+                            Raça
+                        </span>
 
-
-                <!-- =========================================
-                     PLAYER 2
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="2"
-                    data-seat="2"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 2
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
-                            </span>
-
-                            <span class="player-classe">
-                                Classe
-                            </span>
-
-                        </div>
-
-
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-                        </div>
+                        <span class="player-classe">
+                            Classe
+                        </span>
 
                     </div>
 
-                </article>
+                    <div class="player-bars">
 
+                        <div class="status-values">
 
-
-                <!-- =========================================
-                     PLAYER 3
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="3"
-                    data-seat="3"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 3
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
+                            <span>
+                                ❤️ HP
                             </span>
 
-                            <span class="player-classe">
-                                Classe
+                            <span class="hp-value">
+                                100/100
                             </span>
 
                         </div>
 
+                        <div class="status-bar hp-bar">
 
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
+                            <span style="width:100%"></span>
 
                         </div>
 
-                    </div>
+                        <div class="status-values">
 
-                </article>
-
-
-
-                <!-- =========================================
-                     PLAYER 4
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="4"
-                    data-seat="4"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 4
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
+                            <span>
+                                💙 Mana
                             </span>
 
-                            <span class="player-classe">
-                                Classe
+                            <span class="mana-value">
+                                100/100
                             </span>
 
                         </div>
 
+                        <div class="status-bar mana-bar">
 
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
+                            <span style="width:100%"></span>
 
                         </div>
-
-                    </div>
-
-                </article>
-
-
-
-                <!-- =========================================
-                     PLAYER 5
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="5"
-                    data-seat="5"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 5
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
-                            </span>
-
-                            <span class="player-classe">
-                                Classe
-                            </span>
-
-                        </div>
-
-
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-
-
-                <!-- =========================================
-                     PLAYER 6
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="6"
-                    data-seat="6"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 6
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
-                            </span>
-
-                            <span class="player-classe">
-                                Classe
-                            </span>
-
-                        </div>
-
-
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-
-
-                <!-- =========================================
-                     PLAYER 7
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="7"
-                    data-seat="7"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 7
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
-                            </span>
-
-                            <span class="player-classe">
-                                Classe
-                            </span>
-
-                        </div>
-
-
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-
-
-                <!-- =========================================
-                     PLAYER 8
-                ========================================== -->
-
-                <article
-                    class="jogador-card player-card"
-                    data-player="8"
-                    data-seat="8"
-                >
-
-                    <div class="player-card-content">
-
-                        <div class="player-card-header">
-
-                            <div class="player-avatar">
-                                👤
-                            </div>
-
-                            <div class="player-name">
-                                Player 8
-                            </div>
-
-                        </div>
-
-
-                        <div class="player-info">
-
-                            <span class="player-raca">
-                                Raça
-                            </span>
-
-                            <span class="player-classe">
-                                Classe
-                            </span>
-
-                        </div>
-
-
-                        <div class="player-bars">
-
-                            <div class="status-values">
-
-                                <span>
-                                    ❤️ HP
-                                </span>
-
-                                <span class="hp-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar hp-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-
-                            <div class="status-values">
-
-                                <span>
-                                    💙 Mana
-                                </span>
-
-                                <span class="mana-value">
-                                    100/100
-                                </span>
-
-                            </div>
-
-
-                            <div class="status-bar mana-bar">
-
-                                <span style="width:100%"></span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-
-            </section>
-
-
-
-            <!-- =============================================
-                 PALCO CENTRAL
-            ============================================== -->
-
-            <section
-                id="mesa-stage"
-                class="mesa-main mesa-center mesa-stage"
-            >
-
-                <div
-                    id="mesa-screen"
-                    class="mesa-screen mesa-display"
-                >
-
-                    <div
-                        id="mesa-screen-content"
-                        class="mesa-screen-content"
-                    >
-
-                        <h2>
-                            🎲 Mesa de RPG
-                        </h2>
-
-                        <p>
-                            Aguardando o início da aventura...
-                        </p>
 
                     </div>
 
                 </div>
 
-            </section>
+            </article>
+
+
+
+            <!-- PLAYER 2 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="2"
+                data-seat="2"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 2
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+
+                        <span class="player-raca">
+                            Raça
+                        </span>
+
+                        <span class="player-classe">
+                            Classe
+                        </span>
+
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+
+                            <span>❤️ HP</span>
+
+                            <span class="hp-value">
+                                100/100
+                            </span>
+
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+
+                            <span>💙 Mana</span>
+
+                            <span class="mana-value">
+                                100/100
+                            </span>
+
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- PLAYER 3 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="3"
+                data-seat="3"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 3
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+
+                        <span class="player-raca">Raça</span>
+                        <span class="player-classe">Classe</span>
+
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+                            <span>❤️ HP</span>
+                            <span class="hp-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+                            <span>💙 Mana</span>
+                            <span class="mana-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- PLAYER 4 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="4"
+                data-seat="4"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 4
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+                        <span class="player-raca">Raça</span>
+                        <span class="player-classe">Classe</span>
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+                            <span>❤️ HP</span>
+                            <span class="hp-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+                            <span>💙 Mana</span>
+                            <span class="mana-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- PLAYER 5 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="5"
+                data-seat="5"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 5
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+                        <span class="player-raca">Raça</span>
+                        <span class="player-classe">Classe</span>
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+                            <span>❤️ HP</span>
+                            <span class="hp-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+                            <span>💙 Mana</span>
+                            <span class="mana-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- PLAYER 6 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="6"
+                data-seat="6"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 6
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+                        <span class="player-raca">Raça</span>
+                        <span class="player-classe">Classe</span>
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+                            <span>❤️ HP</span>
+                            <span class="hp-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+                            <span>💙 Mana</span>
+                            <span class="mana-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- PLAYER 7 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="7"
+                data-seat="7"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 7
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+                        <span class="player-raca">Raça</span>
+                        <span class="player-classe">Classe</span>
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+                            <span>❤️ HP</span>
+                            <span class="hp-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+                            <span>💙 Mana</span>
+                            <span class="mana-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- PLAYER 8 -->
+
+            <article
+                class="jogador-card player-card"
+                data-player="8"
+                data-seat="8"
+            >
+
+                <div class="player-card-content">
+
+                    <div class="player-card-header">
+
+                        <div class="player-avatar">
+                            👤
+                        </div>
+
+                        <div class="player-name">
+                            Player 8
+                        </div>
+
+                    </div>
+
+                    <div class="player-info">
+                        <span class="player-raca">Raça</span>
+                        <span class="player-classe">Classe</span>
+                    </div>
+
+                    <div class="player-bars">
+
+                        <div class="status-values">
+                            <span>❤️ HP</span>
+                            <span class="hp-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar hp-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                        <div class="status-values">
+                            <span>💙 Mana</span>
+                            <span class="mana-value">100/100</span>
+                        </div>
+
+                        <div class="status-bar mana-bar">
+                            <span style="width:100%"></span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
 
 
         </section>
 
 
 
-        <!-- =================================================
-             MENU DE CONFIGURAÇÕES
-        ================================================== -->
+        <!-- =============================================
+             PALCO CENTRAL
+        ============================================== -->
 
-        <aside
-            id="master-menu"
-            class="master-menu"
-            hidden
+        <section
+            id="mesa-stage"
+            class="mesa-main mesa-center mesa-stage"
         >
 
-            <div class="master-menu-content">
+            <div
+                id="mesa-screen"
+                class="mesa-screen mesa-display"
+            >
 
-                <h2>
-                    ⚙️ Configurações da Mesa
-                </h2>
+                <div
+                    id="mesa-screen-content"
+                    class="mesa-screen-content"
+                >
 
+                    <h2>
+                        🎲 Mesa de RPG
+                    </h2>
 
-                <div class="master-controls">
-
-                    <button
-                        type="button"
-                        data-master-action="mapa"
-                    >
-                        🗺️ Mapa
-                    </button>
-
-
-                    <button
-                        type="button"
-                        data-master-action="dungeon"
-                    >
-                        🏰 Dungeon
-                    </button>
-
-
-                    <button
-                        type="button"
-                        data-master-action="combate"
-                    >
-                        ⚔️ Combate
-                    </button>
-
-
-                    <button
-                        type="button"
-                        data-master-action="boss"
-                    >
-                        👹 Boss
-                    </button>
-
-
-                    <button
-                        type="button"
-                        data-master-action="cte"
-                    >
-                        🎲 CTE
-                    </button>
+                    <p>
+                        Aguardando o início da aventura...
+                    </p>
 
                 </div>
 
             </div>
 
-        </aside>
+        </section>
 
 
-    </main>
+    </section>
 
 
 
-    <!-- =====================================================
-         JAVASCRIPT
-    ====================================================== -->
+    <!-- =================================================
+         MENU DE CONFIGURAÇÕES
+    ================================================== -->
 
-    <!-- =============================================
-         1. NÚCLEO DA MESA
-    ============================================== -->
+    <aside
+        id="master-menu"
+        class="master-menu"
+        hidden
+    >
 
-    <script
-        src="mesa.js"
-        defer
-    ></script>
+        <div class="master-menu-content">
 
+            <h2>
+                ⚙️ Configurações da Mesa
+            </h2>
 
-    <!-- =============================================
-         2. CONFIGURAÇÕES
-    ============================================== -->
+            <div class="master-controls">
 
-    <script
-        src="config-mesa.js"
-        defer
-    ></script>
+                <button
+                    type="button"
+                    data-master-action="mapa"
+                >
+                    🗺️ Mapa
+                </button>
 
+                <button
+                    type="button"
+                    data-master-action="dungeon"
+                >
+                    🏰 Dungeon
+                </button>
 
-    <!-- =============================================
-         3. JOGADORES / CARDS
-    ============================================== -->
+                <button
+                    type="button"
+                    data-master-action="combate"
+                >
+                    ⚔️ Combate
+                </button>
 
-    <script
-        src="mesa-jogadores.js"
-        defer
-    ></script>
+                <button
+                    type="button"
+                    data-master-action="boss"
+                >
+                    👹 Boss
+                </button>
 
+                <button
+                    type="button"
+                    data-master-action="cte"
+                >
+                    🎲 CTE
+                </button>
 
-    <!-- =============================================
-         4. AVENTURA / MAPA / DUNGEON
-    ============================================== -->
+            </div>
 
-    <script
-        src="mesa-aventura.js"
-        defer
-    ></script>
+        </div>
 
-
-    <!-- =============================================
-         5. DADOS DAS PASSIVAS
-    ============================================== -->
-
-    <script
-        src="passivas-dados.js"
-        defer
-    ></script>
-
-
-    <!-- =============================================
-         6. CONTROLE DOS STACKS
-    ============================================== -->
-
-    <script
-        src="passivas-stacks.js"
-        defer
-    ></script>
+    </aside>
 
 
-    <!-- =============================================
-         7. EFEITOS VISUAIS DAS PASSIVAS
-    ============================================== -->
 
-    <script
-        src="passivas-efeitos.js"
-        defer
-    ></script>
+    <!-- =================================================
+         PAINEL DE DIAGNÓSTICO
+    ================================================== -->
+
+    <aside
+        id="mesa-diagnostico"
+        class="mesa-diagnostico"
+        hidden
+        aria-label="Diagnóstico da Mesa"
+    >
+
+        <div class="mesa-diagnostico-content">
+
+            <div class="mesa-diagnostico-header">
+
+                <div>
+
+                    <h2>
+                        🔧 Diagnóstico
+                    </h2>
+
+                    <span>
+                        Sistema de monitoramento da mesa
+                    </span>
+
+                </div>
+
+                <button
+                    id="btn-fechar-diagnostico"
+                    type="button"
+                    class="diagnostico-fechar"
+                    aria-label="Fechar diagnóstico"
+                >
+                    ✕
+                </button>
+
+            </div>
 
 
-    <!-- =============================================
-         8. CONTROLADOR CENTRAL DAS PASSIVAS
-    ============================================== -->
 
-    <script
-        src="passivas.js"
-        defer
-    ></script>
+            <!-- STATUS GERAL -->
+
+            <section class="diagnostico-section">
+
+                <h3>
+                    📡 Sistema
+                </h3>
+
+                <div
+                    id="diagnostico-sistema"
+                    class="diagnostico-grid"
+                >
+
+                    <div class="diagnostico-item">
+                        <span>Supabase</span>
+                        <strong data-diagnostico="supabase">
+                            ⏳
+                        </strong>
+                    </div>
+
+                    <div class="diagnostico-item">
+                        <span>Campanha</span>
+                        <strong data-diagnostico="campanha">
+                            ⏳
+                        </strong>
+                    </div>
+
+                    <div class="diagnostico-item">
+                        <span>Usuário</span>
+                        <strong data-diagnostico="usuario">
+                            ⏳
+                        </strong>
+                    </div>
+
+                    <div class="diagnostico-item">
+                        <span>Realtime</span>
+                        <strong data-diagnostico="realtime">
+                            ⏳
+                        </strong>
+                    </div>
+
+                    <div class="diagnostico-item">
+                        <span>Personagens</span>
+                        <strong data-diagnostico="personagens">
+                            0
+                        </strong>
+                    </div>
+
+                    <div class="diagnostico-item">
+                        <span>Slots ocupados</span>
+                        <strong data-diagnostico="slots">
+                            0/8
+                        </strong>
+                    </div>
+
+                </div>
+
+            </section>
 
 
-    <!-- =============================================
-         9. INTERAÇÕES / CLIQUES
-         
-         Fica por último porque utiliza os sistemas
-         carregados anteriormente.
-    ============================================== -->
 
-    <script
-        src="mesa-ficha-modal.js"
-    ></script>
-    <script
-        src="button-mesa.js"
-        defer
-    ></script>
+            <!-- CAMPANHA -->
+
+            <section class="diagnostico-section">
+
+                <h3>
+                    🏰 Campanha
+                </h3>
+
+                <div class="diagnostico-dados">
+
+                    <div>
+                        <span>ID</span>
+                        <strong
+                            id="diagnostico-campanha-id"
+                        >
+                            —
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Nome</span>
+                        <strong
+                            id="diagnostico-campanha-nome"
+                        >
+                            —
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Master</span>
+                        <strong
+                            id="diagnostico-master-id"
+                        >
+                            —
+                        </strong>
+                    </div>
+
+                </div>
+
+            </section>
 
 
-</body>
 
-</html>
+            <!-- SLOTS -->
+
+            <section class="diagnostico-section">
+
+                <h3>
+                    🎮 Slots
+                </h3>
+
+                <div
+                    id="diagnostico-slots"
+                    class="diagnostico-slots"
+                >
+                </div>
+
+            </section>
+
+
+
+            <!-- EVENTOS -->
+
+            <section class="diagnostico-section">
+
+                <div class="diagnostico-section-title">
+
+                    <h3>
+                        📜 Eventos
+                    </h3>
+
+                    <button
+                        id="btn-limpar-diagnostico"
+                        type="button"
+                    >
+                        Limpar
+                    </button>
+
+                </div>
+
+                <div
+                    id="diagnostico-log"
+                    class="diagnostico-log"
+                >
+
+                    <div class="diagnostico-log-vazio">
+                        Aguardando eventos...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- AÇÕES -->
+
+            <section class="diagnostico-actions">
+
+                <button
+                    id="btn-sincronizar-diagnostico"
+                    type="button"
+                >
+                    🔄 Sincronizar agora
+                </button>
+
+                <button
+                    id="btn-atualizar-diagnostico"
+                    type="button"
+                >
+                    📊 Atualizar diagnóstico
+                </button>
+
+            </section>
+
+        </div>
+
+    </aside>
+
+
+</main>
+
+
+
+<!-- =====================================================
+     JAVASCRIPT
+====================================================== -->
+
+<!-- 1. NÚCLEO DA MESA -->
+
+<script
+    src="mesa.js"
+    defer
+></script>
+
+
+<!-- 2. CONFIGURAÇÕES -->
+
+<script
+    src="config-mesa.js"
+    defer
+></script>
+
+
+<!-- 3. JOGADORES / CARDS -->
+
+<script
+    src="mesa-jogadores.js"
+    defer
+></script>
+
+
+<!-- 4. AVENTURA / MAPA / DUNGEON -->
+
+<script
+    src="mesa-aventura.js"
+    defer
+></script>
+
+
+<!-- 5. DADOS DAS PASSIVAS -->
+
+<script
+    src="passivas-dados.js"
+    defer
+></script>
+
+
+<!-- 6. CONTROLE DOS STACKS -->
+
+<script
+    src="passivas-stacks.js"
+    defer
+></script>
+
+
+<!-- 7. EFEITOS VISUAIS DAS PASSIVAS -->
+
+<script
+    src="passivas-efeitos.js"
+    defer
+></script>
+
+
+<!-- 8. CONTROLADOR CENTRAL DAS PASSIVAS -->
+
+<script
+    src="passivas.js"
+    defer
+></script>
+
+
+<!-- 9. DIAGNÓSTICO -->
+
+<script
+    src="mesa-diagnostico.js"
+    defer
+></script>
+
+
+<!-- 10. INTERAÇÕES / CLIQUES -->
+
+<script
+    src="mesa-ficha-modal.js"
+></script>
+
+<script
+    src="button-mesa.js"
+    defer
+></script>
+
+</body></html>
