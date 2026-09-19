@@ -15,6 +15,18 @@
 
 .mesa-diagnostico-btn {
 
+    /*
+       POSICIONAMENTO NO LADO ESQUERDO
+       INDEPENDENTE DO BOTÃO DE CONFIGURAÇÕES
+    */
+
+    position: fixed;
+
+    top: 12px;
+    left: 12px;
+
+    z-index: 1000001;
+
     width: 42px;
     height: 42px;
 
@@ -63,11 +75,6 @@
 
     inset: 0;
 
-    /*
-       CAMADA MUITO ALTA PARA FICAR ACIMA
-       DO BOTÃO DE CONFIGURAÇÕES E DOS
-       DEMAIS ELEMENTOS DA MESA.
-    */
     z-index: 1000000 !important;
 
     display: flex;
@@ -83,26 +90,19 @@
 
     backdrop-filter: blur(6px);
 
-    /*
-       Garante que o painel possa receber
-       toques/cliques no celular.
-    */
     pointer-events: auto;
 }
 
 
 .mesa-diagnostico[hidden] {
+
     display: none !important;
 }
 
 
-/*
-   Garante que nenhum elemento interno
-   fique atrás de outra camada.
-*/
-
 .mesa-diagnostico,
 .mesa-diagnostico * {
+
     pointer-events: auto;
 }
 
@@ -641,5 +641,17 @@
     .mesa-diagnostico-header h2 {
 
         font-size: 18px;
+    }
+
+
+    /*
+       Mantém o botão no canto esquerdo
+       também em telas pequenas.
+    */
+
+    .mesa-diagnostico-btn {
+
+        top: 8px;
+        left: 8px;
     }
 }
