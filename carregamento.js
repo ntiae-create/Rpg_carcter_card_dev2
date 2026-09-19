@@ -660,8 +660,22 @@ const CarregamentoRPG = (() => {
         ================================================= */
 
         if (
-            dados.image_url
+            dados.image_url &&
+            String(
+                dados.image_url
+            ).trim()
         ) {
+
+            /*
+               A imagem existente no Supabase
+               passa a ser a fonte principal.
+
+               Não tentamos recalcular a arte
+               pela raça + classe neste momento,
+               evitando que uma diferença de nome
+               como "Bufao" / "Bufão" sobrescreva
+               a imagem correta.
+            */
 
             character.imageURL =
                 String(
@@ -670,55 +684,23 @@ const CarregamentoRPG = (() => {
 
 
             /*
-               Verifica se a imagem salva no Supabase
-               corresponde à arte automática atual
-               da raça + classe.
-
-               Se corresponder:
-               imageAuto = true
-
-               Se for diferente:
-               imageAuto = false
-               (imagem manual)
+               A imagem veio do Supabase.
+               Portanto, ela deve ser preservada
+               durante este carregamento.
             */
 
-            let arteAutomatica = null;
-
-
-            if (
-                typeof CharacterModule !==
-                "undefined" &&
-                typeof CharacterModule
-                    .obterArteAutomatica ===
-                    "function"
-            ) {
-
-                arteAutomatica =
-                    CharacterModule
-                        .obterArteAutomatica();
-
-            }
-
-
-            if (
-                arteAutomatica &&
-                character.imageURL ===
-                    arteAutomatica
-            ) {
-
-                character.imageAuto = true;
-
-            }
-
-            else {
-
-                character.imageAuto = false;
-
-            }
+            character.imageAuto = false;
 
         }
 
         else {
+
+            /*
+               Não existe imagem salva no Supabase.
+
+               Nesse caso, o sistema continua podendo
+               utilizar a arte automática normalmente.
+            */
 
             character.imageURL = "";
 
@@ -980,16 +962,21 @@ const CarregamentoRPG = (() => {
             "undefined"
         ) {
 
+            /*
+               Se o personagem já possui uma
+               imagem vinda do Supabase, não
+               recalculamos a arte automática.
+
+               Isso preserva exatamente a URL
+               carregada do banco.
+            */
+
             if (
+                !character.imageURL &&
                 typeof CharacterModule
                     .aplicarArteAutomatica ===
                     "function"
             ) {
-
-                /*
-                   A arte automática é determinada
-                   pela raça + classe.
-                */
 
                 CharacterModule
                     .aplicarArteAutomatica();
