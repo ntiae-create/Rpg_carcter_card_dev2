@@ -817,6 +817,18 @@
             window.SupabaseEntrada;
 
 
+        const clientePrincipal =
+            window.supabaseClient || null;
+
+
+        const bibliotecaGlobal =
+            !!(
+                window.supabase &&
+                typeof window.supabase.createClient ===
+                "function"
+            );
+
+
         const detalhes = [];
 
 
@@ -838,7 +850,31 @@
         );
 
 
+        detalhes.push(
+            `Biblioteca Supabase: ${
+                bibliotecaGlobal
+                    ? "encontrada"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `Cliente principal: ${
+                clientePrincipal
+                    ? "encontrado"
+                    : "ausente"
+            }`
+        );
+
+
         if (!modulo) {
+
+            definirStatus(
+                "supabaseMesa",
+                "🔴 Ausente"
+            );
+
 
             definirTeste(
                 "supabaseMesa",
@@ -883,6 +919,12 @@
 
         } catch (erro) {
 
+            definirStatus(
+                "supabaseMesa",
+                "🔴 Erro"
+            );
+
+
             definirTeste(
                 "supabaseMesa",
                 "erro",
@@ -892,7 +934,7 @@
                 "Não é possível confirmar o estado da conexão isolada.",
                 [
                     "Erro interno no supabase-mesa.js.",
-                    "Cliente Supabase não foi criado corretamente."
+                    "Cliente Supabase não pôde ser consultado."
                 ],
                 "Verifique o diagnóstico interno do SupabaseMesa."
             );
@@ -908,7 +950,18 @@
         }
 
 
-        const biblioteca =
+        /*
+        ------------------------------------------------------
+        O diagnóstico interno pode informar biblioteca:false
+        mesmo quando o módulo está reutilizando o cliente
+        global criado pelo supabase.js.
+
+        Por isso NÃO usamos estadoModulo.biblioteca
+        como única prova da existência da biblioteca.
+        ------------------------------------------------------
+        */
+
+        const bibliotecaInterna =
             !!estadoModulo?.biblioteca;
 
 
@@ -916,7 +969,7 @@
             !!estadoModulo?.inicializado;
 
 
-        const cliente =
+        const clienteInterno =
             !!estadoModulo?.cliente;
 
 
@@ -936,9 +989,77 @@
             !!estadoModulo?.personagem;
 
 
+        let clienteMesa =
+            null;
+
+
+        try {
+
+            if (
+                typeof modulo.obterCliente ===
+                "function"
+            ) {
+
+                clienteMesa =
+                    modulo.obterCliente();
+
+            }
+
+        } catch (erro) {
+
+            registrar(
+                "aviso",
+                "Não foi possível obter o cliente do SupabaseMesa: " +
+                obterMensagemErro(erro)
+            );
+
+        }
+
+
+        const possuiClienteMesa =
+            !!clienteMesa;
+
+
+        const mesmaReferencia =
+            !!(
+                clientePrincipal &&
+                clienteMesa &&
+                clientePrincipal === clienteMesa
+            );
+
+
+        const clientesDiferentes =
+            !!(
+                clientePrincipal &&
+                clienteMesa &&
+                clientePrincipal !== clienteMesa
+            );
+
+
+        /*
+        ------------------------------------------------------
+        A biblioteca é considerada disponível quando:
+
+        1. window.supabase.createClient existe
+        OU
+        2. existe um cliente Supabase principal válido
+        OU
+        3. existe um cliente dentro do SupabaseMesa.
+
+        Isso evita o falso "Supabase ausente".
+        ------------------------------------------------------
+        */
+
+        const bibliotecaDisponivel =
+            bibliotecaGlobal ||
+            !!clientePrincipal ||
+            !!clienteMesa ||
+            bibliotecaInterna;
+
+
         detalhes.push(
             `Biblioteca: ${
-                biblioteca
+                bibliotecaDisponivel
                     ? "OK"
                     : "ausente"
             }`
@@ -946,8 +1067,26 @@
 
 
         detalhes.push(
-            `Cliente: ${
-                cliente
+            `Biblioteca interna: ${
+                bibliotecaInterna
+                    ? "SIM"
+                    : "NÃO"
+            }`
+        );
+
+
+        detalhes.push(
+            `Cliente Mesa: ${
+                possuiClienteMesa
+                    ? "OK"
+                    : "ausente"
+            }`
+        );
+
+
+        detalhes.push(
+            `Cliente interno: ${
+                clienteInterno
                     ? "OK"
                     : "ausente"
             }`
@@ -957,6 +1096,24 @@
         detalhes.push(
             `Inicializado: ${
                 inicializado
+                    ? "SIM"
+                    : "NÃO"
+            }`
+        );
+
+
+        detalhes.push(
+            `Mesma referência: ${
+                mesmaReferencia
+                    ? "SIM"
+                    : "NÃO"
+            }`
+        );
+
+
+        detalhes.push(
+            `Clientes diferentes: ${
+                clientesDiferentes
                     ? "SIM"
                     : "NÃO"
             }`
@@ -1001,25 +1158,32 @@
 
         /*
         ------------------------------------------------------
-        Tudo funcionando
+        CASO IDEAL
         ------------------------------------------------------
         */
 
         if (
-            biblioteca &&
-            inicializado &&
-            cliente
+            bibliotecaDisponivel &&
+            clientePrincipal &&
+            clienteMesa &&
+            mesmaReferencia
         ) {
+
+            definirStatus(
+                "supabaseMesa",
+                "🟢 Conectado"
+            );
+
 
             definirTeste(
                 "supabaseMesa",
                 "sucesso",
                 "Supabase Mesa",
-                "A camada isolada da Mesa encontrou a biblioteca e criou seu próprio cliente Supabase.",
+                "A camada da Mesa está utilizando corretamente o cliente Supabase principal.",
                 detalhes.join(" | "),
-                "Nenhum problema estrutural detectado na conexão isolada.",
+                "Nenhum problema estrutural detectado na integração.",
                 [],
-                "Nenhuma ação necessária nesta etapa."
+                "Nenhuma ação necessária."
             );
 
         }
@@ -1027,28 +1191,70 @@
 
         /*
         ------------------------------------------------------
-        Biblioteca encontrada, mas cliente ausente
+        CLIENTE DA MESA EXISTE, MAS É DIFERENTE
         ------------------------------------------------------
         */
 
         else if (
-            biblioteca &&
-            !cliente
+            clientePrincipal &&
+            clienteMesa &&
+            clientesDiferentes
         ) {
+
+            definirStatus(
+                "supabaseMesa",
+                "🟡 Dois clientes"
+            );
+
+
+            definirTeste(
+                "supabaseMesa",
+                "aviso",
+                "Supabase Mesa",
+                "O Supabase principal e o cliente usado pela Mesa existem, mas são referências diferentes.",
+                detalhes.join(" | "),
+                "A aplicação pode acabar utilizando duas instâncias diferentes do cliente Supabase.",
+                [
+                    "supabase-mesa.js criou uma segunda instância.",
+                    "O cliente global não foi reutilizado.",
+                    "As duas instâncias podem possuir estados de sessão diferentes."
+                ],
+                "Verifique se o SupabaseMesa deve reutilizar window.supabaseClient."
+            );
+
+        }
+
+
+        /*
+        ------------------------------------------------------
+        CLIENTE PRINCIPAL EXISTE, MAS MESA NÃO TEM CLIENTE
+        ------------------------------------------------------
+        */
+
+        else if (
+            clientePrincipal &&
+            !clienteMesa
+        ) {
+
+            definirStatus(
+                "supabaseMesa",
+                "🔴 Sem cliente"
+            );
+
 
             definirTeste(
                 "supabaseMesa",
                 "erro",
                 "Supabase Mesa",
-                "A biblioteca Supabase foi encontrada, mas o cliente isolado da Mesa não foi criado.",
+                "O cliente Supabase principal existe, mas o SupabaseMesa não possui um cliente disponível.",
                 detalhes.join(" | "),
-                "A Mesa ainda não consegue utilizar sua conexão isolada.",
+                "A camada isolada da Mesa não consegue realizar operações no Supabase.",
                 [
-                    "Erro durante createClient().",
-                    "Configuração do Supabase Mesa inválida.",
-                    "supabase-mesa.js não conseguiu inicializar."
+                    "SupabaseMesa não foi inicializado.",
+                    "obterCliente() retornou null.",
+                    "supabase-mesa.js não reutilizou o cliente global."
                 ],
-                "Verifique a inicialização do supabase-mesa.js."
+                "Verifique a inicialização do SupabaseMesa."
             );
 
         }
@@ -1056,28 +1262,34 @@
 
         /*
         ------------------------------------------------------
-        Módulo funcionando, mas contexto ausente
+        CLIENTE DA MESA EXISTE, MAS CLIENTE PRINCIPAL NÃO
         ------------------------------------------------------
         */
 
         else if (
-            cliente &&
-            !contexto
+            clienteMesa &&
+            !clientePrincipal
         ) {
+
+            definirStatus(
+                "supabaseMesa",
+                "🟡 Isolado"
+            );
+
 
             definirTeste(
                 "supabaseMesa",
                 "aviso",
                 "Supabase Mesa",
-                "O cliente isolado foi criado, mas nenhum contexto da Mesa foi recebido.",
+                "O SupabaseMesa possui um cliente próprio, mas o cliente principal da aplicação não foi encontrado.",
                 detalhes.join(" | "),
-                "A conexão existe, mas a Mesa ainda não informou campanha, usuário ou personagem.",
+                "A Mesa possui conexão própria, mas a aplicação pode estar utilizando referências diferentes.",
                 [
-                    "supabase-entrada.js não encontrou o contexto.",
-                    "rpg_mesa_ativa não possui dados.",
-                    "O contexto ainda não foi enviado."
+                    "window.supabaseClient não existe.",
+                    "supabase.js não foi carregado.",
+                    "O SupabaseMesa criou uma conexão própria."
                 ],
-                "Verifique o contexto salvo da Mesa."
+                "Verifique a presença do cliente principal antes de usar a conexão isolada."
             );
 
         }
@@ -1085,25 +1297,65 @@
 
         /*
         ------------------------------------------------------
-        Caso parcial
+        CLIENTE EXISTE, MAS A INICIALIZAÇÃO NÃO FOI MARCADA
+        ------------------------------------------------------
+        */
+
+        else if (
+            clienteMesa &&
+            !inicializado
+        ) {
+
+            definirStatus(
+                "supabaseMesa",
+                "🟡 Parcial"
+            );
+
+
+            definirTeste(
+                "supabaseMesa",
+                "aviso",
+                "Supabase Mesa",
+                "Um cliente foi encontrado, mas o módulo não informou uma inicialização completa.",
+                detalhes.join(" | "),
+                "A integração pode estar em um estado intermediário.",
+                [
+                    "O diagnóstico interno está incompleto.",
+                    "A inicialização ocorreu parcialmente."
+                ],
+                "Execute o diagnóstico novamente após o carregamento completo da Mesa."
+            );
+
+        }
+
+
+        /*
+        ------------------------------------------------------
+        CLIENTE EXISTE, MAS NENHUMA CONEXÃO FOI IDENTIFICADA
         ------------------------------------------------------
         */
 
         else {
 
+            definirStatus(
+                "supabaseMesa",
+                "🔴 Indisponível"
+            );
+
+
             definirTeste(
                 "supabaseMesa",
-                "aviso",
+                "erro",
                 "Supabase Mesa",
-                "O módulo isolado foi encontrado, mas sua inicialização ainda está incompleta.",
+                "O módulo existe, mas nenhum cliente Supabase disponível foi encontrado.",
                 detalhes.join(" | "),
-                "A conexão da Mesa ainda não pode ser considerada totalmente pronta.",
+                "A camada isolada da Mesa não possui uma conexão utilizável.",
                 [
-                    "Biblioteca ainda não detectada.",
-                    "Cliente ainda não criado.",
-                    "Contexto ainda não recebido."
+                    "Cliente Supabase não foi criado.",
+                    "SupabaseMesa não foi inicializado.",
+                    "Biblioteca Supabase não está disponível."
                 ],
-                "Verifique novamente após a inicialização da Mesa."
+                "Verifique supabase.js, supabase-mesa.js e a ordem dos scripts."
             );
 
         }
