@@ -48,18 +48,6 @@ const MESA_CONFIG = {
 
         disponivel: true,
 
-        /*
-         TEMPO PADRÃO DO CTE
-
-         1000 = 1 segundo
-         500  = 0,5 segundo
-         2000 = 2 segundos
-         5000 = 5 segundos
-
-         Esse valor pode ser alterado pelo Mestre
-         ao iniciar um CTE.
-        */
-
         tempoPadrao: 1000,
 
         quantidadePadrao: 1
@@ -177,27 +165,6 @@ const mesaState = {
     },
 
 
-    /*
-     ESTADO DO CTE
-
-     O CTE agora funciona por clique.
-
-     inicio:
-         momento exato em que a janela começou.
-
-     tempo:
-         duração da janela de clique.
-
-     cliques:
-         quantidade de cliques realizados.
-
-     quantidade:
-         quantidade necessária de cliques.
-
-     resultado:
-         resultado final do CTE.
-    */
-
     cte: {
 
         ativo:
@@ -226,22 +193,6 @@ const mesaState = {
 /* ============================================================
    REALTIME
 ============================================================ */
-
-/*
-    Canal Realtime responsável pelos personagens
-    da campanha atualmente aberta.
-
-    IMPORTANTE:
-
-    O Realtime não substitui a tabela characters.
-
-    Ele apenas avisa a mesa quando alguma coisa
-    mudou no banco.
-
-    Quando recebe uma alteração, fazemos uma nova
-    leitura dos personagens da campanha para garantir
-    que o estado local fique completamente atualizado.
-*/
 
 let mesaRealtimeChannel = null;
 
@@ -462,11 +413,6 @@ function sincronizarJogadoresRealtime(
             : [];
 
 
-    /*
-     Criamos uma representação dos jogadores
-     usando o slot existente em characters.
-    */
-
     const jogadores =
 
         lista
@@ -517,11 +463,6 @@ function sincronizarJogadoresRealtime(
             );
 
 
-    /*
-     A própria função já sabe como montar
-     os oito lugares.
-    */
-
     definirAssentos(
         jogadores
     );
@@ -531,6 +472,13 @@ function sincronizarJogadoresRealtime(
      ----------------------------------------------------------
      ATUALIZAR O JOGADOR ATUAL
      ----------------------------------------------------------
+
+     IMPORTANTE:
+
+     Aqui corrigimos um problema do código anterior.
+
+     Se o jogador não estiver mais na lista de personagens,
+     não podemos manter um characterId/slot antigo.
     */
 
     const usuarioId =
@@ -572,16 +520,23 @@ function sincronizarJogadoresRealtime(
 
                 null;
 
+        } else {
+
+            /*
+             O usuário não possui personagem nessa campanha.
+             Limpamos qualquer informação antiga.
+            */
+
+            mesaState.jogadorAtual.characterId =
+                null;
+
+            mesaState.jogadorAtual.slot =
+                null;
+
         }
 
     }
 
-
-    /*
-     ----------------------------------------------------------
-     LOG
-     ----------------------------------------------------------
-    */
 
     console.log(
         "[Mesa Realtime] Jogadores sincronizados:",
@@ -627,13 +582,6 @@ async function iniciarRealtimeMesa() {
     }
 
 
-    /*
-     ----------------------------------------------------------
-     SE JÁ EXISTE UM CANAL PARA ESSA CAMPANHA,
-     NÃO CRIAMOS OUTRO.
-     ----------------------------------------------------------
-    */
-
     if (
 
         mesaRealtimeChannel &&
@@ -647,11 +595,6 @@ async function iniciarRealtimeMesa() {
 
     }
 
-
-    /*
-     Se existe canal de outra campanha,
-     removemos antes.
-    */
 
     await pararRealtimeMesa();
 
@@ -706,14 +649,6 @@ async function iniciarRealtimeMesa() {
                         payload
                     );
 
-
-                    /*
-                     Não tentamos montar manualmente
-                     o estado usando apenas payload.
-
-                     Recarregamos a lista completa para
-                     manter os 8 slots consistentes.
-                    */
 
                     carregarJogadoresDaCampanha();
 
@@ -995,15 +930,6 @@ function inicializarMesa() {
 
     inicializarSubmodulos();
 
-
-    /*
-     ----------------------------------------------------------
-     INICIAR SINCRONIZAÇÃO REALTIME
-     ----------------------------------------------------------
-
-     Usamos setTimeout para permitir que os outros
-     módulos da mesa terminem a inicialização primeiro.
-    */
 
     setTimeout(
 
@@ -1582,7 +1508,24 @@ function registrarEventos() {
     );
 
 
-    document.addEventListener(
+    /*
+     ===========================================================
+     CORREÇÃO IMPORTANTE
+     ===========================================================
+
+     campaign.js dispara:
+
+         window.dispatchEvent(
+             new CustomEvent("mesa:campanhaAlterada")
+         );
+
+     Portanto, o Mesa precisa escutar no WINDOW.
+
+     Antes estava em DOCUMENT, fazendo com que a mudança
+     de campanha não chegasse corretamente ao core da mesa.
+    */
+
+    window.addEventListener(
 
         "mesa:campanhaAlterada",
 
@@ -1676,6 +1619,9 @@ function sincronizarCampanha(
 
     /*
      Se a campanha mudou, trocamos o canal Realtime.
+
+     Se for a mesma campanha, garantimos que a sincronização
+     continue ativa.
     */
 
     if (
@@ -1686,11 +1632,6 @@ function sincronizarCampanha(
         sincronizarRealtimeCampanha();
 
     } else {
-
-        /*
-         Mesmo sendo a mesma campanha, garantimos
-         que o canal esteja ativo.
-        */
 
         sincronizarRealtimeCampanha();
 
@@ -1919,10 +1860,6 @@ function atualizarModoVisual() {
 ============================================================ */
 
 function voltarParaMesaNormal() {
-
-    /*
-     Se houver CTE ativo, ele é encerrado.
-    */
 
     if (
         mesaState.cte.ativo
@@ -2280,26 +2217,6 @@ function iniciarBoss(
    CTE
 ============================================================ */
 
-/*
-==============================================================
- INICIAR CTE
-
- O CTE agora é:
-
-     1. Mestre inicia
-     2. Área central entra em modo CTE
-     3. Botão aparece
-     4. Começa a janela de tempo
-     5. Jogador clica
-     6. O CORE verifica o tempo exato
-     7. Sucesso ou falha
-
- O tempo NÃO é o evento.
-
- O clique é o evento.
-==============================================================
-*/
-
 function iniciarCTE(
     opcoes = {}
 ) {
@@ -2325,19 +2242,6 @@ function iniciarCTE(
 
     }
 
-
-    /*
-     ----------------------------------------------------------
-     TEMPO
-     ----------------------------------------------------------
-
-     Aceitamos:
-
-         tempo: 1000
-         duracao: 1000
-
-     para manter compatibilidade com chamadas antigas.
-    */
 
     let tempo =
 
@@ -2370,12 +2274,6 @@ function iniciarCTE(
     }
 
 
-    /*
-     ----------------------------------------------------------
-     QUANTIDADE DE CLIQUES
-     ----------------------------------------------------------
-    */
-
     let quantidade =
 
         Number(
@@ -2400,12 +2298,6 @@ function iniciarCTE(
         );
 
 
-    /*
-     ----------------------------------------------------------
-     ESTADO
-     ----------------------------------------------------------
-    */
-
     mesaState.cte.ativo =
         true;
 
@@ -2429,12 +2321,6 @@ function iniciarCTE(
     mesaState.cte.inicio =
         performance.now();
 
-
-    /*
-     ----------------------------------------------------------
-     MOSTRAR CTE
-     ----------------------------------------------------------
-    */
 
     criarTelaCTE();
 
@@ -2466,12 +2352,6 @@ function iniciarCTE(
     );
 
 
-    /*
-     ----------------------------------------------------------
-     COMEÇAR A JANELA DE TEMPO
-     ----------------------------------------------------------
-    */
-
     executarContagemCTE();
 
 }
@@ -2493,15 +2373,6 @@ function criarTelaCTE() {
 
     }
 
-
-    /*
-     IMPORTANTE:
-
-     Não criamos mais um overlay.
-
-     O CTE vive diretamente dentro da
-     área central de informações.
-    */
 
     MesaUI.screenContent.innerHTML = `
 
@@ -2676,12 +2547,6 @@ function executarContagemCTE() {
             );
 
 
-        /*
-         ------------------------------------------------------
-         MOSTRAR TEMPO
-         ------------------------------------------------------
-        */
-
         if (timer) {
 
             timer.textContent =
@@ -2695,12 +2560,6 @@ function executarContagemCTE() {
         }
 
 
-        /*
-         ------------------------------------------------------
-         BARRA
-         ------------------------------------------------------
-        */
-
         if (progress) {
 
             progress.style.width =
@@ -2708,18 +2567,6 @@ function executarContagemCTE() {
 
         }
 
-
-        /*
-         ------------------------------------------------------
-         TEMPO ESGOTADO
-         ------------------------------------------------------
-
-         IMPORTANTE:
-
-         O tempo acabar NÃO significa sucesso.
-
-         Significa que a janela de clique fechou.
-        */
 
         if (
             restante <= 0
@@ -2771,12 +2618,6 @@ function executarCliqueCTE(
         mesaState.cte.inicio;
 
 
-    /*
-     ----------------------------------------------------------
-     O CLIQUE PRECISA ESTAR DENTRO DA JANELA
-     ----------------------------------------------------------
-    */
-
     if (
         decorrido >
         mesaState.cte.tempo
@@ -2789,12 +2630,6 @@ function executarCliqueCTE(
     }
 
 
-    /*
-     ----------------------------------------------------------
-     REGISTRAR CLIQUE
-     ----------------------------------------------------------
-    */
-
     mesaState.cte.cliques++;
 
 
@@ -2805,12 +2640,6 @@ function executarCliqueCTE(
     const quantidade =
         mesaState.cte.quantidade;
 
-
-    /*
-     ----------------------------------------------------------
-     EVENTO DE CLIQUE
-     ----------------------------------------------------------
-    */
 
     document.dispatchEvent(
 
@@ -2855,12 +2684,6 @@ function executarCliqueCTE(
     );
 
 
-    /*
-     ----------------------------------------------------------
-     ATUALIZAR CONTADOR
-     ----------------------------------------------------------
-    */
-
     const contador =
         document.getElementById(
             "cte-click-counter"
@@ -2876,12 +2699,6 @@ function executarCliqueCTE(
     }
 
 
-    /*
-     ----------------------------------------------------------
-     QUANTIDADE ATINGIDA
-     ----------------------------------------------------------
-    */
-
     if (
         cliqueAtual >=
         quantidade
@@ -2895,10 +2712,6 @@ function executarCliqueCTE(
 
     }
 
-
-    /*
-     Ainda precisa de mais cliques.
-    */
 
     const instrucao =
         document.getElementById(
@@ -2933,13 +2746,6 @@ function finalizarCTESucesso(
 
     }
 
-
-    /*
-     Desativa imediatamente.
-
-     Isso impede que o requestAnimationFrame
-     continue processando o CTE.
-    */
 
     mesaState.cte.ativo =
         false;
@@ -3179,11 +2985,6 @@ function mostrarResultadoCTE(
     }
 
 
-    /*
-     Depois do resultado, voltamos para
-     a tela normal.
-    */
-
     setTimeout(
 
         () => {
@@ -3234,12 +3035,6 @@ function limparCTE() {
     mesaState.cte.inicio =
         null;
 
-
-    /*
-     Não procuramos mais #cte-overlay.
-
-     O CTE está dentro da tela central.
-    */
 
     mostrarTelaPrincipal();
 
@@ -3444,13 +3239,6 @@ function atualizarAssento(
 
     }
 
-
-    /*
-     IMPORTANTE:
-
-     Se o novo estado vier vazio, precisamos
-     realmente limpar characterId e userId.
-    */
 
     if (
         typeof dados.ocupado !==
@@ -3662,13 +3450,6 @@ function resetarMesaVisual() {
 
 function inicializarSubmodulos() {
 
-    /*
-     Os submódulos possuem suas próprias
-     inicializações quando disponíveis.
-
-     Não forçamos nenhuma dependência.
-    */
-
     if (
 
         window.MesaJogadores &&
@@ -3770,10 +3551,6 @@ window.MesaRPG = {
     mostrarTelaPrincipal,
 
     resetarMesaVisual,
-
-    /*
-     API Realtime
-    */
 
     carregarJogadoresDaCampanha,
 
@@ -3892,11 +3669,6 @@ window.usuarioEhMestreMesa =
 window.usuarioEhJogadorMesa =
     usuarioEhJogador;
 
-
-/*
- Funções Realtime também ficam disponíveis
- globalmente caso outro módulo precise delas.
-*/
 
 window.carregarJogadoresDaCampanha =
     carregarJogadoresDaCampanha;
