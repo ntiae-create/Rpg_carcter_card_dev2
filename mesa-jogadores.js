@@ -703,6 +703,10 @@ function converterPersonagemParaJogador(
     }
 
 
+    /* ========================================================
+       HP / MP
+    ======================================================== */
+
     const hp =
         Number(
             personagem.hp
@@ -772,6 +776,42 @@ function converterPersonagemParaJogador(
                 )
             )
             : manaMaximo;
+
+
+    /* ========================================================
+       RECURSOS BÁSICOS
+    ======================================================== */
+
+    const recursos =
+        personagem.recursos ||
+        personagem.resources ||
+        {};
+
+
+    const estamina =
+        obterRecursoBasico(
+            personagem,
+            recursos,
+            [
+                "estamina",
+                "stamina",
+                "est"
+            ],
+            jogadorBase?.estamina
+        );
+
+
+    const sanidade =
+        obterRecursoBasico(
+            personagem,
+            recursos,
+            [
+                "sanidade",
+                "sanity",
+                "san"
+            ],
+            jogadorBase?.sanidade
+        );
 
 
     return {
@@ -877,16 +917,34 @@ function converterPersonagemParaJogador(
             },
 
 
-        recursos:
-            personagem.recursos ||
-            personagem.resources ||
-            {
-                est:
-                    personagem.est,
+        /*
+            Recursos básicos utilizados
+            diretamente pelo card.
 
-                sanidade:
-                    personagem.sanidade
-            },
+            Mantemos os três nomes para
+            compatibilidade com sistemas existentes.
+        */
+
+        recursos: {
+
+            est:
+                estamina,
+
+            estamina:
+                estamina,
+
+            sanidade:
+                sanidade
+
+        },
+
+
+        estamina:
+            estamina,
+
+
+        sanidade:
+            sanidade,
 
 
         /*
@@ -1019,6 +1077,194 @@ function converterPersonagemParaJogador(
 
 
 /* ============================================================
+   OBTER RECURSO BÁSICO
+============================================================ */
+
+function obterRecursoBasico(
+    personagem,
+    recursos,
+    nomes,
+    recursoAnterior
+) {
+
+    let valor = null;
+
+
+    /*
+        Procura primeiro dentro de "recursos".
+    */
+
+    for (
+        const nome of nomes
+    ) {
+
+        if (
+            recursos &&
+            recursos[nome] !== undefined &&
+            recursos[nome] !== null
+        ) {
+
+            valor =
+                recursos[nome];
+
+            break;
+
+        }
+
+    }
+
+
+    /*
+        Se não encontrou, procura diretamente
+        no personagem.
+    */
+
+    if (
+        valor === null
+    ) {
+
+        for (
+            const nome of nomes
+        ) {
+
+            if (
+                personagem &&
+                personagem[nome] !== undefined &&
+                personagem[nome] !== null
+            ) {
+
+                valor =
+                    personagem[nome];
+
+                break;
+
+            }
+
+        }
+
+    }
+
+
+    /*
+        Se ainda não encontrou, mantém
+        o valor anterior da Mesa.
+    */
+
+    if (
+        valor === null &&
+        recursoAnterior !== undefined &&
+        recursoAnterior !== null
+    ) {
+
+        valor =
+            recursoAnterior;
+
+    }
+
+
+    /*
+        Recurso no formato:
+
+        {
+            atual: 80,
+            maximo: 100
+        }
+    */
+
+    if (
+        valor &&
+        typeof valor === "object"
+    ) {
+
+        const atual =
+            Number(
+                valor.atual ??
+                valor.current ??
+                valor.valor ??
+                100
+            );
+
+
+        const maximo =
+            Number(
+                valor.maximo ??
+                valor.max ??
+                valor.maximum ??
+                100
+            );
+
+
+        return {
+
+            atual:
+                Number.isFinite(atual)
+                    ? Math.max(
+                        0,
+                        atual
+                    )
+                    : 100,
+
+            maximo:
+                Number.isFinite(maximo) &&
+                maximo > 0
+                    ? maximo
+                    : 100
+
+        };
+
+    }
+
+
+    /*
+        Recurso armazenado simplesmente
+        como número.
+    */
+
+    const numero =
+        Number(
+            valor
+        );
+
+
+    if (
+        Number.isFinite(numero)
+    ) {
+
+        return {
+
+            atual:
+                Math.max(
+                    0,
+                    numero
+                ),
+
+            maximo:
+                100
+
+        };
+
+    }
+
+
+    /*
+        Valor padrão para personagens
+        que ainda não possuem o recurso.
+    */
+
+    return {
+
+        atual:
+            100,
+
+        maximo:
+            100
+
+    };
+
+}
+
+
+/* ============================================================
    SINCRONIZAR PERSONAGENS COM OS 8 SLOTS
 ============================================================ */
 
@@ -1074,8 +1320,6 @@ function sincronizarPersonagensCampanha() {
 
     /*
         Criamos um mapa dos personagens por slot.
-
-        Isso torna a sincronização mais segura.
     */
 
     const personagensPorSlot =
@@ -1520,6 +1764,16 @@ function atualizarCardJogadorCompleto(
 
 
     /* -----------------------------------------
+       ATRIBUTOS BÁSICOS
+    ----------------------------------------- */
+
+    renderizarAtributosBasicosCard(
+        card,
+        jogador
+    );
+
+
+    /* -----------------------------------------
        ESTADOS
     ----------------------------------------- */
 
@@ -1537,6 +1791,304 @@ function atualizarCardJogadorCompleto(
 
     card.dataset.playerId =
         jogador.id;
+
+}
+
+
+/* ============================================================
+   RENDERIZAR ATRIBUTOS BÁSICOS DO CARD
+============================================================ */
+
+function renderizarAtributosBasicosCard(
+    card,
+    jogador
+) {
+
+    if (!card) {
+
+        return;
+
+    }
+
+
+    let container =
+        card.querySelector(
+            ".player-basic-attributes"
+        );
+
+
+    /*
+        Cria o container apenas uma vez.
+    */
+
+    if (!container) {
+
+        container =
+            document.createElement(
+                "div"
+            );
+
+
+        container.className =
+            "player-basic-attributes";
+
+
+        /*
+            Coloca os atributos no final
+            do conteúdo do card.
+        */
+
+        const conteudo =
+            card.querySelector(
+                ".player-card-content"
+            );
+
+
+        if (conteudo) {
+
+            conteudo.appendChild(
+                container
+            );
+
+        }
+
+        else {
+
+            card.appendChild(
+                container
+            );
+
+        }
+
+    }
+
+
+    const hpAtual =
+        Number(
+            jogador.hp?.atual
+        );
+
+
+    const hpMaximo =
+        Number(
+            jogador.hp?.maximo
+        );
+
+
+    const manaAtual =
+        Number(
+            jogador.mana?.atual
+        );
+
+
+    const manaMaximo =
+        Number(
+            jogador.mana?.maximo
+        );
+
+
+    const estamina =
+        normalizarRecursoCard(
+            jogador.estamina ||
+            jogador.recursos?.estamina ||
+            jogador.recursos?.est
+        );
+
+
+    const sanidade =
+        normalizarRecursoCard(
+            jogador.sanidade ||
+            jogador.recursos?.sanidade
+        );
+
+
+    container.innerHTML = `
+
+        <div class="basic-attribute basic-hp">
+
+            <span class="basic-attribute-label">
+                ❤️ HP
+            </span>
+
+            <span class="basic-attribute-value">
+                ${formatarRecursoCard(
+                    hpAtual,
+                    hpMaximo
+                )}
+            </span>
+
+        </div>
+
+
+        <div class="basic-attribute basic-mp">
+
+            <span class="basic-attribute-label">
+                💧 MP
+            </span>
+
+            <span class="basic-attribute-value">
+                ${formatarRecursoCard(
+                    manaAtual,
+                    manaMaximo
+                )}
+            </span>
+
+        </div>
+
+
+        <div class="basic-attribute basic-estamina">
+
+            <span class="basic-attribute-label">
+                ⚡ Estamina
+            </span>
+
+            <span class="basic-attribute-value">
+                ${formatarRecursoCard(
+                    estamina.atual,
+                    estamina.maximo
+                )}
+            </span>
+
+        </div>
+
+
+        <div class="basic-attribute basic-sanidade">
+
+            <span class="basic-attribute-label">
+                🧠 Sanidade
+            </span>
+
+            <span class="basic-attribute-value">
+                ${formatarRecursoCard(
+                    sanidade.atual,
+                    sanidade.maximo
+                )}
+            </span>
+
+        </div>
+
+    `;
+
+
+    card.dataset.temAtributosBasicos =
+        "true";
+
+}
+
+
+/* ============================================================
+   NORMALIZAR RECURSO DO CARD
+============================================================ */
+
+function normalizarRecursoCard(
+    recurso
+) {
+
+    if (
+        recurso &&
+        typeof recurso === "object"
+    ) {
+
+        const atual =
+            Number(
+                recurso.atual ??
+                recurso.current ??
+                recurso.valor ??
+                100
+            );
+
+
+        const maximo =
+            Number(
+                recurso.maximo ??
+                recurso.max ??
+                recurso.maximum ??
+                100
+            );
+
+
+        return {
+
+            atual:
+                Number.isFinite(atual)
+                    ? atual
+                    : 100,
+
+            maximo:
+                Number.isFinite(maximo) &&
+                maximo > 0
+                    ? maximo
+                    : 100
+
+        };
+
+    }
+
+
+    const valor =
+        Number(
+            recurso
+        );
+
+
+    if (
+        Number.isFinite(valor)
+    ) {
+
+        return {
+
+            atual:
+                valor,
+
+            maximo:
+                100
+
+        };
+
+    }
+
+
+    return {
+
+        atual:
+            100,
+
+        maximo:
+            100
+
+    };
+
+}
+
+
+/* ============================================================
+   FORMATAR RECURSO DO CARD
+============================================================ */
+
+function formatarRecursoCard(
+    atual,
+    maximo
+) {
+
+    const valorAtual =
+        Number.isFinite(
+            Number(atual)
+        )
+            ? Number(atual)
+            : 0;
+
+
+    const valorMaximo =
+        Number.isFinite(
+            Number(maximo)
+        )
+            ? Number(maximo)
+            : 100;
+
+
+    return (
+        `${valorAtual}/${valorMaximo}`
+    );
 
 }
 
@@ -3537,6 +4089,62 @@ function resetarJogador(
 
     jogador.mana.atual =
         jogador.mana.maximo;
+
+
+    /*
+        Se Estamina e Sanidade forem recursos
+        estruturados, restauramos para o máximo.
+
+        Isso não interfere em personagens que
+        ainda não possuam esses recursos.
+    */
+
+    if (
+        jogador.estamina &&
+        typeof jogador.estamina ===
+        "object"
+    ) {
+
+        jogador.estamina.atual =
+            jogador.estamina.maximo;
+
+    }
+
+
+    if (
+        jogador.sanidade &&
+        typeof jogador.sanidade ===
+        "object"
+    ) {
+
+        jogador.sanidade.atual =
+            jogador.sanidade.maximo;
+
+    }
+
+
+    if (
+        jogador.recursos?.estamina &&
+        typeof jogador.recursos.estamina ===
+        "object"
+    ) {
+
+        jogador.recursos.estamina.atual =
+            jogador.recursos.estamina.maximo;
+
+    }
+
+
+    if (
+        jogador.recursos?.sanidade &&
+        typeof jogador.recursos.sanidade ===
+        "object"
+    ) {
+
+        jogador.recursos.sanidade.atual =
+            jogador.recursos.sanidade.maximo;
+
+    }
 
 
     jogador.status =
