@@ -16,6 +16,8 @@
 
         registrarEventos();
 
+        registrarBotaoDiagnostico();
+
         console.log(
             "[Button Mesa] Sistema de interação inicializado."
         );
@@ -50,6 +52,58 @@
             tratarCliqueCardJogador
         );
 
+    }
+
+
+
+    /* ========================================================
+       BOTÃO DE DIAGNÓSTICO
+       
+       O diagnóstico possui um listener próprio.
+       Ele NÃO depende do data-mesa-action.
+    ======================================================== */
+
+    function registrarBotaoDiagnostico() {
+
+        const botao =
+            document.getElementById(
+                "btn-diagnostico"
+            );
+
+
+        if (!botao) {
+
+            console.warn(
+                "[Button Mesa] Botão de diagnóstico não encontrado."
+            );
+
+            return;
+
+        }
+
+
+        botao.addEventListener(
+            "click",
+            function (event) {
+
+                /*
+                 Impede que o clique continue sendo tratado
+                 por outros sistemas da mesa.
+                */
+
+                event.preventDefault();
+
+                event.stopPropagation();
+
+                abrirDiagnostico();
+
+            }
+        );
+
+
+        console.log(
+            "[Button Mesa] Botão de diagnóstico conectado."
+        );
 
     }
 
@@ -60,6 +114,22 @@
     ======================================================== */
 
     function tratarCliqueGeral(event) {
+
+        /*
+         O botão de diagnóstico possui tratamento próprio.
+         Portanto, ele não passa novamente pelo sistema geral.
+        */
+
+        if (
+            event.target.closest(
+                "#btn-diagnostico"
+            )
+        ) {
+
+            return;
+
+        }
+
 
         const elemento =
             event.target.closest(
@@ -161,6 +231,9 @@
 
             /* ----------------------------------------------
                DIAGNÓSTICO
+               
+               Mantido como compatibilidade caso outro
+               elemento ainda utilize data-mesa-action.
             ---------------------------------------------- */
 
             case "diagnostico":
@@ -209,24 +282,55 @@
 
     function abrirDiagnostico() {
 
+        console.log(
+            "[Button Mesa] Tentando abrir diagnóstico..."
+        );
+
+
+        /*
+         Verifica se o sistema existe.
+        */
+
         if (
-
-            window.MesaDiagnostico &&
-
-            typeof window.MesaDiagnostico.abrir ===
-            "function"
-
+            !window.MesaDiagnostico
         ) {
 
-            window.MesaDiagnostico.abrir();
+            console.error(
+                "[Button Mesa] window.MesaDiagnostico não existe."
+            );
 
             return;
 
         }
 
 
-        console.warn(
-            "[Button Mesa] MesaDiagnostico ainda não está disponível."
+        /*
+         Verifica se a função abrir existe.
+        */
+
+        if (
+            typeof window.MesaDiagnostico.abrir !==
+            "function"
+        ) {
+
+            console.error(
+                "[Button Mesa] MesaDiagnostico.abrir() não existe."
+            );
+
+            return;
+
+        }
+
+
+        /*
+         Abre o diagnóstico.
+        */
+
+        window.MesaDiagnostico.abrir();
+
+
+        console.log(
+            "[Button Mesa] Diagnóstico solicitado com sucesso."
         );
 
     }
@@ -246,6 +350,22 @@
 
 
         if (!card) {
+
+            return;
+
+        }
+
+
+        /*
+         Se o clique veio de um botão ou elemento interno
+         que possui uma ação própria, não selecionamos o card.
+        */
+
+        if (
+            event.target.closest(
+                "button, a, input, select, textarea"
+            )
+        ) {
 
             return;
 
