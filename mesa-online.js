@@ -180,7 +180,7 @@
        OBTER TOKEN ABLY
     ===================================================== */
 
-    async function obterTokenAbly() {
+     function obterTokenAbly() {
 
         diagnostico(
             "Solicitando token seguro do Ably..."
@@ -284,52 +284,185 @@
                         campanhaId:
                             estado.campanhaId
                     })
+async function obterTokenAbly() {
+
+    diagnostico(
+        "Solicitando autenticação segura do Ably..."
+    );
+
+    /*
+     * IMPORTANTE:
+     *
+     * A chave secreta do Ably NUNCA fica
+     * neste arquivo.
+     *
+     * A Edge Function do Supabase devolve
+     * um TokenRequest para o SDK do Ably.
+     */
+
+    let accessToken = null;
+
+
+    /* =================================================
+       TENTATIVA 1 — CLIENTE SUPABASE GLOBAL
+    ================================================= */
+
+    const clientesSupabase = [
+
+        window.supabaseClient,
+
+        window.sb,
+
+        window.supabaseMesa?.client,
+
+        window.SupabaseMesa?.client
+
+    ];
+
+
+    for (
+        const cliente of clientesSupabase
+    ) {
+
+        if (
+            cliente &&
+            typeof cliente.auth?.getSession ===
+            "function"
+        ) {
+
+            try {
+
+                const resultado =
+                    await cliente.auth.getSession();
+
+                accessToken =
+                    resultado?.data?.session?.access_token ||
+                    null;
+
+                if (accessToken) {
+
+                    break;
+
                 }
-            );
 
+            } catch (erro) {
 
-        const texto =
-            await resposta.text();
+                console.warn(
+                    "[MESA ONLINE] Falha ao obter sessão Supabase:",
+                    erro
+                );
 
-
-        let dados = null;
-
-        try {
-
-            dados =
-                JSON.parse(texto);
-
-        } catch {
-
-            dados = null;
+            }
 
         }
 
-
-        if (!resposta.ok) {
-
-            throw new Error(
-                dados?.error ||
-                dados?.detalhes ||
-                "Erro ao obter token Ably."
-            );
-        }
+    }
 
 
-        if (!dados) {
+    /* =================================================
+       TENTATIVA 2 — RPG AUTH
+    ================================================= */
 
-            throw new Error(
-                "Resposta inválida da autenticação Ably."
-            );
-        }
+    if (!accessToken) {
+
+        accessToken =
+            window.rpgAuth?.session?.access_token ||
+            null;
+
+    }
 
 
-        diagnostico(
-            "Token Ably recebido."
+    if (!accessToken) {
+
+        throw new Error(
+            "Sessão Supabase não encontrada."
         );
 
-        return dados;
     }
+
+
+    /* =================================================
+       SOLICITAR TOKEN AO SUPABASE
+    ================================================= */
+
+    const resposta =
+        await fetch(
+            ABLY_TOKEN_URL,
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Authorization":
+                        "Bearer " +
+                        accessToken,
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify({
+
+                    campanhaId:
+                        estado.campanhaId
+
+                })
+
+            }
+        );
+
+
+    const texto =
+        await resposta.text();
+
+
+    let dados = null;
+
+
+    try {
+
+        dados =
+            JSON.parse(texto);
+
+    } catch {
+
+        dados = null;
+
+    }
+
+
+    if (!resposta.ok) {
+
+        throw new Error(
+
+            dados?.error ||
+            dados?.detalhes ||
+            "Erro ao obter autenticação Ably."
+
+        );
+
+    }
+
+
+    if (!dados) {
+
+        throw new Error(
+            "Resposta inválida da autenticação Ably."
+        );
+
+    }
+
+
+    diagnostico(
+        "TokenRequest Ably recebido."
+    );
+
+
+    return dados;
+
+}
 
 
     /* =====================================================
