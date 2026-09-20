@@ -1116,117 +1116,15 @@
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="https://cdn.jsdelivr.net/gh/ntiae-create/Rpg_carcter_card_dev2@main/supabase.js" onerror="this.onerror=null;this.src='supabase.js';"></script>
+<!-- 1º — Supabase com defer (carrega em segundo plano) -->
+<script src="supabase.js" defer></script>
 
-<script src="supabase-mesa.js" defer></script>
-<script src="supabase-entrada.js" defer></script>
-
-
-<!-- ABLY — MULTIPLAYER -->
-<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
-<script src="mesa-online.js" defer></script>
-
-
-<!-- NÚCLEO DA MESA -->
-<script
-    src="mesa.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     2. CONFIGURAÇÕES
-====================================================== -->
-
-<script
-    src="config-mesa.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     3. JOGADORES / CARDS
-====================================================== -->
-
-<script
-    src="mesa-jogadores.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     4. AVENTURA / MAPA / DUNGEON
-====================================================== -->
-
-<script
-    src="mesa-aventura.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     5. DADOS DAS PASSIVAS
-====================================================== -->
-
-<script
-    src="passivas-dados.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     6. CONTROLE DOS STACKS
-====================================================== -->
-
-<script
-    src="passivas-stacks.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     7. EFEITOS VISUAIS DAS PASSIVAS
-====================================================== -->
-
-<script
-    src="passivas-efeitos.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     8. CONTROLADOR CENTRAL DAS PASSIVAS
-====================================================== -->
-
-<script
-    src="passivas.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     9. DIAGNÓSTICO
-====================================================== -->
-
-<script
-    src="mesa-diagnostico.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     10. INTERAÇÕES / CLIQUES
-====================================================== -->
-
-<script
-    src="mesa-ficha-modal.js"
-></script>
-
-<script
-    src="button-mesa.js"
-    defer
-></script>
-
-
-</body>
-</html>
+<!-- 2º — Depois TODOS os scripts da mesa (SEM defer) -->
+<script src="supabase-entrada.js"></script>
+<script src="mesa-online.js"></script>
+<script src="mesa-jogadores.js"></script>
+<script src="passivas-dados.js"></script>
+<script src="passivas-stacks.js"></script>
+<script src="passivas-efeitos.js"></script>
+<script src="passivas.js"></script>
+<script src="sistema-dano.js"></script>
