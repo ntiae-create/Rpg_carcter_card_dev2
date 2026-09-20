@@ -21,12 +21,18 @@
         const classe =
             (typeof character !== "undefined" && character.class) ||
             "";
+        if (
+            !window.PassivasDados ||
+            typeof window.PassivasDados.listarPorClasse !== "function"
+        ) {
+            return [];
+        }
+
         return window.PassivasDados
-            .listar()
+            .listarPorClasse(classe)
             .filter(function (p) {
                 return (
                     p &&
-                    p.classe === classe &&
                     (p.tipo === "stack" || p.tipo === "stack_alvo")
                 );
             });

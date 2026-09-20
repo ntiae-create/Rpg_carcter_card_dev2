@@ -1163,10 +1163,17 @@
 
         listarPorClasse: function (classe) {
 
+            const normalizar = function (s) {
+                return String(s || "")
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+            };
+
             return Object.values(PASSIVAS)
                 .filter(function (passiva) {
 
-                    return passiva.classe === classe;
+                    return normalizar(passiva.classe) === normalizar(classe);
 
                 });
 
