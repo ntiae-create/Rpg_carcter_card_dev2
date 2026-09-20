@@ -81,26 +81,26 @@
 
     function obterSupabase() {
 
-    try {
+        try {
 
-        if (
-            window.supabaseClient &&
-            typeof window.supabaseClient.from === "function"
-        ) {
-            return window.supabaseClient;
+            if (
+                window.supabase &&
+                typeof window.supabase === "object"
+            ) {
+                return window.supabase;
+            }
+
+        } catch (erro) {
+
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter Supabase:",
+                erro
+            );
+
         }
 
-    } catch (erro) {
-
-        console.warn(
-            "[MESA DIAGNÓSTICO] Erro ao obter cliente Supabase:",
-            erro
-        );
-
+        return null;
     }
-
-    return null;
-}
 
 
     function obterSupabaseMesa() {
