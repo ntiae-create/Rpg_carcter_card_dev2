@@ -568,18 +568,17 @@ async function obterTokenAbly() {
 
         if (!estado.campanhaId) {
 
-            diagnostico(
-                "Não foi possível descobrir a campanha."
-            );
+    diagnostico(
+        "Campanha ainda não disponível. Aguardando o sistema de entrada..."
+    );
 
-            atualizarRealtime(
-                "Sem campanha"
-            );
+    atualizarRealtime(
+        "Aguardando campanha"
+    );
 
-            return;
-        }
+    return;
 
-
+}
         /* ---------------------------------------------
            VERIFICAÇÃO DO USUÁRIO
         --------------------------------------------- */
@@ -1013,7 +1012,40 @@ ably =
         }
     );
 
+window.addEventListener(
+    "rpg:campanhaAtualizada",
+    async function () {
 
+        console.log(
+            "[MESA ONLINE] Campanha atualizada pelo sistema."
+        );
+
+        obterDadosMesa();
+
+
+        if (
+            !estado.campanhaId
+        ) {
+
+            diagnostico(
+                "Campanha ainda não disponível. Aguardando..."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !estado.conectado
+        ) {
+
+            await conectarAbly();
+
+        }
+
+    }
+);
     /* =====================================================
        API PÚBLICA
     ===================================================== */
