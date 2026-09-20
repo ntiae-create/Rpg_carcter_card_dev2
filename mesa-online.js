@@ -1,71 +1,49 @@
 /* =========================================================
    MESA ONLINE — ABLY
-   PRIMEIRO TESTE DE MULTIPLAYER
-
-   NÃO ALTERA mesa.js
-   NÃO ALTERA OS CLIQUES EXISTENTES
+   Camada multiplayer da Mesa
+   NÃO altera mesa.js
 ========================================================= */
 
-(() => {
+(function () {
 
     "use strict";
 
-
-    /* =====================================================
-       CONFIGURAÇÃO
-    ===================================================== */
-
-    const ABLY_API_KEY = "COLE_SUA_CHAVE_AQUI";
-
-
-    /* =====================================================
-       ESTADO
-    ===================================================== */
+    console.log("[MESA ONLINE] Inicializando...");
 
     let ably = null;
-    let channel = null;
+    let canal = null;
 
-    let roomId = null;
-    let clientId = null;
-
-
-    /* =====================================================
-       LOG
-    ===================================================== */
-
-    function log(...args) {
-
-        console.log(
-            "[MESA ONLINE]",
-            ...args
-        );
-
-    }
-
+    let estado = {
+        conectado: false,
+        campanhaId: null,
+        usuarioId: null,
+        personagemId: null,
+        slot: null,
+        nome: null,
+        isMaster: false
+    };
 
     /* =====================================================
-       PEGAR DADOS DA CAMPANHA
+       LOCALSTORAGE
     ===================================================== */
 
-    function obterCampanha() {
+    function obterMesaAtiva() {
 
         try {
 
-            const dados =
-                JSON.parse(
-                    localStorage.getItem("rpg_mesa_ativa")
-                );
+            const salvo = localStorage.getItem("rpg_mesa_ativa");
 
-            if (!dados) {
+            if (!salvo) {
+                console.warn("[MESA ONLINE] rpg_mesa_ativa não encontrado.");
                 return null;
             }
 
-            return dados;
+            return JSON.parse(salvo);
 
         } catch (erro) {
 
             console.error(
-                "[MESA ONLINE] Erro ao ler campanha:",
+                "[MESA ONLINE] Erro ao ler rpg_mesa_ativa:",
                 erro
             );
 
@@ -75,373 +53,70 @@
 
 
     /* =====================================================
-       CRIAR ID DO CLIENTE
+       DESCOBRIR DADOS DA MESA
     ===================================================== */
 
-    function obterClientId(campanha) {
+    function obterDadosMesa() {
 
-        /*
-         * Primeiro tentamos usar o personagem.
-         */
+        const salvo = obterMesaAtiva();
 
-        if (campanha?.characterId) {
+        const auth = window.rpgAuth || {};
+        const campanha = auth.campaign || {};
 
-            return `character-${campanha.characterId}`;
+        const usuario =
+            auth.user ||
+            {};
 
-        }
+        const jogador =
+            auth.campaignCharacter ||
+            auth.currentCharacter ||
+            {};
 
+        estado.campanhaId =
+            salvo?.campaignId ||
+            salvo?.campaign_id ||
+            campanha?.id ||
+            window.rpgCampaign?.activeCampaign?.id ||
+            null;
 
-        /*
-         * Depois tentamos o usuário.
-         */
+        estado.usuarioId =
+            salvo?.userId ||
+            usuario?.id ||
+            null;
 
-        if (campanha?.userId) {
+        estado.personagemId =
+            salvo?.characterId ||
+            jogador?.id ||
+            null;
 
-            return `user-${campanha.userId}`;
+        estado.slot =
+            salvo?.slot ||
+            auth.campaignSlot ||
+            jogador?.slot ||
+            null;
 
-        }
+        estado.nome =
+            jogador?.name ||
+            jogador?.nome ||
+            salvo?.characterName ||
+            usuario?.email ||
+            "Jogador";
 
-
-        /*
-         * Último recurso:
-         * identificador persistente do navegador.
-         */
-
-        let id =
-            localStorage.getItem(
-                "rpg_mesa_client_id"
+        estado.isMaster =
+            auth.isMaster === true ||
+            salvo?.isMaster === true ||
+            (
+                campanha?.master_id &&
+                usuario?.id &&
+                campanha.master_id === usuario.id
             );
 
-        if (!id) {
-
-            id =
-                "browser-" +
-                crypto.randomUUID();
-
-            localStorage.setItem(
-                "rpg_mesa_client_id",
-                id
-            );
-
-        }
-
-        return id;
-    }
-
-
-    /* =====================================================
-       PEGAR ROOM DA CAMPANHA
-    ===================================================== */
-
-    function obterRoom(campanha) {
-
-        if (!campanha?.campaignId) {
-
-            throw new Error(
-                "campaignId não encontrado."
-            );
-
-        }
-
-        return `rpg-mesa-${campanha.campaignId}`;
-    }
-
-
-    /* =====================================================
-       INICIAR
-    ===================================================== */
-
-    async function iniciarMesaOnline() {
-
-        log("Iniciando multiplayer...");
-
-
-        const campanha =
-            obterCampanha();
-
-
-        if (!campanha) {
-
-            console.warn(
-                "[MESA ONLINE] Nenhuma campanha encontrada."
-            );
-
-            return;
-        }
-
-
-        roomId =
-            obterRoom(campanha);
-
-
-        clientId =
-            obterClientId(campanha);
-
-
-        log("Room:", roomId);
-        log("Client ID:", clientId);
-
-
-        /*
-         * Cria conexão com Ably.
-         */
-
-        ably =
-            new Ably.Realtime({
-
-                key: ABLY_API_KEY,
-
-                clientId: clientId
-
-            });
-
-
-        /*
-         * Monitora conexão.
-         */
-
-        ably.connection.on(
-            (stateChange) => {
-
-                log(
-                    "Conexão:",
-                    stateChange.current
-                );
-
-                atualizarDiagnostico(
-                    stateChange.current
-                );
-
-            }
+        console.log(
+            "[MESA ONLINE] Dados encontrados:",
+            estado
         );
 
-
-        /*
-         * Aguarda conexão.
-         */
-
-        await ably.connection.once(
-            "connected"
-        );
-
-
-        log("ABLY CONECTADO");
-
-
-        /*
-         * Obtém o canal da campanha.
-         */
-
-        channel =
-            ably.channels.get(roomId);
-
-
-        /*
-         * Eventos de presença.
-         */
-
-        await channel.presence.subscribe(
-            "enter",
-            membro => {
-
-                log(
-                    "ENTROU:",
-                    membro.clientId
-                );
-
-                atualizarJogadoresOnline();
-
-            }
-        );
-
-
-        await channel.presence.subscribe(
-            "leave",
-            membro => {
-
-                log(
-                    "SAIU:",
-                    membro.clientId
-                );
-
-                atualizarJogadoresOnline();
-
-            }
-        );
-
-
-        /*
-         * Entra na presença da Mesa.
-         */
-
-        await channel.presence.enter({
-
-            campaignId:
-                campanha.campaignId,
-
-            characterId:
-                campanha.characterId ?? null,
-
-            slot:
-                campanha.slot ?? null,
-
-            master:
-                campanha.masterId ===
-                campanha.userId
-
-        });
-
-
-        log(
-            "ENTROU NA MESA ONLINE"
-        );
-
-
-        /*
-         * Atualiza lista inicial.
-         */
-
-        await atualizarJogadoresOnline();
-
-    }
-
-
-    /* =====================================================
-       LISTAR JOGADORES ONLINE
-    ===================================================== */
-
-    async function atualizarJogadoresOnline() {
-
-        if (!channel) {
-            return;
-        }
-
-
-        try {
-
-            const membros =
-                await channel.presence.get();
-
-
-            log(
-                "Jogadores online:",
-                membros
-            );
-
-
-            /*
-             * Guarda globalmente para outros módulos.
-             */
-
-            window.rpgMesaOnlinePlayers =
-                membros;
-
-
-            /*
-             * Atualiza visual.
-             */
-
-            marcarJogadoresOnline(
-                membros
-            );
-
-
-            /*
-             * Diagnóstico.
-             */
-
-            const elemento =
-                document.querySelector(
-                    '[data-diagnostico="realtime"]'
-                );
-
-            if (elemento) {
-
-                elemento.textContent =
-                    `🟢 ${membros.length} online`;
-
-            }
-
-        } catch (erro) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao obter presença:",
-                erro
-            );
-
-        }
-
-    }
-
-
-    /* =====================================================
-       MARCAR CARDS ONLINE
-    ===================================================== */
-
-    function marcarJogadoresOnline(
-        membros
-    ) {
-
-        /*
-         * Primeiro limpamos apenas a nossa
-         * marcação visual.
-         *
-         * Não removemos classes usadas pelo mesa.js.
-         */
-
-        document
-            .querySelectorAll(
-                ".player-card"
-            )
-            .forEach(card => {
-
-                card.removeAttribute(
-                    "data-online"
-                );
-
-            });
-
-
-        /*
-         * Para o primeiro teste:
-         * tentamos associar o slot enviado
-         * pela presença.
-         */
-
-        membros.forEach(
-            membro => {
-
-                const dados =
-                    membro.data || {};
-
-
-                if (
-                    dados.slot === null ||
-                    dados.slot === undefined
-                ) {
-                    return;
-                }
-
-
-                const card =
-                    document.querySelector(
-                        `.player-card[data-seat="${dados.slot}"]`
-                    );
-
-
-                if (!card) {
-                    return;
-                }
-
-
-                card.setAttribute(
-                    "data-online",
-                    "true"
-                );
-
-            }
-        );
-
+        return estado;
     }
 
 
@@ -449,107 +124,188 @@
        DIAGNÓSTICO
     ===================================================== */
 
-    function atualizarDiagnostico(
-        estado
-    ) {
+    function diagnostico(texto) {
+
+        console.log("[MESA ONLINE]", texto);
+
+        const log =
+            document.querySelector("#diagnostico-log");
+
+        if (!log) return;
+
+        const linha =
+            document.createElement("div");
+
+        linha.textContent =
+            "[ONLINE] " + texto;
+
+        log.appendChild(linha);
+
+        log.scrollTop =
+            log.scrollHeight;
+    }
+
+
+    function atualizarRealtime(status) {
 
         const elemento =
             document.querySelector(
                 '[data-diagnostico="realtime"]'
             );
 
-        if (!elemento) {
+        if (!elemento) return;
+
+        elemento.textContent =
+            status;
+    }
+
+
+    /* =====================================================
+       ABLY
+    ===================================================== */
+
+    async function conectarAbly() {
+
+        obterDadosMesa();
+
+        if (!estado.campanhaId) {
+
+            diagnostico(
+                "Não foi possível descobrir a campanha."
+            );
+
+            atualizarRealtime(
+                "Sem campanha"
+            );
+
             return;
         }
 
+        if (!estado.usuarioId) {
 
-        const estadosOnline = [
-            "connected",
-            "attaching",
-            "attached"
-        ];
+            diagnostico(
+                "Não foi possível descobrir o usuário."
+            );
 
+            atualizarRealtime(
+                "Sem usuário"
+            );
 
-        if (
-            estadosOnline.includes(
-                estado
-            )
-        ) {
-
-            elemento.textContent =
-                "🟢 Conectado";
-
-        } else {
-
-            elemento.textContent =
-                `🔴 ${estado}`;
-
+            return;
         }
 
+        /*
+         * IMPORTANTE:
+         *
+         * A chave secreta do Ably NÃO deve ficar aqui.
+         *
+         * Por enquanto deixamos a estrutura pronta.
+         * A autenticação segura será ligada no próximo passo.
+         */
+
+        diagnostico(
+            "Campanha encontrada: " +
+            estado.campanhaId
+        );
+
+        diagnostico(
+            "Usuário encontrado: " +
+            estado.usuarioId
+        );
+
+        diagnostico(
+            "Slot: " +
+            (estado.slot ?? "nenhum")
+        );
+
+        diagnostico(
+            "Preparando conexão multiplayer..."
+        );
+
+        /*
+         * A conexão real será ativada assim que
+         * configurarmos a autenticação segura do Ably.
+         */
+
+        atualizarRealtime(
+            "Aguardando autenticação Ably"
+        );
     }
+
+
+    /* =====================================================
+       INICIALIZAÇÃO
+    ===================================================== */
+
+    function iniciar() {
+
+        console.log(
+            "[MESA ONLINE] Camada multiplayer carregada."
+        );
+
+        conectarAbly();
+    }
+
+
+    /* =====================================================
+       EVENTO PÚBLICO
+       Outros arquivos poderão avisar quando a campanha
+       estiver pronta.
+    ===================================================== */
+
+    window.addEventListener(
+        "mesa:campanhaAlterada",
+        function () {
+
+            console.log(
+                "[MESA ONLINE] Campanha alterada."
+            );
+
+            obterDadosMesa();
+        }
+    );
 
 
     /* =====================================================
        API PÚBLICA
     ===================================================== */
 
-    window.rpgMesaOnline = {
+    window.mesaOnline = {
 
-        getChannel() {
+        estado: estado,
 
-            return channel;
+        conectar: conectarAbly,
 
+        obterDados: obterDadosMesa,
+
+        get canal() {
+            return canal;
         },
 
-        getPlayers() {
-
-            return (
-                window.rpgMesaOnlinePlayers ||
-                []
-            );
-
-        },
-
-        getRoomId() {
-
-            return roomId;
-
-        },
-
-        getClientId() {
-
-            return clientId;
-
-        },
-
-        async refresh() {
-
-            await atualizarJogadoresOnline();
-
+        get ably() {
+            return ably;
         }
 
     };
 
 
     /* =====================================================
-       INICIAR QUANDO A PÁGINA ESTIVER PRONTA
+       ESPERAR DOM
     ===================================================== */
 
     if (
-        document.readyState ===
-        "loading"
+        document.readyState === "loading"
     ) {
 
         document.addEventListener(
             "DOMContentLoaded",
-            iniciarMesaOnline
+            iniciar
         );
 
     } else {
 
-        iniciarMesaOnline();
+        iniciar();
 
     }
-
 
 })();
