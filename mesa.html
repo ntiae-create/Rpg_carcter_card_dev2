@@ -1107,6 +1107,9 @@
 <!-- ======================================
    1. PRIMEIRO — TUDO DA MESA (CLIQUE FUNCIONA)
    ====================================== -->
+<!-- ======================================
+   🟢 PARTE 1 — TUDO DA MESA (CLIQUE PRIMEIRO)
+   ====================================== -->
 <script src="config-mesa.js"></script>
 <script src="mesa.js"></script>
 <script src="mesa-entrada.js"></script>
@@ -1123,12 +1126,25 @@
 <script src="sistema-dano.js"></script>
 
 <!-- ======================================
-   2. SÓ DEPOIS — SUPABASE (NÃO BLOQUEIA NADA)
+   🔴 PARTE 2 — SUPABASE ISOLADO
    ====================================== -->
-<script src="supabase.js"></script>
-<script src="supabase-mesa.js"></script>
-<script src="supabase-entrada.js"></script>
+<script>
+// ISOLA O SUPABASE — SÓ CARREGA 2 SEGUNDOS DEPOIS
+setTimeout(function() {
+    const s1 = document.createElement('script');
+    s1.src = 'supabase.js';
+    s1.onload = function() {
+        const s2 = document.createElement('script');
+        s2.src = 'supabase-entrada.js';
+        document.body.appendChild(s2);
+        
+        const s3 = document.createElement('script');
+        s3.src = 'supabase-mesa.js';
+        document.body.appendChild(s3);
+    };
+    document.body.appendChild(s1);
+}, 2000); // ESPERA 2 SEGUNDOS — MESA FICA 100% PRIMEIRO
+</script>
 
-    
 </body>
 </html>
