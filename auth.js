@@ -875,71 +875,13 @@
         }
 
 
-        const membros =
-            window.rpgAuth.campaignMembers || [];
-
-
-        const userIds =
-            membros
-                .map(
-                    membro =>
-                        membro.user_id
-                )
-                .filter(
-                    id =>
-                        !!id
-                );
-
-
-        /*
-         * O mestre pode não estar na tabela
-         * campaign_members.
-         *
-         * Por isso garantimos que o master_id
-         * também seja consultado.
-         */
-
-        const masterId =
-            window.rpgAuth.campaign?.master_id;
-
-
-        if (masterId) {
-
-            const masterIdString =
-                String(masterId);
-
-
-            const mestreJaExiste =
-                userIds.some(
-                    id =>
-                        String(id) ===
-                        masterIdString
-                );
-
-
-            if (!mestreJaExiste) {
-
-                userIds.push(
-                    masterId
-                );
-
-            }
-
-        }
-
-
-        if (
-            userIds.length === 0
-        ) {
-
-            window.rpgAuth.campaignCharacters =
-                [];
-
-            return true;
-        }
-
-
         try {
+
+            console.log(
+                "🔎 RPG AUTH — Buscando personagens da campanha:",
+                campaignId
+            );
+
 
             const {
                 data,
@@ -951,10 +893,6 @@
                     .eq(
                         "campaign_id",
                         campaignId
-                    )
-                    .in(
-                        "user_id",
-                        userIds
                     );
 
 
@@ -983,6 +921,35 @@
                 data || [];
 
 
+            console.log(
+                "✅ RPG AUTH — Personagens encontrados:",
+                window.rpgAuth.campaignCharacters
+            );
+
+
+            console.log(
+                "📊 RPG AUTH — Quantidade de personagens:",
+                window.rpgAuth.campaignCharacters.length
+            );
+
+
+            if (
+                window.rpgAuth.campaignCharacters.length === 0
+            ) {
+
+                console.warn(
+                    "⚠️ Nenhum personagem encontrado para esta conta/campanha.",
+                    {
+                        campaignId,
+                        userId:
+                            window.rpgAuth.user?.id ||
+                            null
+                    }
+                );
+
+            }
+
+
             return true;
 
         }
@@ -997,6 +964,13 @@
 
             window.rpgAuth.campaignCharacters =
                 [];
+
+
+            mostrarDiagnostico(
+                `❌ Erro inesperado ao carregar personagens: ${error.message}`,
+                "erro"
+            );
+
 
             return false;
         }
