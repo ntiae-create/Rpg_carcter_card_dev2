@@ -1126,9 +1126,7 @@
    🟣 SUPABASE — ISOLADO, NÃO QUEBRA CLIQUES
    ====================================== -->
 <script>
-// Carrega o Supabase SEM tocar na página
 (function() {
-    // Cria um iframe escondido para carregar o Supabase
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
@@ -1136,23 +1134,31 @@
     iframe.contentWindow.document.open();
     iframe.contentWindow.document.write(`
         <html><body>
+        <script>
+            // COMPARTILHA O LOCALSTORAGE COM A JANELA PRINCIPAL
+            Object.defineProperty(window, 'localStorage', {
+                get: () => window.parent.localStorage
+            });
+        <\/script>
         <script src="supabase.js"><\/script>
         <script>
-            // Quando o Supabase estiver pronto
             function esperarEEnviar() {
                 if (window.supabaseClient && window.parent) {
-                    // Copia apenas o cliente para a janela principal
                     window.parent.supabaseClient = window.supabaseClient;
-                    // Carrega o entrada.js NA JANELA PRINCIPAL, só agora
+                    console.log('✅ Supabase conectado!');
+                    
+                    // Carrega entrada
                     const s = document.createElement('script');
                     s.src = 'supabase-entrada.js';
                     window.parent.document.body.appendChild(s);
-                    // Depois carrega o supabase-mesa.js
+                    
+                    // Carrega supabase-mesa DEPOIS do entrada
                     setTimeout(function() {
                         const s2 = document.createElement('script');
                         s2.src = 'supabase-mesa.js';
                         window.parent.document.body.appendChild(s2);
-                    }, 300);
+                        console.log('✅ supabase-mesa carregado!');
+                    }, 500);
                 } else {
                     setTimeout(esperarEEnviar, 50);
                 }
