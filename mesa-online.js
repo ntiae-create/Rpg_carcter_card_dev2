@@ -668,18 +668,48 @@ async function obterTokenAbly() {
 
 
             diagnostico(
-                "Criando conexão Ably..."
-            );
+    "Criando conexão Ably..."
+);
 
 
-            /* -----------------------------------------
-               CONEXÃO
-            ----------------------------------------- */
+/*
+ * O Supabase Edge Function devolve um
+ * TokenRequest.
+ *
+ * O SDK do Ably recebe esse TokenRequest
+ * através do authCallback.
+ */
 
-            ably =
-                new window.Ably.Realtime({
-                    token: token
-                });
+ably =
+    new window.Ably.Realtime({
+
+        authCallback: async function (
+            params,
+            callback
+        ) {
+
+            try {
+
+                const tokenRequest =
+                    await obterTokenAbly();
+
+                callback(
+                    null,
+                    tokenRequest
+                );
+
+            } catch (erro) {
+
+                callback(
+                    erro,
+                    null
+                );
+
+            }
+
+        }
+
+    });
 
 
             /* -----------------------------------------
