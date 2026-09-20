@@ -1116,114 +1116,88 @@
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="supabase-mesa.js" defer></script>
-<script src="supabase-entrada.js" defer></script>
+<<!-- ======================================
+   🔵 PASSO 1 — SALVA TUDO DA MESA PRIMEIRO
+   ====================================== -->
+<script>
+// 🛡️ PROTEGE TUDO QUE A MESA JÁ CRIOU
+window.__MESA_PROTEGIDO__ = {
+    // Salva todas as variáveis globais da mesa
+    rpgAuth: window.rpgAuth,
+    mesa: window.mesa,
+    PASSIVAS_DE_CLASSE: window.PASSIVAS_DE_CLASSE,
+    PassivasDados: window.PassivasDados,
+    PassivasStacks: window.PassivasStacks,
+    SistemaDano: window.SistemaDano,
+    
+    // Salva o localStorage atual
+    localStorageDados: localStorage.getItem('rpg_mesa_ativa'),
+    
+    // Salva todos os event listeners de clique
+    cliques: [],
+    init: function() {
+        document.querySelectorAll('button, [onclick], .slot-personagem').forEach(el => {
+            if (el.onclick) this.cliques.push({el: el, handler: el.onclick});
+        });
+        console.log('🛡️ Mesa protegida! Dados salvos');
+    }
+};
+window.__MESA_PROTEGIDO__.init();
+</script>
 
+<!-- ======================================
+   🔵 PASSO 2 — TUDO DA MESA CARREGA
+   ====================================== -->
+<script src="config-mesa.js"></script>
+<script src="mesa.js"></script>
+<script src="mesa-entrada.js"></script>
+<script src="mesa-online.js"></script>
+<script src="mesa-jogadores.js"></script>
+<script src="mesa-aventura.js"></script>
+<script src="mesa-ficha-modal.js"></script>
+<script src="button-mesa.js"></script>
+<script src="mesa-diagnostico.js"></script>
+<script src="passivas-dados.js"></script>
+<script src="passivas-stacks.js"></script>
+<script src="passivas-efeitos.js"></script>
+<script src="passivas.js"></script>
+<script src="sistema-dano.js"></script>
 
-<!-- ABLY — MULTIPLAYER -->
-<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
-<script src="mesa-online.js" defer></script>
+<!-- ======================================
+   🟣 PASSO 3 — CARREGA SUPABASE + RESTAURA
+   ====================================== -->
+<script src="supabase.js"></script>
+<script src="supabase-entrada.js"></script>
+<script src="supabase-mesa.js"></script>
 
+<!-- ======================================
+   🟢 PASSO 4 — DEPOIS DE TUDO, RESTAURA!
+   ====================================== -->
+<script>
+// 🔄 RESTAURA TUDO QUE O SUPABASE PODE TER APAGADO
+setTimeout(function() {
+    const prot = window.__MESA_PROTEGIDO__;
+    
+    // Restaura o localStorage se foi apagado
+    if (!localStorage.getItem('rpg_mesa_ativa') && prot.localStorageDados) {
+        localStorage.setItem('rpg_mesa_ativa', prot.localStorageDados);
+        console.log('✅ LocalStorage restaurado!');
+    }
+    
+    // Restaura os cliques
+    prot.cliques.forEach(({el, handler}) => {
+        if (!el.onclick) el.onclick = handler;
+    });
+    console.log('✅ Cliques restaurados!');
+    
+    // Recarrega os dados da campanha
+    if (window.carregarDiagnostico) window.carregarDiagnostico();
+    if (window.buscarPersonagensCampanha) window.buscarPersonagensCampanha();
+    
+    console.log('🎉 Tudo restaurado!');
+}, 500);
+</script>
 
-<!-- NÚCLEO DA MESA -->
-<script
-    src="mesa.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     2. CONFIGURAÇÕES
-====================================================== -->
-
-<script
-    src="config-mesa.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     3. JOGADORES / CARDS
-====================================================== -->
-
-<script
-    src="mesa-jogadores.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     4. AVENTURA / MAPA / DUNGEON
-====================================================== -->
-
-<script
-    src="mesa-aventura.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     5. DADOS DAS PASSIVAS
-====================================================== -->
-
-<script
-    src="passivas-dados.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     6. CONTROLE DOS STACKS
-====================================================== -->
-
-<script
-    src="passivas-stacks.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     7. EFEITOS VISUAIS DAS PASSIVAS
-====================================================== -->
-
-<script
-    src="passivas-efeitos.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     8. CONTROLADOR CENTRAL DAS PASSIVAS
-====================================================== -->
-
-<script
-    src="passivas.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     9. DIAGNÓSTICO
-====================================================== -->
-
-<script
-    src="mesa-diagnostico.js"
-    defer
-></script>
-
-
-<!-- =====================================================
-     10. INTERAÇÕES / CLIQUES
-====================================================== -->
-
-<script
-    src="mesa-ficha-modal.js"
-></script>
-
-<script
-    src="button-mesa.js"
-    defer
-></script>
 
 
 </body>
