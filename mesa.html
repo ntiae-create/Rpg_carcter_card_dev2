@@ -1128,7 +1128,24 @@
 <script src="sistema-dano.js"></script>
   
     <!-- ÚLTIMA COISA DO ARQUIVO -->
-<script src="supabase.js"></script>
-<script src="supabase-entrada.js"></script>
+<!-- ======================================
+     SUPABASE — CARREGA POR ÚLTIMO, SEMPRE!
+     ====================================== -->
+<script>
+// Carrega o Supabase SOMENTE DEPOIS que a página inteira carregou
+window.addEventListener('load', function() {
+    // 1. Carrega o supabase.js
+    const scriptSupabase = document.createElement('script');
+    scriptSupabase.src = 'supabase.js';
+    scriptSupabase.onload = function() {
+        console.log('✅ Supabase carregado');
+        // 2. Depois carrega o entrada
+        const scriptEntrada = document.createElement('script');
+        scriptEntrada.src = 'supabase-entrada.js';
+        document.body.appendChild(scriptEntrada);
+    };
+    document.body.appendChild(scriptSupabase);
+});
+</script>
 </body>
 </html>
