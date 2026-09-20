@@ -1101,65 +1101,36 @@
 </main>
 
 
-
-<!-- =====================================================
-     JAVASCRIPT
-====================================================== -->
-<!-- =====================================================
-     0. SUPABASE
-====================================================== -->
-
-<!-- =====================================================
-     JAVASCRIPT
-====================================================== -->
-
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-
-<!-- 2º — Depois TODOS os scripts da mesa (SEM defer) -->
 <!-- ======================================
-   SCRIPTS DA MESA — ORDEM CORRETA
+   SCRIPTS DA MESA — SEM DEFER!
    ====================================== -->
-<!-- 1. Configuração e Base -->
-<script src="config-mesa.js" defer></script>
-<script src="mesa.js" defer></script>
-
-<!-- 2. Entrada e Conexão -->
-<script src="mesa-entrada.js" defer></script>
-<script src="mesa-online.js" defer></script>
-
-<!-- 3. Jogadores e Dados -->
-<script src="mesa-jogadores.js" defer></script>
-<script src="supabase-mesa.js" defer></script>
-
-<!-- 4. Aventura e Interface -->
-<script src="mesa-aventura.js" defer></script>
-<script src="mesa-ficha-modal.js" defer></script>
-<script src="button-mesa.js" defer></script>
-
-<!-- 5. Diagnóstico -->
-<script src="mesa-diagnostico.js" defer></script>
-
-<!-- 6. Sistema de Passivas -->
-<script src="passivas-dados.js" defer></script>
-<script src="passivas-stacks.js" defer></script>
-<script src="passivas-efeitos.js" defer></script>
-<script src="passivas.js" defer></script>
-
-<!-- 7. Sistema de Combate -->
-<script src="sistema-dano.js" defer></script>
+<script src="config-mesa.js"></script>
+<script src="mesa.js"></script>
+<script src="mesa-entrada.js"></script>
+<script src="mesa-online.js"></script>
+<script src="mesa-jogadores.js"></script>
+<script src="supabase-mesa.js"></script>
+<script src="mesa-aventura.js"></script>
+<script src="mesa-ficha-modal.js"></script>
+<script src="button-mesa.js"></script>
+<script src="mesa-diagnostico.js"></script>
+<script src="passivas-dados.js"></script>
+<script src="passivas-stacks.js"></script>
+<script src="passivas-efeitos.js"></script>
+<script src="passivas.js"></script>
+<script src="sistema-dano.js"></script>
 
 <!-- ======================================
-   SUPABASE — CARREGA POR ÚLTIMO, SEM BLOQUEAR
+   SUPABASE — CARREGA POR ÚLTIMO, DINAMICO
    ====================================== -->
 <script>
 window.addEventListener('load', function() {
-    // Carrega supabase.js primeiro
     const scriptSupabase = document.createElement('script');
     scriptSupabase.src = 'supabase.js';
     scriptSupabase.onload = function() {
-        // Depois carrega supabase-entrada.js
         const scriptEntrada = document.createElement('script');
         scriptEntrada.src = 'supabase-entrada.js';
         document.body.appendChild(scriptEntrada);
@@ -1167,6 +1138,7 @@ window.addEventListener('load', function() {
     document.body.appendChild(scriptSupabase);
 });
 </script>
+
     
 </body>
 </html>
