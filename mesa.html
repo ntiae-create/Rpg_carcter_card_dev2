@@ -1105,7 +1105,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- ======================================
-   1. PRIMEIRO — TUDO DA MESA (CLIQUE FUNCIONA)
+   🔵 TUDO DA MESA — PRIMEIRO, SEMPRE
    ====================================== -->
 <script src="config-mesa.js"></script>
 <script src="mesa.js"></script>
@@ -1123,12 +1123,47 @@
 <script src="sistema-dano.js"></script>
 
 <!-- ======================================
-   SUPABASE — COMENTADO TEMPORARIAMENTE
+   🟣 SUPABASE — ISOLADO, NÃO QUEBRA CLIQUES
    ====================================== -->
-<!-- <script src="supabase.js"></script>
-<script src="supabase-entrada.js"></script>
-<script src="supabase-mesa.js"></script> -->
-
+<script>
+// Carrega o Supabase SEM tocar na página
+(function() {
+    // Cria um iframe escondido para carregar o Supabase
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(`
+        <html><body>
+        <script src="supabase.js"><\/script>
+        <script>
+            // Quando o Supabase estiver pronto
+            function esperarEEnviar() {
+                if (window.supabaseClient && window.parent) {
+                    // Copia apenas o cliente para a janela principal
+                    window.parent.supabaseClient = window.supabaseClient;
+                    // Carrega o entrada.js NA JANELA PRINCIPAL, só agora
+                    const s = document.createElement('script');
+                    s.src = 'supabase-entrada.js';
+                    window.parent.document.body.appendChild(s);
+                    // Depois carrega o supabase-mesa.js
+                    setTimeout(function() {
+                        const s2 = document.createElement('script');
+                        s2.src = 'supabase-mesa.js';
+                        window.parent.document.body.appendChild(s2);
+                    }, 300);
+                } else {
+                    setTimeout(esperarEEnviar, 50);
+                }
+            }
+            esperarEEnviar();
+        <\/script>
+        </body></html>
+    `);
+    iframe.contentWindow.document.close();
+})();
+</script>
 
 </body>
 </html>
