@@ -3,7 +3,9 @@
 (function () {
 
     console.log("[supabase.js] Iniciando...");
-
+    
+window.__SUPABASE_JS_CARREGOU = true;
+    
     const SUPABASE_URL =
         "https://bjkbfxcmyihdruqrwsdf.supabase.co";
 
