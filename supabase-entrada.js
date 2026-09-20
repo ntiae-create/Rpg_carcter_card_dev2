@@ -14,7 +14,6 @@
  - preservar a conexão principal do index.html
  - permitir que ambas as páginas apontem para o MESMO
    projeto Supabase
- - restaurar a campanha ativa da Mesa
 
  NÃO executa consultas ao banco.
  NÃO inicia Realtime.
@@ -49,9 +48,7 @@
 
         supabasePrincipalDisponivel: false,
 
-        supabaseMesaDisponivel: false,
-
-        campanhaSincronizada: false
+        supabaseMesaDisponivel: false
 
     };
 
@@ -293,300 +290,6 @@
 
     /*
     ==========================================================
-     SINCRONIZA A CAMPANHA ATIVA
-     
-     IMPORTANTE:
-     - Não faz consulta ao banco diretamente.
-     - Usa o campaign.js, que já possui essa responsabilidade.
-     - Recupera a campanha salva em rpg_mesa_ativa.
-    ==========================================================
-    */
-
-    async function sincronizarCampanha() {
-
-        const contexto =
-            estado.contexto ||
-            prepararContexto();
-
-
-        if (!contexto) {
-
-            console.warn(
-                "[Supabase Entrada] Não foi possível sincronizar campanha: contexto ausente."
-            );
-
-            return false;
-        }
-
-
-        const campanhaId =
-            contexto.campanha?.id;
-
-
-        if (!campanhaId) {
-
-            console.warn(
-                "[Supabase Entrada] Nenhum campaignId encontrado no contexto da Mesa."
-            );
-
-            return false;
-        }
-
-
-        /*
-        ------------------------------------------------------
-        Verifica se o campaign.js está disponível
-        ------------------------------------------------------
-        */
-
-        if (
-            !window.rpgCampaign
-        ) {
-
-            console.warn(
-                "[Supabase Entrada] rpgCampaign ainda não está disponível. Aguardando..."
-            );
-
-            return false;
-        }
-
-
-        /*
-        ------------------------------------------------------
-        Seleciona a campanha pelo ID salvo
-        ------------------------------------------------------
-        */
-
-        if (
-            typeof window.rpgCampaign
-                .selecionarCampanhaPorId ===
-            "function"
-        ) {
-
-            try {
-
-                const campanha =
-                    await window.rpgCampaign
-                        .selecionarCampanhaPorId(
-                            campanhaId
-                        );
-
-
-                if (campanha) {
-
-                    estado.campanhaSincronizada =
-                        true;
-
-
-                    console.log(
-                        "[Supabase Entrada] Campanha restaurada:",
-                        campanha
-                    );
-
-
-                    /*
-                    --------------------------------------------------
-                    Mantém o contexto sincronizado com a campanha real
-                    --------------------------------------------------
-                    */
-
-                    if (
-                        estado.contexto &&
-                        estado.contexto.campanha
-                    ) {
-
-                        estado.contexto.campanha.nome =
-                            campanha.nome ||
-                            campanha.name ||
-                            estado.contexto.campanha.nome;
-
-                        estado.contexto.campanha.masterId =
-                            campanha.master_id ||
-                            campanha.masterId ||
-                            estado.contexto.campanha.masterId;
-                    }
-
-
-                    /*
-                    --------------------------------------------------
-                    Atualiza rpgAuth quando disponível
-                    --------------------------------------------------
-                    */
-
-                    if (
-                        window.rpgAuth
-                    ) {
-
-                        window.rpgAuth.campaign =
-                            campanha;
-
-                        window.rpgAuth.activeCampaign =
-                            campanha;
-
-                        window.rpgAuth.campaignId =
-                            campanha.id;
-
-                        window.rpgAuth.campaignCode =
-                            campanha.codigo_mesa ||
-                            campanha.codigoMesa ||
-                            null;
-
-                        window.rpgAuth.campaignName =
-                            campanha.nome ||
-                            campanha.name ||
-                            "Campanha";
-
-                        const usuario =
-                            window.rpgAuth.user;
-
-                        const masterId =
-                            campanha.master_id ||
-                            campanha.masterId ||
-                            null;
-
-                        window.rpgAuth.isMaster =
-                            Boolean(
-                                usuario?.id &&
-                                masterId &&
-                                String(usuario.id) ===
-                                String(masterId)
-                            );
-
-                        if (
-                            contexto.personagem?.id
-                        ) {
-
-                            window.rpgAuth.characterId =
-                                contexto.personagem.id;
-                        }
-
-                        if (
-                            contexto.personagem?.slot !==
-                            null &&
-                            contexto.personagem?.slot !==
-                            undefined
-                        ) {
-
-                            window.rpgAuth.campaignSlot =
-                                Number(
-                                    contexto.personagem.slot
-                                );
-
-                            window.rpgAuth.slot =
-                                Number(
-                                    contexto.personagem.slot
-                                );
-                        }
-                    }
-
-
-                    /*
-                    --------------------------------------------------
-                    Evento usado pelo restante da Mesa
-                    --------------------------------------------------
-                    */
-
-                    document.dispatchEvent(
-                        new CustomEvent(
-                            "rpg:campanhaAtualizada",
-                            {
-                                detail: {
-
-                                    campanha:
-                                        campanha,
-
-                                    campaign:
-                                        campanha,
-
-                                    campanhaId:
-                                        campanha.id,
-
-                                    campaignId:
-                                        campanha.id,
-
-                                    contexto:
-                                        contexto,
-
-                                    personagemId:
-                                        contexto.personagem?.id ||
-                                        null,
-
-                                    slot:
-                                        contexto.personagem?.slot ??
-                                        null,
-
-                                    isMaster:
-                                        window.rpgAuth?.isMaster ??
-                                        false
-
-                                }
-                            }
-                        )
-                    );
-
-
-                    /*
-                    --------------------------------------------------
-                    Evento compatível com mesa-online.js
-                    --------------------------------------------------
-                    */
-
-                    document.dispatchEvent(
-                        new CustomEvent(
-                            "mesa:campanhaAlterada",
-                            {
-                                detail: {
-
-                                    campanha:
-                                        campanha,
-
-                                    campaign:
-                                        campanha,
-
-                                    campanhaId:
-                                        campanha.id,
-
-                                    campaignId:
-                                        campanha.id
-
-                                }
-                            }
-                        )
-                    );
-
-
-                    return true;
-                }
-
-
-                console.warn(
-                    "[Supabase Entrada] campaign.js não encontrou a campanha:",
-                    campanhaId
-                );
-
-            } catch (erro) {
-
-                console.error(
-                    "[Supabase Entrada] Erro ao restaurar campanha:",
-                    erro
-                );
-
-            }
-
-        } else {
-
-            console.warn(
-                "[Supabase Entrada] selecionarCampanhaPorId() não está disponível."
-            );
-        }
-
-
-        return false;
-    }
-
-
-    /*
-    ==========================================================
      ENVIA O CONTEXTO PARA A MESA
     ==========================================================
     */
@@ -682,7 +385,7 @@
     ==========================================================
     */
 
-    async function iniciarMesa() {
+    function iniciarMesa() {
 
         console.log(
             "[Supabase Entrada] Rota MESA detectada."
@@ -726,24 +429,6 @@
 
         /*
         ------------------------------------------------------
-        Lê o contexto primeiro
-        ------------------------------------------------------
-        */
-
-        prepararContexto();
-
-
-        /*
-        ------------------------------------------------------
-        Restaura a campanha ativa
-        ------------------------------------------------------
-        */
-
-        await sincronizarCampanha();
-
-
-        /*
-        ------------------------------------------------------
         Envia contexto
         ------------------------------------------------------
         */
@@ -761,7 +446,7 @@
     ==========================================================
     */
 
-    async function iniciar() {
+    function iniciar() {
 
         console.log(
             "[Supabase Entrada] Iniciando porta central..."
@@ -805,7 +490,7 @@
 
         else if (pagina === "mesa") {
 
-            await iniciarMesa();
+            iniciarMesa();
 
         }
 
@@ -849,10 +534,7 @@
                             estado.contexto,
 
                         pronto:
-                            estado.pronto,
-
-                        campanhaSincronizada:
-                            estado.campanhaSincronizada
+                            estado.pronto
 
                     }
                 }
@@ -881,8 +563,6 @@
         obterContextoMesa,
 
         prepararContexto,
-
-        sincronizarCampanha,
 
         enviarContexto,
 
