@@ -1121,45 +1121,7 @@
 <script src="passivas-efeitos.js"></script>
 <script src="passivas.js"></script>
 <script src="sistema-dano.js"></script>
-
-<!-- ======================================
-   🟣 SUPABASE — CARREGA NORMAL, NO FINAL
-   ====================================== -->
-<script>
-// Salva as funções de clique ANTES do Supabase carregar
-window._preservedEvents = {
-    onclick: document.body.onclick,
-    clickHandlers: []
-};
-
-// Captura todos os eventos de clique já registrados
-document.querySelectorAll('button, [onclick]').forEach(el => {
-    if (el.onclick) window._preservedEvents.clickHandlers.push({el, handler: el.onclick});
-});
-</script>
-
-<!-- Agora carrega o Supabase NORMALMENTE -->
-<script src="supabase.js"></script>
-<script src="supabase-entrada.js"></script>
+    
 <script src="supabase-mesa.js"></script>
-
-<!-- Restaura os cliques DEPOIS que o Supabase carregou -->
-<script>
-// Restaura os cliques que o Supabase pode ter apagado
-function restaurarCliques() {
-    if (window._preservedEvents) {
-        window._preservedEvents.clickHandlers.forEach(({el, handler}) => {
-            if (!el.onclick) el.onclick = handler;
-        });
-        console.log('✅ Cliques restaurados!');
-    }
-}
-
-// Restaura depois que tudo carregou
-window.addEventListener('load', function() {
-    setTimeout(restaurarCliques, 100);
-});
-</script>
-
 </body>
 </html>
