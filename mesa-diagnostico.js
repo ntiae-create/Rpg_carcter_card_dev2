@@ -1,3311 +1,2593 @@
 /* =========================================================
-MESA RPG — SISTEMA DE DIAGNÓSTICO
-VERSÃO DETALHADA
+   MESA ONLINE — DIAGNÓSTICO
+   RPG MASTER CAOS
 
-SUPABASE MESA
+   Responsabilidades:
+   - Diagnóstico do ambiente
+   - Diagnóstico Supabase
+   - Diagnóstico campanha
+   - Diagnóstico usuário
+   - Diagnóstico personagens
+   - Diagnóstico slots
+   - Diagnóstico Supabase Realtime
+   - Diagnóstico Multiplayer Ably
+   - Logs da Mesa
+   - Sincronização manual
+   - Monitoramento de eventos
 ========================================================= */
-
 
 (function () {
 
-"use strict";  
+    "use strict";
+
+    /* =====================================================
+       ESTADO
+    ===================================================== */
+
+    const Diagnostico = {
+
+        aberto: false,
+
+        logs: [],
+
+        maxLogs: 150,
+
+        ultimoRealtime: null,
+
+        ultimoMultiplayer: null,
+
+        ultimaQuantidadePersonagens: null,
+
+        jogadoresOnline: 0,
+
+        inicializado: false,
+
+        testes: {},
+
+        ultimoDiagnostico: null,
+
+        intervalo: null
+
+    };
 
 
-/* =====================================================  
-   ESTADO  
-===================================================== */  
+    /* =====================================================
+       UTILITÁRIOS
+    ===================================================== */
 
-const Diagnostico = {  
+    function obterEstadoMesa() {
 
-    aberto: false,  
+        try {
 
-    logs: [],  
+            if (
+                window.MesaRPG &&
+                typeof window.MesaRPG === "object"
+            ) {
+                return window.MesaRPG;
+            }
 
-    maxLogs: 150,  
+        } catch (erro) {
 
-    ultimoRealtime: null,  
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter MesaRPG:",
+                erro
+            );
 
-    ultimaQuantidadePersonagens: null,  
+        }
 
-    inicializado: false,  
-
-    testes: {},  
-
-    ultimoDiagnostico: null  
-
-};  
-
-
-/* =====================================================  
-   HELPERS  
-===================================================== */  
-
-function obterEstadoMesa() {  
-
-    try {  
-
-        if (  
-            window.MesaRPG &&  
-            typeof window.MesaRPG.estado === "function"  
-        ) {  
-
-            return window.MesaRPG.estado();  
-
-        }  
-
-    } catch (erro) {  
-
-        registrar(  
-            "erro",  
-            "Falha ao obter o estado interno da Mesa: " +  
-            obterMensagemErro(erro)  
-        );  
-
-    }  
-
-    return null;  
-
-}  
-
-
-function obterSupabase() {
-
-    const cliente =
-        window.supabaseClient;
-
-    if (
-        cliente &&
-        typeof cliente.from === "function" &&
-        cliente.auth
-    ) {
-        return cliente;
+        return null;
     }
 
-    return null;
-}
 
+    function obterSupabase() {
 
-function obterSupabaseMesa() {  
+        try {
 
-    if (  
-        window.SupabaseMesa &&  
-        typeof window.SupabaseMesa.obterCliente ===  
-        "function"  
-    ) {  
+            if (
+                window.supabase &&
+                typeof window.supabase === "object"
+            ) {
+                return window.supabase;
+            }
 
-        return window.SupabaseMesa.obterCliente();  
+        } catch (erro) {
 
-    }  
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter Supabase:",
+                erro
+            );
 
-    return null;  
+        }
 
-}  
+        return null;
+    }
 
 
-function obterAuth() {  
+    function obterSupabaseMesa() {
 
-    return window.rpgAuth || null;  
+        try {
 
-}  
+            if (
+                window.supabaseMesa &&
+                typeof window.supabaseMesa === "object"
+            ) {
+                return window.supabaseMesa;
+            }
 
+            if (
+                window.SupabaseMesa &&
+                typeof window.SupabaseMesa === "object"
+            ) {
+                return window.SupabaseMesa;
+            }
 
-function obterPersonagens() {  
+        } catch (erro) {
 
-    const auth =  
-        obterAuth();  
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter Supabase Mesa:",
+                erro
+            );
 
+        }
 
-    if (  
-        auth &&  
-        Array.isArray(auth.campaignCharacters)  
-    ) {  
+        return null;
+    }
 
-        return auth.campaignCharacters;  
 
-    }  
+    function obterAuth() {
 
+        try {
 
-    const estado =  
-        obterEstadoMesa();  
+            if (
+                window.rpgAuth &&
+                typeof window.rpgAuth === "object"
+            ) {
+                return window.rpgAuth;
+            }
 
+        } catch (erro) {
 
-    if (  
-        estado &&  
-        Array.isArray(estado.personagens)  
-    ) {  
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter rpgAuth:",
+                erro
+            );
 
-        return estado.personagens;  
+        }
 
-    }  
+        return null;
+    }
 
 
-    return [];  
+    function obterPersonagens() {
 
-}  
+        try {
 
+            if (
+                window.MesaRPG &&
+                Array.isArray(window.MesaRPG.personagens)
+            ) {
+                return window.MesaRPG.personagens;
+            }
 
-function obterCampanha() {  
+            if (
+                window.rpgAuth &&
+                Array.isArray(window.rpgAuth.personagens)
+            ) {
+                return window.rpgAuth.personagens;
+            }
 
-    const estado =  
-        obterEstadoMesa();  
+            if (
+                window.personagensMesa &&
+                Array.isArray(window.personagensMesa)
+            ) {
+                return window.personagensMesa;
+            }
 
+        } catch (erro) {
 
-    if (  
-        estado &&  
-        estado.campanha  
-    ) {  
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter personagens:",
+                erro
+            );
 
-        return estado.campanha;  
+        }
 
-    }  
+        return [];
+    }
 
 
-    const auth =  
-        obterAuth();  
+    function obterCampanha() {
 
+        try {
 
-    if (  
-        auth &&  
-        auth.campaign  
-    ) {  
+            const auth = obterAuth();
 
-        return auth.campaign;  
+            if (
+                auth &&
+                auth.campaign
+            ) {
+                return auth.campaign;
+            }
 
-    }  
+            if (
+                window.rpgCampaign &&
+                typeof window.rpgCampaign === "object"
+            ) {
+                return window.rpgCampaign;
+            }
 
+            if (
+                window.MesaRPG &&
+                window.MesaRPG.campanha
+            ) {
+                return window.MesaRPG.campanha;
+            }
 
-    return null;  
+            if (
+                window.MesaRPG &&
+                window.MesaRPG.campaign
+            ) {
+                return window.MesaRPG.campaign;
+            }
 
-}  
+        } catch (erro) {
 
+            console.warn(
+                "[MESA DIAGNÓSTICO] Erro ao obter campanha:",
+                erro
+            );
 
-function obterMensagemErro(erro) {  
+        }
 
-    if (!erro) {  
+        return null;
+    }
 
-        return "Erro desconhecido.";  
 
-    }  
+    function obterMensagemErro(erro) {
 
+        if (!erro) {
+            return "Erro desconhecido.";
+        }
 
-    if (erro.message) {  
+        if (typeof erro === "string") {
+            return erro;
+        }
 
-        return erro.message;  
+        if (erro.message) {
+            return erro.message;
+        }
 
-    }  
+        try {
 
+            return JSON.stringify(erro);
 
-    if (typeof erro === "string") {  
+        } catch {
 
-        return erro;  
+            return String(erro);
 
-    }  
+        }
 
+    }
 
-    try {  
 
-        return JSON.stringify(erro);  
+    function escaparHTML(valor) {
 
-    } catch (_) {  
+        return String(valor ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
 
-        return String(erro);  
+    }
 
-    }  
 
-}  
+    /* =====================================================
+       TESTES
+    ===================================================== */
 
+    function definirTeste(
+        chave,
+        status,
+        titulo,
+        mensagem,
+        detalhes = "",
+        impacto = "",
+        causas = [],
+        acao = ""
+    ) {
 
-function definirTeste(  
-    chave,  
-    status,  
-    titulo,  
-    descricao,  
-    detalhes,  
-    impacto,  
-    causas,  
-    recomendacao  
-) {  
+        Diagnostico.testes[chave] = {
 
-    Diagnostico.testes[chave] = {  
+            chave,
 
-        chave,  
+            status,
 
-        status,  
+            titulo,
 
-        titulo,  
+            mensagem,
 
-        descricao,  
+            detalhes,
 
-        detalhes,  
+            impacto,
 
-        impacto,  
+            causas: Array.isArray(causas)
+                ? causas
+                : [causas],
 
-        causas: Array.isArray(causas)  
-            ? causas  
-            : [],  
+            acao,
 
-        recomendacao  
+            timestamp: new Date()
 
-    };  
+        };
 
-}  
+    }
 
 
-function registrarDiagnosticoTeste(chave) {  
+    function registrarDiagnosticoTeste(chave) {
 
-    const teste =  
-        Diagnostico.testes[chave];  
+        const teste = Diagnostico.testes[chave];
 
+        if (!teste) {
+            return;
+        }
 
-    if (!teste) return;  
+        const prefixos = {
 
+            sucesso: "🟢",
 
-    let tipo = "info";  
+            aviso: "🟡",
 
+            erro: "🔴",
 
-    if (teste.status === "sucesso") {  
+            info: "🔵"
 
-        tipo = "sucesso";  
+        };
 
-    }  
+        const icone =
+            prefixos[teste.status] || "⚪";
 
-    if (teste.status === "aviso") {  
+        registrar(
+            teste.status,
+            `${icone} ${teste.titulo}: ${teste.mensagem}`
+        );
 
-        tipo = "aviso";  
+    }
 
-    }  
 
-    if (teste.status === "erro") {  
+    /* =====================================================
+       LOG
+    ===================================================== */
 
-        tipo = "erro";  
+    function registrar(tipo, mensagem) {
 
-    }  
+        const entrada = {
 
+            tipo: tipo || "info",
 
-    registrar(  
-        tipo,  
-        `${teste.titulo}: ${teste.descricao}`  
-    );  
+            mensagem: String(mensagem ?? ""),
 
-}  
+            data: new Date()
 
+        };
 
-/* =====================================================  
-   LOG  
-===================================================== */  
+        Diagnostico.logs.push(entrada);
 
-function registrar(tipo, mensagem) {  
+        if (
+            Diagnostico.logs.length >
+            Diagnostico.maxLogs
+        ) {
 
-    const agora =  
-        new Date();  
+            Diagnostico.logs.shift();
 
+        }
 
-    const hora =  
-        agora.toLocaleTimeString(  
-            "pt-BR",  
-            {  
-                hour: "2-digit",  
-                minute: "2-digit",  
-                second: "2-digit"  
-            }  
-        );  
+        atualizarLog();
 
+    }
 
-    Diagnostico.logs.push({  
 
-        tipo,  
+    function atualizarLog() {
 
-        mensagem,  
+        const elemento =
+            document.getElementById(
+                "diagnostico-log"
+            );
 
-        hora  
+        if (!elemento) {
+            return;
+        }
 
-    });  
+        if (!Diagnostico.logs.length) {
 
+            elemento.innerHTML =
+                "Nenhum evento registrado.";
 
-    if (  
-        Diagnostico.logs.length >  
-        Diagnostico.maxLogs  
-    ) {  
+            return;
 
-        Diagnostico.logs.shift();  
+        }
 
-    }  
+        elemento.innerHTML =
+            Diagnostico.logs
+                .slice()
+                .reverse()
+                .map((item) => {
 
+                    const hora =
+                        item.data instanceof Date
+                            ? item.data.toLocaleTimeString(
+                                "pt-BR"
+                            )
+                            : "";
 
-    atualizarLog();  
+                    return `
+                        <div class="diagnostico-log-item diagnostico-log-${escaparHTML(item.tipo)}">
+                            <span class="diagnostico-log-hora">
+                                [${escaparHTML(hora)}]
+                            </span>
 
-}  
+                            <span class="diagnostico-log-mensagem">
+                                ${escaparHTML(item.mensagem)}
+                            </span>
+                        </div>
+                    `;
 
+                })
+                .join("");
 
-function atualizarLog() {  
+    }
 
-    const elemento =  
-        document.getElementById(  
-            "diagnostico-log"  
-        );  
 
+    /* =====================================================
+       STATUS VISUAL
+    ===================================================== */
 
-    if (!elemento) return;  
+    function definirStatus(chave, texto) {
 
+        const elemento =
+            document.querySelector(
+                `[data-diagnostico="${chave}"]`
+            );
 
-    if (!Diagnostico.logs.length) {  
+        if (!elemento) {
+            return;
+        }
 
-        elemento.innerHTML = `  
-            <div class="diagnostico-log-vazio">  
-                Aguardando eventos...  
-            </div>  
-        `;  
+        elemento.textContent = texto;
 
-        return;  
+    }
 
-    }  
 
+    /* =====================================================
+       AMBIENTE
+    ===================================================== */
 
-    elemento.innerHTML =  
-        Diagnostico.logs  
-            .slice()  
-            .reverse()  
-            .map(item => {  
+    function diagnosticarAmbiente() {
 
-                let classe =  
-                    "diagnostico-log-info";  
+        const supabase =
+            !!window.supabase;
 
+        const mesaRPG =
+            !!window.MesaRPG;
 
-                if (  
-                    item.tipo === "sucesso"  
-                ) {  
+        const mesaOnline =
+            !!window.mesaOnline;
 
-                    classe =  
-                        "diagnostico-log-sucesso";  
+        const ably =
+            !!window.Ably;
 
-                }  
+        const diagnostico =
+            !!window.MesaDiagnostico;
 
+        const detalhes = [
 
-                if (  
-                    item.tipo === "aviso"  
-                ) {  
+            `Supabase: ${supabase ? "OK" : "ausente"}`,
 
-                    classe =  
-                        "diagnostico-log-aviso";  
+            `MesaRPG: ${mesaRPG ? "OK" : "ausente"}`,
 
-                }  
+            `mesaOnline: ${mesaOnline ? "OK" : "ausente"}`,
 
+            `Ably SDK: ${ably ? "OK" : "ausente"}`,
 
-                if (  
-                    item.tipo === "erro"  
-                ) {  
+            `Diagnóstico: ${diagnostico ? "OK" : "inicializando"}`
 
-                    classe =  
-                        "diagnostico-log-erro";  
+        ];
 
-                }  
+        definirTeste(
+            "ambiente",
+            supabase && mesaRPG
+                ? "sucesso"
+                : "aviso",
+            "Ambiente",
+            supabase && mesaRPG
+                ? "Ambiente principal carregado."
+                : "Alguns componentes ainda não foram encontrados.",
+            detalhes.join(" | "),
+            "",
+            [],
+            ""
+        );
 
+        registrarDiagnosticoTeste("ambiente");
 
-                return `  
-                    <div class="diagnostico-log-item">  
+    }
 
-                        <span class="diagnostico-log-hora">  
-                            [${item.hora}]  
-                        </span>  
 
-                        <span class="${classe}">  
-                            ${escaparHTML(item.mensagem)}  
-                        </span>  
+    /* =====================================================
+       SUPABASE
+    ===================================================== */
 
-                    </div>  
-                `;  
+    function diagnosticarSupabase() {
 
-            })  
-            .join("");  
+        const supabase =
+            obterSupabase();
 
-}  
+        if (!supabase) {
 
+            definirStatus(
+                "supabase",
+                "🔴 Ausente"
+            );
 
-function escaparHTML(valor) {  
+            definirTeste(
+                "supabase",
+                "erro",
+                "Supabase",
+                "O cliente Supabase não foi encontrado.",
+                "window.supabase não está disponível.",
+                "A Mesa não poderá acessar os dados persistentes.",
+                [
+                    "supabase.js pode não ter carregado.",
+                    "A biblioteca do Supabase pode não ter carregado."
+                ],
+                "Verifique os scripts carregados pelo mesa.html."
+            );
 
-    return String(valor ?? "")  
-        .replace(/&/g, "&amp;")  
-        .replace(/</g, "&lt;")  
-        .replace(/>/g, "&gt;")  
-        .replace(/"/g, "&quot;")  
-        .replace(/'/g, "&#039;");  
+            registrarDiagnosticoTeste(
+                "supabase"
+            );
 
-}  
+            return;
 
+        }
 
-/* =====================================================  
-   STATUS DA INTERFACE  
-===================================================== */  
+        definirStatus(
+            "supabase",
+            "🟢 Carregado"
+        );
 
-function definirStatus(chave, texto) {  
+        definirTeste(
+            "supabase",
+            "sucesso",
+            "Supabase",
+            "Cliente Supabase encontrado.",
+            "window.supabase está disponível.",
+            "",
+            [],
+            ""
+        );
 
-    const elemento =  
-        document.querySelector(  
-            `[data-diagnostico="${chave}"]`  
-        );  
+        registrarDiagnosticoTeste(
+            "supabase"
+        );
 
+    }
 
-    if (!elemento) return;  
 
+    /* =====================================================
+       SUPABASE MESA
+    ===================================================== */
 
-    elemento.textContent =  
-        texto;  
+    function diagnosticarSupabaseMesa() {
 
-}  
+        const mesa =
+            obterSupabaseMesa();
 
+        if (!mesa) {
 
-/* =====================================================  
-   DIAGNÓSTICO — SCRIPTS E AMBIENTE  
-===================================================== */  
+            definirTeste(
+                "supabaseMesa",
+                "aviso",
+                "Supabase Mesa",
+                "O módulo específico da Mesa não foi encontrado.",
+                "Isso não significa necessariamente que o Supabase esteja quebrado.",
+                [
+                    "O módulo pode utilizar outro nome global.",
+                    "O script pode ainda estar carregando."
+                ],
+                "",
+                []
+            );
 
-function diagnosticarAmbiente() {  
+            registrarDiagnosticoTeste(
+                "supabaseMesa"
+            );
 
-    const mesa =  
-        !!window.MesaRPG;  
+            return;
 
-    const auth =  
-        !!window.rpgAuth;  
+        }
 
-    const supabaseClient =  
-        !!window.supabaseClient;  
+        definirTeste(
+            "supabaseMesa",
+            "sucesso",
+            "Supabase Mesa",
+            "Módulo Supabase da Mesa encontrado.",
+            "O módulo está disponível no navegador.",
+            "",
+            [],
+            ""
+        );
 
-    const supabaseGlobal =  
-        !!window.supabase;  
+        registrarDiagnosticoTeste(
+            "supabaseMesa"
+        );
 
+    }
 
-    const supabaseMesa =  
-        !!window.SupabaseMesa;  
 
+    /* =====================================================
+       USUÁRIO
+    ===================================================== */
 
-    const supabaseEntrada =  
-        !!window.SupabaseEntrada;  
+    async function diagnosticarUsuario(supabase) {
 
+        const auth =
+            obterAuth();
 
-    const elementosMesa =  
-        !!document.getElementById(  
-            "mesa-diagnostico"  
-        );  
+        let usuario = null;
 
+        try {
 
-    const detalhes = [];  
+            if (
+                supabase &&
+                typeof supabase.auth?.getUser ===
+                "function"
+            ) {
 
+                const resposta =
+                    await supabase.auth.getUser();
 
-    detalhes.push(  
-        `MesaRPG: ${mesa ? "encontrado" : "ausente"}`  
-    );  
+                usuario =
+                    resposta?.data?.user ||
+                    null;
 
+            }
 
-    detalhes.push(  
-        `rpgAuth: ${auth ? "encontrado" : "ausente"}`  
-    );  
+        } catch (erro) {
 
+            registrar(
+                "erro",
+                "Erro ao consultar usuário Supabase: " +
+                obterMensagemErro(erro)
+            );
 
-    detalhes.push(  
-        `window.supabaseClient: ${  
-            supabaseClient  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+        }
 
+        const userId =
+            usuario?.id ||
+            auth?.user?.id ||
+            auth?.userId ||
+            auth?.usuario?.id ||
+            null;
 
-    detalhes.push(  
-        `window.supabase: ${  
-            supabaseGlobal  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+        if (!userId) {
 
+            definirStatus(
+                "usuario",
+                "🟡 Não identificado"
+            );
 
-    detalhes.push(  
-        `SupabaseMesa: ${  
-            supabaseMesa  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+            definirTeste(
+                "usuario",
+                "aviso",
+                "Usuário",
+                "Nenhum usuário autenticado foi identificado.",
+                "Não foi possível encontrar o UUID do usuário.",
+                "A entrada na campanha pode ainda não ter sido concluída.",
+                [
+                    "Sessão Supabase ainda não carregada.",
+                    "rpgAuth ainda não recebeu o usuário."
+                ],
+                "Verifique a autenticação e aguarde o carregamento da Mesa."
+            );
 
+            registrarDiagnosticoTeste(
+                "usuario"
+            );
 
-    detalhes.push(  
-        `SupabaseEntrada: ${  
-            supabaseEntrada  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+            return;
 
+        }
 
-    detalhes.push(  
-        `Painel de diagnóstico: ${  
-            elementosMesa  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+        definirStatus(
+            "usuario",
+            "🟢 Identificado"
+        );
 
+        definirTeste(
+            "usuario",
+            "sucesso",
+            "Usuário",
+            "Usuário autenticado identificado.",
+            `UUID: ${userId}`,
+            "",
+            [],
+            ""
+        );
 
-    if (  
-        mesa ||  
-        auth ||  
-        supabaseClient ||  
-        supabaseGlobal ||  
-        supabaseMesa ||  
-        supabaseEntrada  
-    ) {  
+        registrarDiagnosticoTeste(
+            "usuario"
+        );
 
-        definirTeste(  
-            "ambiente",  
-            "sucesso",  
-            "Ambiente da Mesa",  
-            "Os componentes principais da aplicação foram localizados.",  
-            detalhes.join(" | "),  
-            "Nenhum impacto identificado.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+    }
 
-    } else {  
 
-        definirTeste(  
-            "ambiente",  
-            "erro",  
-            "Ambiente da Mesa",  
-            "Nenhum componente principal da Mesa foi localizado.",  
-            detalhes.join(" | "),  
-            "A Mesa provavelmente não conseguirá inicializar seus sistemas.",  
-            [  
-                "Scripts da Mesa não foram carregados.",  
-                "A ordem dos scripts no HTML pode estar incorreta.",  
-                "Algum arquivo JavaScript pode ter falhado durante o carregamento."  
-            ],  
-            "Verifique os arquivos JavaScript incluídos no mesa.html."  
-        );  
+    /* =====================================================
+       CAMPANHA
+    ===================================================== */
 
-    }  
+    function diagnosticarCampanha() {
 
+        const campanha =
+            obterCampanha();
 
-    registrarDiagnosticoTeste(  
-        "ambiente"  
-    );  
+        if (!campanha) {
 
-}  
+            definirStatus(
+                "campanha",
+                "🔴 Ausente"
+            );
 
+            definirTeste(
+                "campanha",
+                "erro",
+                "Campanha",
+                "Nenhuma campanha foi encontrada.",
+                "rpgAuth.campaign / rpgCampaign não estão disponíveis.",
+                "A Mesa não sabe qual campanha deve sincronizar.",
+                [
+                    "A entrada da Mesa ainda não terminou.",
+                    "O contexto da campanha não foi carregado."
+                ],
+                "Volte à entrada da Mesa e carregue a campanha novamente."
+            );
 
-/* =====================================================  
-   DIAGNÓSTICO — SUPABASE PRINCIPAL  
-===================================================== */  
+            registrarDiagnosticoTeste(
+                "campanha"
+            );
 
-function diagnosticarSupabase() {  
+            return;
 
-    const client =  
-        window.supabaseClient;  
+        }
 
+        const id =
+            campanha.id ||
+            campanha.campaign_id ||
+            campanha.campaignId ||
+            null;
 
-    const globalSupabase =  
-        window.supabase;  
+        const nome =
+            campanha.nome ||
+            campanha.name ||
+            campanha.titulo ||
+            "Sem nome";
 
+        definirStatus(
+            "campanha",
+            id
+                ? "🟢 Encontrada"
+                : "🟡 Sem ID"
+        );
 
-    const detalhes = [];
+        definirTeste(
+            "campanha",
+            id
+                ? "sucesso"
+                : "aviso",
+            "Campanha",
+            id
+                ? `Campanha "${nome}" encontrada.`
+                : "Campanha encontrada, mas sem ID.",
+            id
+                ? `ID: ${id}`
+                : "Não foi possível localizar o ID da campanha.",
+            "",
+            [],
+            ""
+        );
 
-detalhes.push(
-    `typeof window.supabaseClient: ${typeof window.supabaseClient}`
-);
+        registrarDiagnosticoTeste(
+            "campanha"
+        );
 
-detalhes.push(
-    `cliente possui from(): ${
-        window.supabaseClient &&
-        typeof window.supabaseClient.from === "function"
-            ? "SIM"
-            : "NÃO"
-    }`
-);
+        atualizarDadosCampanha();
 
-detalhes.push(
-    `cliente possui auth: ${
-        window.supabaseClient &&
-        !!window.supabaseClient.auth
-            ? "SIM"
-            : "NÃO"
-    }`
-);
+    }
 
-detalhes.push(
-    `biblioteca possui createClient: ${
-        window.supabase &&
-        typeof window.supabase.createClient === "function"
-            ? "SIM"
-            : "NÃO"
-    }`
-);  
 
+    /* =====================================================
+       DADOS DA CAMPANHA
+    ===================================================== */
 
-    detalhes.push(  
-        `window.supabaseClient: ${  
-            client  
-                ? "ENCONTRADO"  
-                : "AUSENTE"  
-        }`  
-    );  
+    function atualizarDadosCampanha() {
 
+        const campanha =
+            obterCampanha();
 
-    detalhes.push(  
-        `window.supabase: ${  
-            globalSupabase  
-                ? "ENCONTRADO"  
-                : "AUSENTE"  
-        }`  
-    );  
+        if (!campanha) {
+            return;
+        }
 
+        const id =
+            campanha.id ||
+            campanha.campaign_id ||
+            campanha.campaignId ||
+            "—";
 
-    if (!client && !globalSupabase) {  
+        const nome =
+            campanha.nome ||
+            campanha.name ||
+            campanha.titulo ||
+            "—";
 
-        definirStatus(  
-            "supabase",  
-            "🔴 Ausente"  
-        );  
+        const masterId =
+            campanha.master_id ||
+            campanha.masterId ||
+            "—";
 
+        const campoId =
+            document.getElementById(
+                "diagnostico-campanha-id"
+            );
 
-        definirTeste(  
-            "supabase",  
-            "erro",  
-            "Supabase",  
-            "Nenhum cliente Supabase foi encontrado.",  
-            detalhes.join(" | "),  
-            "A Mesa não consegue consultar o banco de dados, autenticação ou Realtime através do Supabase.",  
-            [  
-                "Cliente Supabase não foi inicializado.",  
-                "Os scripts foram carregados na ordem errada.",  
-                "O cliente pode estar usando outro nome de variável global."  
-            ],  
-            "Verifique a inicialização do Supabase e a ordem dos scripts no mesa.html."  
-        );  
+        const campoNome =
+            document.getElementById(
+                "diagnostico-campanha-nome"
+            );
 
+        const campoMaster =
+            document.getElementById(
+                "diagnostico-master-id"
+            );
 
-        registrarDiagnosticoTeste(  
-            "supabase"  
-        );  
+        if (campoId) {
+            campoId.textContent = id;
+        }
 
+        if (campoNome) {
+            campoNome.textContent = nome;
+        }
 
-        return null;  
+        if (campoMaster) {
+            campoMaster.textContent = masterId;
+        }
 
-    }  
+    }
 
 
-    const supabase =  
-        obterSupabase();  
+    /* =====================================================
+       PERSONAGENS
+    ===================================================== */
 
+    function diagnosticarPersonagens() {
 
-    if (!supabase) {  
+        const personagens =
+            obterPersonagens();
 
-        definirStatus(  
-            "supabase",  
-            "🟡 Detectado"  
-        );  
+        const quantidade =
+            personagens.length;
 
+        Diagnostico.ultimaQuantidadePersonagens =
+            quantidade;
 
-        definirTeste(  
-            "supabase",  
-            "aviso",  
-            "Supabase",  
-            "Foi encontrado um objeto relacionado ao Supabase, mas ele não aparenta ser um cliente válido.",  
-            detalhes.join(" | "),  
-            "Algumas funções da Mesa podem não funcionar.",  
-            [  
-                "O objeto encontrado pode ser apenas a biblioteca Supabase.",  
-                "O cliente pode não ter sido criado.",  
-                "A variável pode estar sendo sobrescrita."  
-            ],  
-            "Verifique se o createClient foi executado e se o resultado foi atribuído ao cliente usado pela Mesa."  
-        );  
+        definirStatus(
+            "personagens",
+            `🟢 ${quantidade}`
+        );
 
+        definirTeste(
+            "personagens",
+            "sucesso",
+            "Personagens",
+            `${quantidade} personagem(ns) encontrados.`,
+            quantidade
+                ? "A Mesa recebeu personagens para sincronização."
+                : "Nenhum personagem foi encontrado no contexto atual.",
+            "",
+            [],
+            ""
+        );
 
-        registrarDiagnosticoTeste(  
-            "supabase"  
-        );  
+        registrarDiagnosticoTeste(
+            "personagens"
+        );
 
+        atualizarSlots(
+            personagens
+        );
 
-        return null;  
+    }
 
-    }  
 
+    /* =====================================================
+       SLOTS
+    ===================================================== */
 
-    const possuiAuth =  
-        !!supabase.auth;  
+    function atualizarSlots(personagens) {
 
+        const quantidade =
+            Array.isArray(personagens)
+                ? personagens.length
+                : 0;
 
-    const possuiFrom =  
-        typeof supabase.from === "function";  
+        const elemento =
+            document.getElementById(
+                "diagnostico-slots"
+            );
 
+        if (elemento) {
 
-    const possuiChannel =  
-        typeof supabase.channel === "function";  
+            elemento.textContent =
+                String(quantidade);
 
+        }
 
-    detalhes.push(  
-        `auth: ${  
-            possuiAuth  
-                ? "disponível"  
-                : "ausente"  
-        }`  
-    );  
+        const campanha =
+            obterCampanha();
 
+        let texto =
+            `${quantidade} personagem(ns)`;
 
-    detalhes.push(  
-        `from(): ${  
-            possuiFrom  
-                ? "disponível"  
-                : "ausente"  
-        }`  
-    );  
+        if (campanha) {
 
+            texto +=
+                " carregados na campanha.";
 
-    detalhes.push(  
-        `channel(): ${  
-            possuiChannel  
-                ? "disponível"  
-                : "ausente"  
-        }`  
-    );  
+        }
 
+        const testeExistente =
+            Diagnostico.testes.slots;
 
-    if (  
-        !possuiAuth ||  
-        !possuiFrom  
-    ) {  
+        if (!testeExistente) {
 
-        definirStatus(  
-            "supabase",  
-            "🟡 Parcial"  
-        );  
+            definirTeste(
+                "slots",
+                "sucesso",
+                "Slots",
+                texto,
+                "A quantidade representa os personagens encontrados no contexto atual.",
+                "",
+                [],
+                ""
+            );
 
+        } else {
 
-        definirTeste(  
-            "supabase",  
-            "aviso",  
-            "Supabase",  
-            "O cliente Supabase foi encontrado, mas algumas funções esperadas estão ausentes.",  
-            detalhes.join(" | "),  
-            "Autenticação ou consultas ao banco podem não funcionar corretamente.",  
-            [  
-                "Cliente incorreto foi atribuído à variável.",  
-                "A inicialização do Supabase está incompleta."  
-            ],  
-            "Verifique o objeto atribuído a window.supabaseClient."  
-        );  
+            testeExistente.mensagem =
+                texto;
 
+            testeExistente.timestamp =
+                new Date();
 
-    } else {  
+        }
 
-        definirStatus(  
-            "supabase",  
-            "🟢 Conectado"  
-        );  
+        definirStatus(
+            "slots",
+            `🟢 ${quantidade}`
+        );
 
+        registrarDiagnosticoTeste(
+            "slots"
+        );
 
-        definirTeste(  
-            "supabase",  
-            "sucesso",  
-            "Supabase",  
-            "Cliente Supabase encontrado e com as funções básicas disponíveis.",  
-            detalhes.join(" | "),  
-            "Nenhum problema estrutural detectado nesta etapa.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+    }
 
-    }  
 
+    /* =====================================================
+       SUPABASE REALTIME
+    ===================================================== */
 
-    registrarDiagnosticoTeste(  
-        "supabase"  
-    );  
+    function diagnosticarRealtime() {
 
+        const possuiFuncaoRealtime =
+            !!(
+                window.MesaRPG &&
+                typeof window.MesaRPG
+                    .iniciarRealtimeMesa ===
+                "function"
+            );
 
-    return supabase;  
+        const campanha =
+            obterCampanha();
 
-}  
+        if (
+            possuiFuncaoRealtime &&
+            campanha
+        ) {
 
+            Diagnostico.ultimoRealtime =
+                new Date();
 
-/* =====================================================  
-   DIAGNÓSTICO — SUPABASE MESA  
-===================================================== */  
+            definirStatus(
+                "realtime",
+                "🟢 Ativo"
+            );
 
-function diagnosticarSupabaseMesa() {  
+            definirTeste(
+                "realtime",
+                "sucesso",
+                "Supabase Realtime",
+                "A função de inicialização do Realtime está disponível e existe uma campanha para sincronizar.",
+                `Campanha: ${
+                    campanha.id ||
+                    campanha.campaign_id ||
+                    campanha.campaignId ||
+                    "sem ID"
+                }`,
+                "",
+                [],
+                ""
+            );
 
-    const modulo =  
-        window.SupabaseMesa;  
+            registrarDiagnosticoTeste(
+                "realtime"
+            );
 
+            return;
 
-    const entrada =  
-        window.SupabaseEntrada;  
+        }
 
+        if (!campanha) {
 
-    const clientePrincipal =  
-        window.supabaseClient || null;  
+            definirStatus(
+                "realtime",
+                "🟡 Aguardando campanha"
+            );
 
+            definirTeste(
+                "realtime",
+                "aviso",
+                "Supabase Realtime",
+                "O Realtime está aguardando o contexto da campanha.",
+                "Nenhuma campanha disponível para iniciar a sincronização.",
+                "",
+                [
+                    "A entrada da Mesa ainda pode estar carregando."
+                ],
+                "Aguarde o carregamento da campanha."
+            );
 
-    const bibliotecaGlobal =  
-        !!(  
-            window.supabase &&  
-            typeof window.supabase.createClient ===  
-            "function"  
-        );  
+            registrarDiagnosticoTeste(
+                "realtime"
+            );
 
+            return;
 
-    const detalhes = [];  
+        }
 
+        definirStatus(
+            "realtime",
+            "🟡 Não inicializado"
+        );
 
-    detalhes.push(  
-        `SupabaseMesa: ${  
-            modulo  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+        definirTeste(
+            "realtime",
+            "aviso",
+            "Supabase Realtime",
+            "A função de inicialização do Realtime não foi encontrada.",
+            "MesaRPG.iniciarRealtimeMesa não está disponível.",
+            "",
+            [
+                "mesa.js pode ainda não ter carregado.",
+                "supabase-mesa.js pode não ter exposto a função."
+            ],
+            "Verifique a ordem dos scripts no mesa.html."
+        );
 
+        registrarDiagnosticoTeste(
+            "realtime"
+        );
 
-    detalhes.push(  
-        `SupabaseEntrada: ${  
-            entrada  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+    }
 
 
-    detalhes.push(  
-        `Biblioteca Supabase: ${  
-            bibliotecaGlobal  
-                ? "encontrada"  
-                : "ausente"  
-        }`  
-    );  
+    /* =====================================================
+       MULTIPLAYER ABLY
+    ===================================================== */
 
+    async function diagnosticarMultiplayer() {
 
-    detalhes.push(  
-        `Cliente principal: ${  
-            clientePrincipal  
-                ? "encontrado"  
-                : "ausente"  
-        }`  
-    );  
+        const multiplayer =
+            window.mesaOnline || null;
 
+        const campanha =
+            obterCampanha();
 
-    if (!modulo) {  
+        const sdkAbly =
+            !!window.Ably;
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🔴 Ausente"  
-        );  
+        const detalhes = [];
 
+        detalhes.push(
+            `mesaOnline: ${
+                multiplayer
+                    ? "encontrado"
+                    : "ausente"
+            }`
+        );
 
-        definirTeste(  
-            "supabaseMesa",  
-            "erro",  
-            "Supabase Mesa",  
-            "O módulo isolado da Mesa não foi encontrado.",  
-            detalhes.join(" | "),  
-            "A Mesa não possui sua camada isolada de acesso ao Supabase.",  
-            [  
-                "supabase-mesa.js não foi carregado.",  
-                "O script possui erro durante a inicialização.",  
-                "A ordem dos scripts está incorreta."  
-            ],  
-            "Verifique se supabase-mesa.js está incluído no mesa.html."  
-        );  
+        detalhes.push(
+            `Ably SDK: ${
+                sdkAbly
+                    ? "carregado"
+                    : "ausente"
+            }`
+        );
 
+        detalhes.push(
+            `Campanha: ${
+                campanha
+                    ? "encontrada"
+                    : "ausente"
+            }`
+        );
 
-        registrarDiagnosticoTeste(  
-            "supabaseMesa"  
-        );  
 
+        /* -------------------------------------------------
+           MESA ONLINE AUSENTE
+        ------------------------------------------------- */
 
-        return;  
+        if (!multiplayer) {
 
-    }  
+            definirStatus(
+                "multiplayer",
+                "🔴 Ausente"
+            );
 
+            definirTeste(
+                "multiplayer",
+                "erro",
+                "Multiplayer Ably",
+                "mesa-online.js não foi encontrado.",
+                detalhes.join(" | "),
+                "A camada multiplayer não está disponível.",
+                [
+                    "mesa-online.js pode não ter carregado.",
+                    "O script pode estar fora do mesa.html.",
+                    "Pode existir erro JavaScript antes da inicialização."
+                ],
+                "Verifique se mesa-online.js está sendo carregado no mesa.html."
+            );
 
-    let estadoModulo = null;  
+            registrarDiagnosticoTeste(
+                "multiplayer"
+            );
 
+            return;
 
-    try {  
+        }
 
-        if (  
-            typeof modulo.diagnostico ===  
-            "function"  
-        ) {  
 
-            estadoModulo =  
-                modulo.diagnostico();  
+        /* -------------------------------------------------
+           CAMPANHA AUSENTE
+        ------------------------------------------------- */
 
-        }  
+        if (!campanha) {
 
-    } catch (erro) {  
+            definirStatus(
+                "multiplayer",
+                "🟡 Aguardando"
+            );
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🔴 Erro"  
-        );  
+            definirTeste(
+                "multiplayer",
+                "aviso",
+                "Multiplayer Ably",
+                "A camada multiplayer foi carregada, mas a campanha ainda não está disponível.",
+                detalhes.join(" | "),
+                "O canal multiplayer ainda não pode ser definido corretamente.",
+                [
+                    "A campanha ainda está sendo carregada.",
+                    "rpgAuth.campaign ainda não foi preenchido."
+                ],
+                "Aguarde a entrada da Mesa terminar."
+            );
 
+            registrarDiagnosticoTeste(
+                "multiplayer"
+            );
 
-        definirTeste(  
-            "supabaseMesa",  
-            "erro",  
-            "Supabase Mesa",  
-            "O módulo foi encontrado, mas seu diagnóstico interno apresentou erro.",  
-            obterMensagemErro(erro),  
-            "Não é possível confirmar o estado da conexão isolada.",  
-            [  
-                "Erro interno no supabase-mesa.js.",  
-                "Cliente Supabase não pôde ser consultado."  
-            ],  
-            "Verifique o diagnóstico interno do SupabaseMesa."  
-        );  
+            return;
 
+        }
 
-        registrarDiagnosticoTeste(  
-            "supabaseMesa"  
-        );  
 
+        /* -------------------------------------------------
+           SDK AUSENTE
+        ------------------------------------------------- */
 
-        return;  
+        if (!sdkAbly) {
 
-    }  
+            definirStatus(
+                "multiplayer",
+                "🔴 SDK ausente"
+            );
 
+            definirTeste(
+                "multiplayer",
+                "erro",
+                "Multiplayer Ably",
+                "O SDK do Ably não foi encontrado.",
+                detalhes.join(" | "),
+                "Não é possível criar uma conexão multiplayer.",
+                [
+                    "A biblioteca CDN do Ably pode não ter carregado.",
+                    "Pode existir bloqueio de rede ou erro no script."
+                ],
+                "Verifique o carregamento da biblioteca Ably no mesa.html."
+            );
 
-    /*  
-    ------------------------------------------------------  
-    O diagnóstico interno pode informar biblioteca:false  
-    mesmo quando o módulo está reutilizando o cliente  
-    global criado pelo supabase.js.  
+            registrarDiagnosticoTeste(
+                "multiplayer"
+            );
 
-    Por isso NÃO usamos estadoModulo.biblioteca  
-    como única prova da existência da biblioteca.  
-    ------------------------------------------------------  
-    */  
+            return;
 
-    const bibliotecaInterna =  
-        !!estadoModulo?.biblioteca;  
+        }
 
 
-    const inicializado =  
-        !!estadoModulo?.inicializado;  
+        /* -------------------------------------------------
+           OBJETOS DA CONEXÃO
+        ------------------------------------------------- */
 
+        const ably =
+            multiplayer.ably ||
+            null;
 
-    const clienteInterno =  
-        !!estadoModulo?.cliente;  
+        const canal =
+            multiplayer.canal ||
+            multiplayer.channel ||
+            null;
 
 
-    const contexto =  
-        !!estadoModulo?.contextoRecebido;  
+        if (!ably) {
 
+            definirStatus(
+                "multiplayer",
+                "🟡 Aguardando autenticação"
+            );
 
-    const campanha =  
-        !!estadoModulo?.campanha;  
+            definirTeste(
+                "multiplayer",
+                "aviso",
+                "Multiplayer Ably",
+                "A camada multiplayer está carregada, mas ainda não existe uma conexão Ably ativa.",
+                detalhes.join(" | "),
+                "A Mesa ainda não está compartilhando eventos entre navegadores.",
+                [
+                    "A autenticação do Ably ainda não foi configurada.",
+                    "A conexão pode ainda não ter sido inicializada."
+                ],
+                "Configurar a autenticação segura do Ably em mesa-online.js."
+            );
 
+            registrarDiagnosticoTeste(
+                "multiplayer"
+            );
 
-    const usuario =  
-        !!estadoModulo?.usuario;  
+            return;
 
+        }
 
-    const personagem =  
-        !!estadoModulo?.personagem;  
 
+        /* -------------------------------------------------
+           ESTADO DA CONEXÃO
+        ------------------------------------------------- */
 
-    let clienteMesa =  
-        null;  
+        let estadoConexao =
+            "desconhecido";
 
+        try {
 
-    try {  
+            estadoConexao =
+                ably.connection?.state ||
+                "desconhecido";
 
-        if (  
-            typeof modulo.obterCliente ===  
-            "function"  
-        ) {  
+        } catch (erro) {
 
-            clienteMesa =  
-                modulo.obterCliente();  
+            estadoConexao =
+                "erro";
 
-        }  
+            detalhes.push(
+                "Erro ao consultar estado da conexão."
+            );
 
-    } catch (erro) {  
+        }
 
-        registrar(  
-            "aviso",  
-            "Não foi possível obter o cliente do SupabaseMesa: " +  
-            obterMensagemErro(erro)  
-        );  
 
-    }  
+        detalhes.push(
+            `Conexão: ${estadoConexao}`
+        );
 
 
-    const possuiClienteMesa =  
-        !!clienteMesa;  
+        if (canal) {
 
+            detalhes.push(
+                `Canal: ${
+                    canal.name ||
+                    "ativo"
+                }`
+            );
 
-    const mesmaReferencia =  
-        !!(  
-            clientePrincipal &&  
-            clienteMesa &&  
-            clientePrincipal === clienteMesa  
-        );  
+        } else {
 
+            detalhes.push(
+                "Canal: não encontrado"
+            );
 
-    const clientesDiferentes =  
-        !!(  
-            clientePrincipal &&  
-            clienteMesa &&  
-            clientePrincipal !== clienteMesa  
-        );  
+        }
 
 
-    /*  
-    ------------------------------------------------------  
-    A biblioteca é considerada disponível quando:  
+        /* -------------------------------------------------
+           PRESENÇA
+        ------------------------------------------------- */
 
-    1. window.supabase.createClient existe  
-    OU  
-    2. existe um cliente Supabase principal válido  
-    OU  
-    3. existe um cliente dentro do SupabaseMesa.  
+        let quantidadePresenca =
+            Diagnostico.jogadoresOnline || 0;
 
-    Isso evita o falso "Supabase ausente".  
-    ------------------------------------------------------  
-    */  
+        if (
+            canal &&
+            canal.presence &&
+            typeof canal.presence.get ===
+            "function" &&
+            estadoConexao === "connected"
+        ) {
 
-    const bibliotecaDisponivel =  
-        bibliotecaGlobal ||  
-        !!clientePrincipal ||  
-        !!clienteMesa ||  
-        bibliotecaInterna;  
+            try {
 
+                const membros =
+                    await canal.presence.get();
 
-    detalhes.push(  
-        `Biblioteca: ${  
-            bibliotecaDisponivel  
-                ? "OK"  
-                : "ausente"  
-        }`  
-    );  
+                quantidadePresenca =
+                    Array.isArray(membros)
+                        ? membros.length
+                        : 0;
 
+                Diagnostico.jogadoresOnline =
+                    quantidadePresenca;
 
-    detalhes.push(  
-        `Biblioteca interna: ${  
-            bibliotecaInterna  
-                ? "SIM"  
-                : "NÃO"  
-        }`  
-    );  
+                detalhes.push(
+                    `Jogadores online: ${quantidadePresenca}`
+                );
 
+            } catch (erro) {
 
-    detalhes.push(  
-        `Cliente Mesa: ${  
-            possuiClienteMesa  
-                ? "OK"  
-                : "ausente"  
-        }`  
-    );  
+                detalhes.push(
+                    "Presença: não foi possível consultar."
+                );
 
+                registrar(
+                    "aviso",
+                    "Não foi possível consultar a presença Ably: " +
+                    obterMensagemErro(erro)
+                );
 
-    detalhes.push(  
-        `Cliente interno: ${  
-            clienteInterno  
-                ? "OK"  
-                : "ausente"  
-        }`  
-    );  
+            }
 
+        }
 
-    detalhes.push(  
-        `Inicializado: ${  
-            inicializado  
-                ? "SIM"  
-                : "NÃO"  
-        }`  
-    );  
 
+        Diagnostico.ultimoMultiplayer =
+            new Date();
 
-    detalhes.push(  
-        `Mesma referência: ${  
-            mesmaReferencia  
-                ? "SIM"  
-                : "NÃO"  
-        }`  
-    );  
 
+        /* -------------------------------------------------
+           CONECTADO
+        ------------------------------------------------- */
 
-    detalhes.push(  
-        `Clientes diferentes: ${  
-            clientesDiferentes  
-                ? "SIM"  
-                : "NÃO"  
-        }`  
-    );  
+        if (
+            estadoConexao ===
+            "connected"
+        ) {
 
+            definirStatus(
+                "multiplayer",
+                `🟢 Conectado${
+                    quantidadePresenca >= 0
+                        ? ` (${quantidadePresenca})`
+                        : ""
+                }`
+            );
 
-    detalhes.push(  
-        `Contexto: ${  
-            contexto  
-                ? "recebido"  
-                : "ausente"  
-        }`  
-    );  
+            definirTeste(
+                "multiplayer",
+                "sucesso",
+                "Multiplayer Ably",
+                "Conexão multiplayer estabelecida.",
+                detalhes.join(" | "),
+                "A camada multiplayer está pronta para sincronizar eventos.",
+                [],
+                ""
+            );
 
+            registrarDiagnosticoTeste(
+                "multiplayer"
+            );
 
-    detalhes.push(  
-        `Campanha: ${  
-            campanha  
-                ? "recebida"  
-                : "ausente"  
-        }`  
-    );  
+            return;
 
+        }
 
-    detalhes.push(  
-        `Usuário: ${  
-            usuario  
-                ? "recebido"  
-                : "ausente"  
-        }`  
-    );  
 
+        /* -------------------------------------------------
+           CONEXÃO EM PROCESSO
+        ------------------------------------------------- */
 
-    detalhes.push(  
-        `Personagem: ${  
-            personagem  
-                ? "recebido"  
-                : "ausente"  
-        }`  
-    );  
+        const estadosConectando = [
 
+            "initialized",
+            "connecting",
+            "disconnected",
+            "suspended"
 
-    /*  
-    ------------------------------------------------------  
-    CASO IDEAL  
-    ------------------------------------------------------  
-    */  
+        ];
 
-    if (  
-        bibliotecaDisponivel &&  
-        clientePrincipal &&  
-        clienteMesa &&  
-        mesmaReferencia  
-    ) {  
+        if (
+            estadosConectando.includes(
+                estadoConexao
+            )
+        ) {
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🟢 Conectado"  
-        );  
+            definirStatus(
+                "multiplayer",
+                `🟡 ${estadoConexao}`
+            );
 
+            definirTeste(
+                "multiplayer",
+                "aviso",
+                "Multiplayer Ably",
+                `Ably está em estado "${estadoConexao}".`,
+                detalhes.join(" | "),
+                "O multiplayer ainda não está totalmente conectado.",
+                [],
+                "Aguarde a conexão terminar."
+            );
 
-        definirTeste(  
-            "supabaseMesa",  
-            "sucesso",  
-            "Supabase Mesa",  
-            "A camada da Mesa está utilizando corretamente o cliente Supabase principal.",  
-            detalhes.join(" | "),  
-            "Nenhum problema estrutural detectado na integração.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+            registrarDiagnosticoTeste(
+                "multiplayer"
+            );
 
-    }  
+            return;
 
+        }
 
-    /*  
-    ------------------------------------------------------  
-    CLIENTE DA MESA EXISTE, MAS É DIFERENTE  
-    ------------------------------------------------------  
-    */  
 
-    else if (  
-        clientePrincipal &&  
-        clienteMesa &&  
-        clientesDiferentes  
-    ) {  
+        /* -------------------------------------------------
+           ERRO
+        ------------------------------------------------- */
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🟡 Dois clientes"  
-        );  
+        definirStatus(
+            "multiplayer",
+            "🔴 Erro"
+        );
 
+        definirTeste(
+            "multiplayer",
+            "erro",
+            "Multiplayer Ably",
+            `A conexão Ably está em estado "${estadoConexao}".`,
+            detalhes.join(" | "),
+            "A sincronização multiplayer pode não funcionar.",
+            [
+                "A conexão Ably pode ter falhado.",
+                "Pode existir problema de autenticação.",
+                "Pode existir problema de rede."
+            ],
+            "Verifique o console do navegador e a autenticação Ably."
+        );
 
-        definirTeste(  
-            "supabaseMesa",  
-            "aviso",  
-            "Supabase Mesa",  
-            "O Supabase principal e o cliente usado pela Mesa existem, mas são referências diferentes.",  
-            detalhes.join(" | "),  
-            "A aplicação pode acabar utilizando duas instâncias diferentes do cliente Supabase.",  
-            [  
-                "supabase-mesa.js criou uma segunda instância.",  
-                "O cliente global não foi reutilizado.",  
-                "As duas instâncias podem possuir estados de sessão diferentes."  
-            ],  
-            "Verifique se o SupabaseMesa deve reutilizar window.supabaseClient."  
-        );  
+        registrarDiagnosticoTeste(
+            "multiplayer"
+        );
 
-    }  
+    }
 
 
-    /*  
-    ------------------------------------------------------  
-    CLIENTE PRINCIPAL EXISTE, MAS MESA NÃO TEM CLIENTE  
-    ------------------------------------------------------  
-    */  
+    /* =====================================================
+       FUNÇÕES DA MESA
+    ===================================================== */
 
-    else if (  
-        clientePrincipal &&  
-        !clienteMesa  
-    ) {  
+    function diagnosticarFuncoesMesa() {
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🔴 Sem cliente"  
-        );  
+        const mesa =
+            obterEstadoMesa();
 
+        const funcoes = {
 
-        definirTeste(  
-            "supabaseMesa",  
-            "erro",  
-            "Supabase Mesa",  
-            "O cliente Supabase principal existe, mas o SupabaseMesa não possui um cliente disponível.",  
-            detalhes.join(" | "),  
-            "A camada isolada da Mesa não consegue realizar operações no Supabase.",  
-            [  
-                "SupabaseMesa não foi inicializado.",  
-                "obterCliente() retornou null.",  
-                "supabase-mesa.js não reutilizou o cliente global."  
-            ],  
-            "Verifique a inicialização do SupabaseMesa."  
-        );  
+            carregarJogadores:
+                !!(
+                    mesa &&
+                    typeof mesa.carregarJogadoresDaCampanha ===
+                    "function"
+                ),
 
-    }  
+            realtime:
+                !!(
+                    mesa &&
+                    typeof mesa.iniciarRealtimeMesa ===
+                    "function"
+                ),
 
+            sincronizar:
+                typeof window.sincronizarPersonagensMesa ===
+                "function"
 
-    /*  
-    ------------------------------------------------------  
-    CLIENTE DA MESA EXISTE, MAS CLIENTE PRINCIPAL NÃO  
-    ------------------------------------------------------  
-    */  
+        };
 
-    else if (  
-        clienteMesa &&  
-        !clientePrincipal  
-    ) {  
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🟡 Isolado"  
-        );  
+        const quantidade =
+            Object.values(funcoes)
+                .filter(Boolean)
+                .length;
 
 
-        definirTeste(  
-            "supabaseMesa",  
-            "aviso",  
-            "Supabase Mesa",  
-            "O SupabaseMesa possui um cliente próprio, mas o cliente principal da aplicação não foi encontrado.",  
-            detalhes.join(" | "),  
-            "A Mesa possui conexão própria, mas a aplicação pode estar utilizando referências diferentes.",  
-            [  
-                "window.supabaseClient não existe.",  
-                "supabase.js não foi carregado.",  
-                "O SupabaseMesa criou uma conexão própria."  
-            ],  
-            "Verifique a presença do cliente principal antes de usar a conexão isolada."  
-        );  
+        definirTeste(
+            "funcoesMesa",
+            quantidade ===
+                Object.keys(funcoes).length
+                ? "sucesso"
+                : "aviso",
+            "Funções da Mesa",
+            `${quantidade}/${Object.keys(funcoes).length} funções principais disponíveis.`,
+            Object.entries(funcoes)
+                .map(
+                    ([nome, ativa]) =>
+                        `${nome}: ${ativa ? "OK" : "ausente"}`
+                )
+                .join(" | "),
+            "",
+            [],
+            ""
+        );
 
-    }  
+        registrarDiagnosticoTeste(
+            "funcoesMesa"
+        );
 
+    }
 
-    /*  
-    ------------------------------------------------------  
-    CLIENTE EXISTE, MAS A INICIALIZAÇÃO NÃO FOI MARCADA  
-    ------------------------------------------------------  
-    */  
 
-    else if (  
-        clienteMesa &&  
-        !inicializado  
-    ) {  
+    /* =====================================================
+       RESUMO
+    ===================================================== */
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🟡 Parcial"  
-        );  
+    function atualizarResumoDiagnostico() {
 
+        const testes =
+            Object.values(
+                Diagnostico.testes
+            );
 
-        definirTeste(  
-            "supabaseMesa",  
-            "aviso",  
-            "Supabase Mesa",  
-            "Um cliente foi encontrado, mas o módulo não informou uma inicialização completa.",  
-            detalhes.join(" | "),  
-            "A integração pode estar em um estado intermediário.",  
-            [  
-                "O diagnóstico interno está incompleto.",  
-                "A inicialização ocorreu parcialmente."  
-            ],  
-            "Execute o diagnóstico novamente após o carregamento completo da Mesa."  
-        );  
+        const sucessos =
+            testes.filter(
+                (teste) =>
+                    teste.status ===
+                    "sucesso"
+            ).length;
 
-    }  
+        const avisos =
+            testes.filter(
+                (teste) =>
+                    teste.status ===
+                    "aviso"
+            ).length;
 
+        const erros =
+            testes.filter(
+                (teste) =>
+                    teste.status ===
+                    "erro"
+            ).length;
 
-    /*  
-    ------------------------------------------------------  
-    CLIENTE EXISTE, MAS NENHUMA CONEXÃO FOI IDENTIFICADA  
-    ------------------------------------------------------  
-    */  
 
-    else {  
+        const resumo =
+            document.getElementById(
+                "diagnostico-resumo"
+            );
 
-        definirStatus(  
-            "supabaseMesa",  
-            "🔴 Indisponível"  
-        );  
+        if (resumo) {
 
+            resumo.textContent =
+                `${sucessos} OK • ${avisos} avisos • ${erros} erros`;
 
-        definirTeste(  
-            "supabaseMesa",  
-            "erro",  
-            "Supabase Mesa",  
-            "O módulo existe, mas nenhum cliente Supabase disponível foi encontrado.",  
-            detalhes.join(" | "),  
-            "A camada isolada da Mesa não possui uma conexão utilizável.",  
-            [  
-                "Cliente Supabase não foi criado.",  
-                "SupabaseMesa não foi inicializado.",  
-                "Biblioteca Supabase não está disponível."  
-            ],  
-            "Verifique supabase.js, supabase-mesa.js e a ordem dos scripts."  
-        );  
+        }
 
-    }  
 
+        Diagnostico.ultimoDiagnostico = {
 
-    registrarDiagnosticoTeste(  
-        "supabaseMesa"  
-    );  
+            data: new Date(),
 
-}  
+            sucessos,
 
+            avisos,
 
-/* =====================================================  
-   DIAGNÓSTICO — AUTENTICAÇÃO  
-===================================================== */  
+            erros,
 
-async function diagnosticarUsuario(supabase) {  
+            total: testes.length
 
-    const auth =  
-        obterAuth();  
+        };
 
+    }
 
-    if (  
-        auth &&  
-        auth.user  
-    ) {  
 
-        const id =  
-            auth.user.id ||  
-            auth.user.user_id ||  
-            auth.user.uid;  
+    /* =====================================================
+       RELATÓRIO
+    ===================================================== */
 
+    function gerarRelatorio() {
 
-        definirStatus(  
-            "usuario",  
-            id  
-                ? "🟢 " + id.slice(0, 8) + "..."  
-                : "🟢 Autenticado"  
-        );  
+        const detalhes =
+            document.getElementById(
+                "diagnostico-detalhes"
+            );
 
+        if (!detalhes) {
+            return;
+        }
 
-        definirTeste(  
-            "usuario",  
-            "sucesso",  
-            "Autenticação",  
-            "O sistema local da Mesa possui um usuário autenticado.",  
-            id  
-                ? `ID do usuário: ${id}`  
-                : "ID não informado.",  
-            "Nenhum impacto identificado.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+        const testes =
+            Object.values(
+                Diagnostico.testes
+            );
 
+        if (!testes.length) {
 
-        registrarDiagnosticoTeste(  
-            "usuario"  
-        );  
+            detalhes.innerHTML =
+                "<p>Nenhum diagnóstico executado.</p>";
 
+            return;
 
-        return auth.user;  
+        }
 
-    }  
 
+        detalhes.innerHTML =
+            testes
+                .map((teste) => {
 
-    if (  
-        !supabase ||  
-        !supabase.auth ||  
-        typeof supabase.auth.getUser !== "function"  
-    ) {  
+                    const classe =
+                        `diagnostico-teste-${escaparHTML(
+                            teste.status
+                        )}`;
 
-        definirStatus(  
-            "usuario",  
-            "🟡 Desconhecido"  
-        );  
+                    const causas =
+                        Array.isArray(
+                            teste.causas
+                        ) &&
+                        teste.causas.length
+                            ? `
+                                <ul>
+                                    ${
+                                        teste.causas
+                                            .map(
+                                                (causa) =>
+                                                    `<li>${escaparHTML(causa)}</li>`
+                                            )
+                                            .join("")
+                                    }
+                                </ul>
+                              `
+                            : "";
 
+                    return `
+                        <div class="diagnostico-teste ${classe}">
 
-        definirTeste(  
-            "usuario",  
-            "aviso",  
-            "Autenticação",  
-            "Não foi possível consultar o usuário autenticado.",  
-            "O cliente Supabase ou o método auth.getUser() não está disponível.",  
-            "Não é possível confirmar a sessão atual.",  
-            [  
-                "Supabase ausente.",  
-                "Cliente Supabase incompleto.",  
-                "Sistema de autenticação ainda não inicializado."  
-            ],  
-            "Corrija primeiro o diagnóstico do Supabase."  
-        );  
+                            <div class="diagnostico-teste-titulo">
+                                ${escaparHTML(teste.titulo)}
+                            </div>
 
+                            <div class="diagnostico-teste-mensagem">
+                                ${escaparHTML(teste.mensagem)}
+                            </div>
 
-        registrarDiagnosticoTeste(  
-            "usuario"  
-        );  
+                            ${
+                                teste.detalhes
+                                    ? `
+                                        <div class="diagnostico-teste-detalhes">
+                                            ${escaparHTML(teste.detalhes)}
+                                        </div>
+                                      `
+                                    : ""
+                            }
 
+                            ${
+                                teste.impacto
+                                    ? `
+                                        <div class="diagnostico-teste-impacto">
+                                            <strong>Impacto:</strong>
+                                            ${escaparHTML(teste.impacto)}
+                                        </div>
+                                      `
+                                    : ""
+                            }
 
-        return null;  
+                            ${
+                                causas
+                                    ? `
+                                        <div class="diagnostico-teste-causas">
+                                            <strong>Possíveis causas:</strong>
+                                            ${causas}
+                                        </div>
+                                      `
+                                    : ""
+                            }
 
-    }  
+                            ${
+                                teste.acao
+                                    ? `
+                                        <div class="diagnostico-teste-acao">
+                                            <strong>Ação:</strong>
+                                            ${escaparHTML(teste.acao)}
+                                        </div>
+                                      `
+                                    : ""
+                            }
 
+                        </div>
+                    `;
 
-    try {  
+                })
+                .join("");
 
-        const resposta =  
-            await supabase.auth.getUser();  
+    }
 
 
-        const usuario =  
-            resposta?.data?.user;  
+    /* =====================================================
+       DIAGNÓSTICO COMPLETO
+    ===================================================== */
 
+    async function atualizarDiagnostico() {
 
-        if (usuario) {  
+        registrar(
+            "info",
+            "Iniciando diagnóstico completo da Mesa."
+        );
 
-            definirStatus(  
-                "usuario",  
-                "🟢 " +  
-                usuario.id.slice(0, 8) +  
-                "..."  
-            );  
 
+        /* ---------------------------------------------
+           Ambiente
+        --------------------------------------------- */
 
-            definirTeste(  
-                "usuario",  
-                "sucesso",  
-                "Autenticação",  
-                "Usuário autenticado encontrado pelo Supabase.",  
-                `ID: ${usuario.id}`,  
-                "Nenhum impacto identificado.",  
-                [],  
-                "Nenhuma ação necessária."  
-            );  
+        diagnosticarAmbiente();
 
 
-            registrarDiagnosticoTeste(  
-                "usuario"  
-            );  
+        /* ---------------------------------------------
+           Supabase
+        --------------------------------------------- */
 
+        diagnosticarSupabase();
 
-            return usuario;  
 
-        }  
+        /* ---------------------------------------------
+           Supabase Mesa
+        --------------------------------------------- */
 
+        diagnosticarSupabaseMesa();
 
-        definirStatus(  
-            "usuario",  
-            "🔴 Não autenticado"  
-        );  
 
+        /* ---------------------------------------------
+           Usuário
+        --------------------------------------------- */
 
-        definirTeste(  
-            "usuario",  
-            "erro",  
-            "Autenticação",  
-            "O Supabase respondeu, mas não existe usuário autenticado.",  
-            "supabase.auth.getUser() não retornou um usuário.",  
-            "A Mesa não consegue associar as ações atuais a um usuário autenticado.",  
-            [  
-                "Sessão expirada.",  
-                "Usuário não realizou login.",  
-                "Sessão não foi restaurada corretamente."  
-            ],  
-            "Verifique o login e a restauração da sessão do usuário."  
-        );  
+        await diagnosticarUsuario(
+            obterSupabase()
+        );
 
 
-        registrarDiagnosticoTeste(  
-            "usuario"  
-        );  
+        /* ---------------------------------------------
+           Campanha
+        --------------------------------------------- */
 
+        diagnosticarCampanha();
 
-        return null;  
 
-    } catch (erro) {  
+        /* ---------------------------------------------
+           Personagens
+        --------------------------------------------- */
 
-        definirStatus(  
-            "usuario",  
-            "🔴 Erro"  
-        );  
+        diagnosticarPersonagens();
 
 
-        definirTeste(  
-            "usuario",  
-            "erro",  
-            "Autenticação",  
-            "O Supabase encontrou um erro ao consultar o usuário.",  
-            obterMensagemErro(erro),  
-            "A sessão do usuário não pôde ser confirmada.",  
-            [  
-                "Sessão inválida.",  
-                "Problema de configuração do Supabase.",  
-                "Falha temporária na comunicação."  
-            ],  
-            "Verifique o erro informado e a sessão atual do usuário."  
-        );  
+        /* ---------------------------------------------
+           Realtime Supabase
+        --------------------------------------------- */
 
+        diagnosticarRealtime();
 
-        registrarDiagnosticoTeste(  
-            "usuario"  
-        );  
 
+        /* ---------------------------------------------
+           Multiplayer Ably
+        --------------------------------------------- */
 
-        return null;  
+        await diagnosticarMultiplayer();
 
-    }  
 
-}  
+        /* ---------------------------------------------
+           Funções da Mesa
+        --------------------------------------------- */
 
+        diagnosticarFuncoesMesa();
 
-/* =====================================================  
-   DIAGNÓSTICO — CAMPANHA  
-===================================================== */  
 
-function diagnosticarCampanha() {  
+        /* ---------------------------------------------
+           Resumo
+        --------------------------------------------- */
 
-    const campanha =  
-        obterCampanha();  
+        atualizarResumoDiagnostico();
 
+        gerarRelatorio();
 
-    if (!campanha) {  
 
-        definirStatus(  
-            "campanha",  
-            "🔴 Nenhuma"  
-        );  
+        registrar(
+            "sucesso",
+            "Diagnóstico completo finalizado."
+        );
 
+    }
 
-        definirTeste(  
-            "campanha",  
-            "erro",  
-            "Campanha",  
-            "Nenhuma campanha foi encontrada no estado atual da Mesa.",  
-            "obterCampanha() retornou null.",  
-            "A Mesa não possui uma campanha disponível para sincronização.",  
-            [  
-                "A campanha ainda não foi carregada.",  
-                "O usuário não pertence a uma campanha.",  
-                "A sincronização inicial ainda não terminou."  
-            ],  
-            "Aguarde a sincronização ou verifique o carregamento da campanha."  
-        );  
 
+    /* =====================================================
+       SINCRONIZAR AGORA
+    ===================================================== */
 
-        registrarDiagnosticoTeste(  
-            "campanha"  
-        );  
+    async function sincronizarAgora() {
 
+        registrar(
+            "info",
+            "Sincronização manual solicitada."
+        );
 
-        return null;  
 
-    }  
+        try {
 
+            if (
+                window.MesaRPG &&
+                typeof window.MesaRPG
+                    .carregarJogadoresDaCampanha ===
+                "function"
+            ) {
 
-    const id =  
-        campanha.id ||  
-        campanha.campaign_id ||  
-        campanha.campaignId;  
+                await window.MesaRPG
+                    .carregarJogadoresDaCampanha();
 
+                registrar(
+                    "sucesso",
+                    "Jogadores da campanha sincronizados."
+                );
 
-    const nome =  
-        campanha.name ||  
-        campanha.nome ||  
-        "Sem nome";  
+            } else if (
+                typeof window
+                    .sincronizarPersonagensMesa ===
+                "function"
+            ) {
 
+                await window
+                    .sincronizarPersonagensMesa();
 
-    if (!id) {  
+                registrar(
+                    "sucesso",
+                    "Personagens da Mesa sincronizados."
+                );
 
-        definirStatus(  
-            "campanha",  
-            "🟡 Sem ID"  
-        );  
+            } else {
 
+                registrar(
+                    "aviso",
+                    "Nenhuma função de sincronização disponível."
+                );
 
-        definirTeste(  
-            "campanha",  
-            "aviso",  
-            "Campanha",  
-            "Uma campanha foi encontrada, mas ela não possui um ID identificável.",  
-            `Nome: ${nome}`,  
-            "Consultas e sincronizações que dependem do ID podem falhar.",  
-            [  
-                "Objeto da campanha está incompleto.",  
-                "Nome da coluna pode ser diferente do esperado."  
-            ],  
-            "Verifique a estrutura do objeto de campanha retornado pelo sistema."  
-        );  
+            }
 
+        } catch (erro) {
 
-    } else {  
+            registrar(
+                "erro",
+                "Erro na sincronização: " +
+                obterMensagemErro(erro)
+            );
 
-        definirStatus(  
-            "campanha",  
-            "🟢 OK"  
-        );  
+        }
 
 
-        definirTeste(  
-            "campanha",  
-            "sucesso",  
-            "Campanha",  
-            "Campanha encontrada corretamente.",  
-            `Nome: ${nome} | ID: ${id}`,  
-            "Nenhum impacto identificado.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+        await atualizarDiagnostico();
 
-    }  
+    }
 
 
-    registrarDiagnosticoTeste(  
-        "campanha"  
-    );  
+    /* =====================================================
+       EVENTOS
+    ===================================================== */
 
+    function registrarEventos() {
 
-    return campanha;  
+        /* ---------------------------------------------
+           Jogadores atualizados
+        --------------------------------------------- */
 
-}  
+        window.addEventListener(
+            "mesa:jogadoresAtualizados",
+            function (evento) {
 
+                registrar(
+                    "sucesso",
+                    "Evento mesa:jogadoresAtualizados recebido."
+                );
 
-/* =====================================================  
-   DADOS DA CAMPANHA  
-===================================================== */  
+                if (
+                    evento &&
+                    evento.detail
+                ) {
 
-function atualizarDadosCampanha() {  
+                    registrar(
+                        "info",
+                        "Dados de jogadores atualizados."
+                    );
 
-    const campanha =  
-        obterCampanha();  
+                }
 
+                diagnosticarPersonagens();
 
-    const id =  
-        document.getElementById(  
-            "diagnostico-campanha-id"  
-        );  
+                atualizarResumoDiagnostico();
 
+            }
+        );
 
-    const nome =  
-        document.getElementById(  
-            "diagnostico-campanha-nome"  
-        );  
 
+        /* ---------------------------------------------
+           Estado dos jogadores
+        --------------------------------------------- */
 
-    const master =  
-        document.getElementById(  
-            "diagnostico-master-id"  
-        );  
+        window.addEventListener(
+            "mesa:estadoJogadoresAtualizado",
+            function () {
 
+                registrar(
+                    "info",
+                    "Estado dos jogadores atualizado."
+                );
 
-    if (!campanha) {  
+            }
+        );
 
-        if (id) {  
 
-            id.textContent =  
-                "—";  
+        /* ---------------------------------------------
+           Jogador individual
+        --------------------------------------------- */
 
-        }  
+        window.addEventListener(
+            "mesa:jogadorAtualizado",
+            function () {
 
+                registrar(
+                    "info",
+                    "Dados de um jogador foram atualizados."
+                );
 
-        if (nome) {  
+            }
+        );
 
-            nome.textContent =  
-                "—";  
 
-        }  
+        /* ---------------------------------------------
+           Campanha
+        --------------------------------------------- */
 
+        window.addEventListener(
+            "rpg:campanhaAtualizada",
+            function () {
 
-        if (master) {  
+                registrar(
+                    "sucesso",
+                    "Contexto da campanha atualizado."
+                );
 
-            master.textContent =  
-                "—";  
+                diagnosticarCampanha();
 
-        }  
+                diagnosticarMultiplayer();
 
+            }
+        );
 
-        return;  
 
-    }  
+        /* ---------------------------------------------
+           Personagens sincronizados
+        --------------------------------------------- */
 
+        window.addEventListener(
+            "mesa:jogadores:personagensSincronizados",
+            function () {
 
-    if (id) {  
+                registrar(
+                    "sucesso",
+                    "Personagens sincronizados."
+                );
 
-        id.textContent =  
-            campanha.id ||  
-            campanha.campaign_id ||  
-            campanha.campaignId ||  
-            "—";  
+                diagnosticarPersonagens();
 
-    }  
+            }
+        );
 
 
-    if (nome) {  
+        /* ---------------------------------------------
+           Supabase Mesa pronto
+        --------------------------------------------- */
 
-        nome.textContent =  
-            campanha.name ||  
-            campanha.nome ||  
-            "Sem nome";  
+        window.addEventListener(
+            "supabase:mesaPronto",
+            function () {
 
-    }  
+                registrar(
+                    "sucesso",
+                    "Supabase Mesa informou que está pronto."
+                );
 
+                diagnosticarSupabaseMesa();
 
-    if (master) {  
+            }
+        );
 
-        master.textContent =  
-            campanha.master_id ||  
-            campanha.masterId ||  
-            "—";  
 
-    }  
+        /* ---------------------------------------------
+           Contexto recebido
+        --------------------------------------------- */
 
-}  
+        window.addEventListener(
+            "supabase:mesaContextoRecebido",
+            function () {
 
+                registrar(
+                    "sucesso",
+                    "Contexto da Mesa recebido do Supabase."
+                );
 
-/* =====================================================  
-   DIAGNÓSTICO — PERSONAGENS  
-===================================================== */  
+                diagnosticarCampanha();
 
-function diagnosticarPersonagens() {  
+            }
+        );
 
-    const personagens =  
-        obterPersonagens();  
 
+        /* ---------------------------------------------
+           Entrada pronta
+        --------------------------------------------- */
 
-    const validos =  
-        Array.isArray(personagens)  
-            ? personagens  
-            : [];  
+        window.addEventListener(
+            "supabase:entradaPronta",
+            function () {
 
+                registrar(
+                    "sucesso",
+                    "Entrada da Mesa concluída."
+                );
 
-    const ocupados =  
-        validos.filter(  
-            personagem =>  
-                personagem &&  
-                personagem.slot != null  
-        );  
+                atualizarDiagnostico();
 
+            }
+        );
 
-    definirStatus(  
-        "personagens",  
-        String(validos.length)  
-    );  
 
+        /* ---------------------------------------------
+           ABLY — CONECTADO
+        --------------------------------------------- */
 
-    definirStatus(  
-        "slots",  
-        `${ocupados.length}/8`  
-    );  
+        window.addEventListener(
+            "mesa:multiplayerConectado",
+            function (evento) {
 
+                registrar(
+                    "sucesso",
+                    "Multiplayer Ably conectado."
+                );
 
-    atualizarSlots(  
-        validos  
-    );  
+                if (
+                    evento?.detail
+                ) {
 
+                    registrar(
+                        "info",
+                        JSON.stringify(
+                            evento.detail
+                        )
+                    );
 
-    const slotsInvalidos =  
-        validos.filter(  
-            personagem => {  
+                }
 
-                const slot =  
-                    Number(personagem?.slot);  
+                atualizarDiagnostico();
 
+            }
+        );
 
-                return (  
-                    personagem &&  
-                    (  
-                        !Number.isInteger(slot) ||  
-                        slot < 1 ||  
-                        slot > 8  
-                    )  
-                );  
 
-            }  
-        );  
+        /* ---------------------------------------------
+           ABLY — JOGADORES
+        --------------------------------------------- */
 
+        window.addEventListener(
+            "mesa:multiplayerJogadoresAtualizados",
+            function (evento) {
 
-    if (!validos.length) {  
+                registrar(
+                    "sucesso",
+                    "Presença multiplayer atualizada."
+                );
 
-        definirTeste(  
-            "personagens",  
-            "aviso",  
-            "Personagens",  
-            "Nenhum personagem foi encontrado no estado atual.",  
-            "Quantidade: 0",  
-            "Os cards dos jogadores não possuem dados para exibir.",  
-            [  
-                "A campanha ainda não foi sincronizada.",  
-                "Não existem personagens vinculados à campanha.",  
-                "A função de carregamento ainda não foi executada."  
-            ],  
-            "Use o botão de sincronização e verifique novamente."  
-        );  
+                if (
+                    evento?.detail
+                ) {
 
-    } else if (slotsInvalidos.length) {  
+                    const quantidade =
+                        evento.detail.quantidade ??
+                        evento.detail.count ??
+                        evento.detail.jogadoresOnline;
 
-        definirTeste(  
-            "personagens",  
-            "aviso",  
-            "Personagens",  
-            `${validos.length} personagem(ns) encontrado(s), mas existem registros com slot inválido.`,  
-            `Slots ocupados: ${ocupados.length}/8 | Registros inválidos: ${slotsInvalidos.length}`,  
-            "Alguns personagens podem não aparecer corretamente nos slots.",  
-            [  
-                "Slot nulo ou inexistente.",  
-                "Slot fora do intervalo 1–8.",  
-                "Dados antigos ou inconsistentes no banco."  
-            ],  
-            "Verifique o slot dos personagens no banco e na sincronização da Mesa."  
-        );  
+                    if (
+                        typeof quantidade ===
+                        "number"
+                    ) {
 
-    } else {  
+                        Diagnostico.jogadoresOnline =
+                            quantidade;
 
-        definirTeste(  
-            "personagens",  
-            "sucesso",  
-            "Personagens",  
-            `${validos.length} personagem(ns) encontrado(s) corretamente.`,  
-            `Slots ocupados: ${ocupados.length}/8`,  
-            "Nenhum problema estrutural detectado nesta etapa.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+                    }
 
-    }  
+                }
 
+                diagnosticarMultiplayer();
 
-    registrarDiagnosticoTeste(  
-        "personagens"  
-    );  
+            }
+        );
 
 
-    if (  
-        Diagnostico.ultimaQuantidadePersonagens !==  
-        validos.length  
-    ) {  
+        /* ---------------------------------------------
+           ABLY — DESCONECTADO
+        --------------------------------------------- */
 
-        if (  
-            Diagnostico.ultimaQuantidadePersonagens !==  
-            null  
-        ) {  
+        window.addEventListener(
+            "mesa:multiplayerDesconectado",
+            function (evento) {
 
-            registrar(  
-                "info",  
-                `Quantidade de personagens alterada: ${validos.length}`  
-            );  
+                registrar(
+                    "aviso",
+                    "Multiplayer Ably desconectado."
+                );
 
-        }  
+                if (
+                    evento?.detail
+                ) {
 
+                    registrar(
+                        "aviso",
+                        JSON.stringify(
+                            evento.detail
+                        )
+                    );
 
-        Diagnostico.ultimaQuantidadePersonagens =  
-            validos.length;  
+                }
 
-    }  
+                diagnosticarMultiplayer();
 
-}  
+            }
+        );
 
 
-/* =====================================================  
-   SLOTS  
-===================================================== */  
+        /* ---------------------------------------------
+           ABLY — ERRO
+        --------------------------------------------- */
 
-function atualizarSlots(personagens) {  
+        window.addEventListener(
+            "mesa:multiplayerErro",
+            function (evento) {
 
-    const container =  
-        document.getElementById(  
-            "diagnostico-slots"  
-        );  
+                const detalhe =
+                    evento?.detail;
 
+                registrar(
+                    "erro",
+                    "Erro no multiplayer Ably: " +
+                    (
+                        detalhe?.message ||
+                        detalhe?.error ||
+                        JSON.stringify(
+                            detalhe ||
+                            {}
+                        )
+                    )
+                );
 
-    if (!container) return;  
+                diagnosticarMultiplayer();
 
+            }
+        );
 
-    const mapa =  
-        new Map();  
 
+        /* ---------------------------------------------
+           ERRO GLOBAL
+        --------------------------------------------- */
 
-    personagens.forEach(  
-        personagem => {  
+        window.addEventListener(
+            "error",
+            function (evento) {
 
-            const slot =  
-                Number(  
-                    personagem?.slot  
-                );  
+                registrar(
+                    "erro",
+                    `Erro JavaScript: ${
+                        evento.message ||
+                        "erro desconhecido"
+                    }`
+                );
 
+            }
+        );
 
-            if (  
-                Number.isInteger(slot) &&  
-                slot >= 1 &&  
-                slot <= 8  
-            ) {  
 
-                mapa.set(  
-                    slot,  
-                    personagem  
-                );  
+        /* ---------------------------------------------
+           PROMISE REJEITADA
+        --------------------------------------------- */
 
-            }  
+        window.addEventListener(
+            "unhandledrejection",
+            function (evento) {
 
-        }  
-    );  
+                registrar(
+                    "erro",
+                    "Promise rejeitada: " +
+                    obterMensagemErro(
+                        evento.reason
+                    )
+                );
 
+            }
+        );
 
-    let html =  
-        "";  
+    }
 
 
-    for (  
-        let slot = 1;  
-        slot <= 8;  
-        slot++  
-    ) {  
+    /* =====================================================
+       ABRIR
+    ===================================================== */
 
-        const personagem =  
-            mapa.get(slot);  
+    function abrir() {
 
+        const painel =
+            document.getElementById(
+                "diagnostico-panel"
+            );
 
-        if (personagem) {  
+        if (!painel) {
 
-            const nome =  
-                personagem.name ||  
-                personagem.nome ||  
-                "Sem nome";  
+            registrar(
+                "erro",
+                "Painel de diagnóstico não encontrado."
+            );
 
+            return;
 
-            const characterId =  
-                personagem.id ||  
-                personagem.characterId ||  
-                "—";  
+        }
 
+        Diagnostico.aberto =
+            true;
 
-            const userId =  
-                personagem.user_id ||  
-                personagem.userId ||  
-                "—";  
+        painel.style.display =
+            "flex";
 
+        atualizarDiagnostico();
 
-            html += `  
+        if (!Diagnostico.intervalo) {
 
-                <div class="diagnostico-slot ocupado">  
+            Diagnostico.intervalo =
+                setInterval(
+                    function () {
 
-                    <div class="diagnostico-slot-topo">  
+                        if (
+                            Diagnostico.aberto
+                        ) {
 
-                        <span class="diagnostico-slot-numero">  
-                            Slot ${slot}  
-                        </span>  
+                            atualizarDiagnostico();
 
-                        <span class="diagnostico-slot-status">  
-                            🟢 OCUPADO  
-                        </span>  
+                        }
 
-                    </div>  
+                    },
+                    5000
+                );
 
-                    <div class="diagnostico-slot-nome">  
-                        ${escaparHTML(nome)}  
-                    </div>  
+        }
 
-                    <div class="diagnostico-slot-id">  
-                        Character: ${escaparHTML(characterId)}  
-                    </div>  
+    }
 
-                    <div class="diagnostico-slot-id">  
-                        User: ${escaparHTML(userId)}  
-                    </div>  
 
-                </div>  
+    /* =====================================================
+       FECHAR
+    ===================================================== */
 
-            `;  
+    function fechar() {
 
-        } else {  
+        const painel =
+            document.getElementById(
+                "diagnostico-panel"
+            );
 
-            html += `  
+        Diagnostico.aberto =
+            false;
 
-                <div class="diagnostico-slot vazio">  
+        if (painel) {
 
-                    <div class="diagnostico-slot-topo">  
+            painel.style.display =
+                "none";
 
-                        <span class="diagnostico-slot-numero">  
-                            Slot ${slot}  
-                        </span>  
+        }
 
-                        <span class="diagnostico-slot-status">  
-                            ⚪ VAZIO  
-                        </span>  
+        if (
+            Diagnostico.intervalo
+        ) {
 
-                    </div>  
+            clearInterval(
+                Diagnostico.intervalo
+            );
 
-                    <div class="diagnostico-slot-nome">  
-                        Nenhum personagem  
-                    </div>  
+            Diagnostico.intervalo =
+                null;
 
-                </div>  
+        }
 
-            `;  
+    }
 
-        }  
 
-    }  
+    /* =====================================================
+       LIMPAR LOGS
+    ===================================================== */
 
+    function limparLogs() {
 
-    container.innerHTML =  
-        html;  
+        Diagnostico.logs = [];
 
-}  
+        atualizarLog();
 
+        registrar(
+            "info",
+            "Logs limpos."
+        );
 
-/* =====================================================  
-   DIAGNÓSTICO — REALTIME  
-===================================================== */  
+    }
 
-function diagnosticarRealtime() {  
 
-    const estado =  
-        obterEstadoMesa();  
+    /* =====================================================
+       EVENTOS DA INTERFACE
+    ===================================================== */
 
+    function registrarEventosInterface() {
 
-    const campanha =  
-        obterCampanha();  
+        /* ---------------------------------------------
+           Botão abrir diagnóstico
+        --------------------------------------------- */
 
+        document.addEventListener(
+            "click",
+            function (evento) {
 
-    const possuiMesa =  
-        !!window.MesaRPG;  
+                const botao =
+                    evento.target.closest(
+                        "#btn-diagnostico"
+                    );
 
+                if (!botao) {
+                    return;
+                }
 
-    const possuiFuncaoRealtime =  
-        !!(  
-            window.MesaRPG &&  
-            typeof window.MesaRPG.iniciarRealtimeMesa ===  
-            "function"  
-        );  
+                evento.preventDefault();
 
+                abrir();
 
-    const detalhes = [];  
+            }
+        );
 
 
-    detalhes.push(  
-        `MesaRPG: ${  
-            possuiMesa  
-                ? "disponível"  
-                : "ausente"  
-        }`  
-    );  
+        /* ---------------------------------------------
+           Botão fechar
+        --------------------------------------------- */
 
+        document.addEventListener(
+            "click",
+            function (evento) {
 
-    detalhes.push(  
-        `iniciarRealtimeMesa(): ${  
-            possuiFuncaoRealtime  
-                ? "disponível"  
-                : "ausente"  
-        }`  
-    );  
+                const botao =
+                    evento.target.closest(
+                        "#btn-fechar-diagnostico"
+                    );
 
+                if (!botao) {
+                    return;
+                }
 
-    detalhes.push(  
-        `Campanha: ${  
-            campanha  
-                ? "encontrada"  
-                : "ausente"  
-        }`  
-    );  
+                evento.preventDefault();
 
+                fechar();
 
-    if (  
-        possuiFuncaoRealtime &&  
-        campanha  
-    ) {  
+            }
+        );
 
-        definirStatus(  
-            "realtime",  
-            "🟢 Ativo"  
-        );  
 
+        /* ---------------------------------------------
+           Botão limpar
+        --------------------------------------------- */
 
-        definirTeste(  
-            "realtime",  
-            "sucesso",  
-            "Realtime",  
-            "A função de inicialização do Realtime está disponível e existe uma campanha para sincronizar.",  
-            detalhes.join(" | "),  
-            "Nenhum problema estrutural detectado.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+        document.addEventListener(
+            "click",
+            function (evento) {
 
+                const botao =
+                    evento.target.closest(
+                        "#btn-limpar-diagnostico"
+                    );
 
-        Diagnostico.ultimoRealtime =  
-            new Date();  
+                if (!botao) {
+                    return;
+                }
 
+                evento.preventDefault();
 
-    } else {  
+                limparLogs();
 
-        definirStatus(  
-            "realtime",  
-            "🟡 Aguardando"  
-        );  
+            }
+        );
 
 
-        definirTeste(  
-            "realtime",  
-            "aviso",  
-            "Realtime",  
-            "Não foi possível confirmar uma conexão Realtime ativa.",  
-            detalhes.join(" | "),  
-            "As alterações em tempo real podem não ser recebidas imediatamente.",  
-            [  
-                "Campanha ainda não carregada.",  
-                "Função de inicialização do Realtime ausente.",  
-                "Realtime ainda está sendo inicializado."  
-            ],  
-            "Verifique o carregamento da Mesa e aguarde a sincronização inicial."  
-        );  
+        /* ---------------------------------------------
+           Botão sincronizar
+        --------------------------------------------- */
 
-    }  
+        document.addEventListener(
+            "click",
+            function (evento) {
 
+                const botao =
+                    evento.target.closest(
+                        "#btn-sincronizar-diagnostico"
+                    );
 
-    if (  
-        estado &&  
-        estado.campanha  
-    ) {  
+                if (!botao) {
+                    return;
+                }
 
-        definirStatus(  
-            "realtime",  
-            "🟢 Ativo"  
-        );  
+                evento.preventDefault();
 
-    }  
+                sincronizarAgora();
 
+            }
+        );
 
-    registrarDiagnosticoTeste(  
-        "realtime"  
-    );  
 
-}  
+        /* ---------------------------------------------
+           Botão atualizar
+        --------------------------------------------- */
 
+        document.addEventListener(
+            "click",
+            function (evento) {
 
-/* =====================================================  
-   DIAGNÓSTICO — FUNÇÕES DA MESA  
-===================================================== */  
+                const botao =
+                    evento.target.closest(
+                        "#btn-atualizar-diagnostico"
+                    );
 
-function diagnosticarFuncoesMesa() {  
+                if (!botao) {
+                    return;
+                }
 
-    const funcoes = {  
+                evento.preventDefault();
 
-        estado:  
-            !!(  
-                window.MesaRPG &&  
-                typeof window.MesaRPG.estado === "function"  
-            ),  
+                atualizarDiagnostico();
 
-        carregarJogadores:  
-            !!(  
-                window.MesaRPG &&  
-                typeof window.MesaRPG.carregarJogadoresDaCampanha ===  
-                "function"  
-            ),  
+            }
+        );
 
-        realtime:  
-            !!(  
-                window.MesaRPG &&  
-                typeof window.MesaRPG.iniciarRealtimeMesa ===  
-                "function"  
-            ),  
+    }
 
-        sincronizar:  
-            typeof window.sincronizarPersonagensMesa ===  
-            "function"  
 
-    };  
+    /* =====================================================
+       INICIALIZAÇÃO
+    ===================================================== */
 
+    function inicializar() {
 
-    const encontradas =  
-        Object.entries(funcoes)  
-            .filter(  
-                ([_, valor]) => valor  
-            )  
-            .map(  
-                ([chave]) => chave  
-            );  
+        if (
+            Diagnostico.inicializado
+        ) {
+            return;
+        }
 
+        Diagnostico.inicializado =
+            true;
 
-    const ausentes =  
-        Object.entries(funcoes)  
-            .filter(  
-                ([_, valor]) => !valor  
-            )  
-            .map(  
-                ([chave]) => chave  
-            );  
 
+        registrar(
+            "info",
+            "Sistema de diagnóstico da Mesa iniciado."
+        );
 
-    if (!encontradas.length) {  
 
-        definirTeste(  
-            "funcoes",  
-            "erro",  
-            "Funções da Mesa",  
-            "Nenhuma função pública esperada da Mesa foi encontrada.",  
-            "Todas as funções testadas estão ausentes.",  
-            "O diagnóstico não consegue consultar ou sincronizar o estado da Mesa.",  
-            [  
-                "mesa.js não foi carregado.",  
-                "MesaRPG não foi inicializado.",  
-                "O nome das funções foi alterado."  
-            ],  
-            "Verifique o carregamento do mesa.js."  
-        );  
+        registrarEventos();
 
-    } else if (ausentes.length) {  
+        registrarEventosInterface();
 
-        definirTeste(  
-            "funcoes",  
-            "aviso",  
-            "Funções da Mesa",  
-            "A Mesa possui algumas funções disponíveis, mas outras estão ausentes.",  
-            `Encontradas: ${encontradas.join(", ")} | Ausentes: ${ausentes.join(", ")}`,  
-            "Alguns recursos do diagnóstico ou sincronização podem não funcionar.",  
-            [  
-                "Versão parcial do mesa.js.",  
-                "Função removida ou renomeada.",  
-                "Script carregado parcialmente."  
-            ],  
-            "Verifique se as funções ausentes são esperadas na versão atual da Mesa."  
-        );  
 
-    } else {  
+        /* ---------------------------------------------
+           Primeiro diagnóstico
+        --------------------------------------------- */
 
-        definirTeste(  
-            "funcoes",  
-            "sucesso",  
-            "Funções da Mesa",  
-            "Todas as funções principais esperadas foram encontradas.",  
-            encontradas.join(", "),  
-            "Nenhum problema detectado.",  
-            [],  
-            "Nenhuma ação necessária."  
-        );  
+        setTimeout(
+            function () {
 
-    }  
+                atualizarDiagnostico();
 
+            },
+            300
+        );
 
-    registrarDiagnosticoTeste(  
-        "funcoes"  
-    );  
+    }
 
-}  
 
+    /* =====================================================
+       API PÚBLICA
+    ===================================================== */
 
-/* =====================================================  
-   ATUALIZAÇÃO COMPLETA  
-===================================================== */  
+    window.MesaDiagnostico = {
 
-async function atualizarDiagnostico() {  
+        abrir,
 
-    Diagnostico.testes = {};  
+        fechar,
 
+        registrar,
 
-    diagnosticarAmbiente();  
+        atualizar:
+            atualizarDiagnostico,
 
+        sincronizar:
+            sincronizarAgora,
 
-    const supabase =  
-        diagnosticarSupabase();  
+        relatorio:
+            gerarRelatorio,
 
+        limpar:
+            limparLogs,
 
-    diagnosticarSupabaseMesa();  
+        diagnosticarMultiplayer,
 
+        estado:
+            Diagnostico
 
-    await diagnosticarUsuario(  
-        supabase  
-    );  
+    };
 
 
-    diagnosticarCampanha();  
+    /* =====================================================
+       START
+    ===================================================== */
 
+    if (
+        document.readyState ===
+        "loading"
+    ) {
 
-    diagnosticarPersonagens();  
+        document.addEventListener(
+            "DOMContentLoaded",
+            inicializar,
+            {
+                once: true
+            }
+        );
 
+    } else {
 
-    diagnosticarRealtime();  
+        inicializar();
 
+    }
 
-    diagnosticarFuncoesMesa();  
-
-
-    atualizarDadosCampanha();  
-
-
-    Diagnostico.ultimoDiagnostico =  
-        new Date();  
-
-
-    atualizarResumoDiagnostico();  
-
-}  
-
-
-/* =====================================================  
-   RESUMO  
-===================================================== */  
-
-function atualizarResumoDiagnostico() {  
-
-    const testes =  
-        Object.values(  
-            Diagnostico.testes  
-        );  
-
-
-    const erros =  
-        testes.filter(  
-            teste =>  
-                teste.status === "erro"  
-        );  
-
-
-    const avisos =  
-        testes.filter(  
-            teste =>  
-                teste.status === "aviso"  
-        );  
-
-
-    const sucessos =  
-        testes.filter(  
-            teste =>  
-                teste.status === "sucesso"  
-        );  
-
-
-    const resumo =  
-        document.getElementById(  
-            "diagnostico-resumo"  
-        );  
-
-
-    if (!resumo) return;  
-
-
-    resumo.innerHTML = `  
-
-        <div class="diagnostico-resumo-item">  
-            <strong>${sucessos.length}</strong>  
-            <span>OK</span>  
-        </div>  
-
-        <div class="diagnostico-resumo-item">  
-            <strong>${avisos.length}</strong>  
-            <span>Avisos</span>  
-        </div>  
-
-        <div class="diagnostico-resumo-item">  
-            <strong>${erros.length}</strong>  
-            <span>Erros</span>  
-        </div>  
-
-    `;  
-
-}  
-
-
-/* =====================================================  
-   RELATÓRIO DETALHADO  
-===================================================== */  
-
-function gerarRelatorio() {  
-
-    const testes =  
-        Object.values(  
-            Diagnostico.testes  
-        );  
-
-
-    if (!testes.length) {  
-
-        return `  
-            <div class="diagnostico-relatorio-vazio">  
-                Nenhum diagnóstico executado ainda.  
-            </div>  
-        `;  
-
-    }  
-
-
-    return testes  
-        .map(  
-            teste => {  
-
-                let classe =  
-                    "diagnostico-detalhe-info";  
-
-
-                let icone =  
-                    "ℹ️";  
-
-
-                if (  
-                    teste.status === "sucesso"  
-                ) {  
-
-                    classe =  
-                        "diagnostico-detalhe-sucesso";  
-
-                    icone =  
-                        "🟢";  
-
-                }  
-
-
-                if (  
-                    teste.status === "aviso"  
-                ) {  
-
-                    classe =  
-                        "diagnostico-detalhe-aviso";  
-
-                    icone =  
-                        "🟡";  
-
-                }  
-
-
-                if (  
-                    teste.status === "erro"  
-                ) {  
-
-                    classe =  
-                        "diagnostico-detalhe-erro";  
-
-                    icone =  
-                        "🔴";  
-
-                }  
-
-
-                const causas =  
-                    teste.causas.length  
-                        ? `  
-                            <ul>  
-                                ${  
-                                    teste.causas  
-                                        .map(  
-                                            causa =>  
-                                                `<li>${escaparHTML(causa)}</li>`  
-                                        )  
-                                        .join("")  
-                                }  
-                            </ul>  
-                        `  
-                        : `  
-                            <div class="diagnostico-sem-causas">  
-                                Nenhuma causa suspeita.  
-                            </div>  
-                        `;  
-
-
-                return `  
-
-                    <article class="diagnostico-detalhe ${classe}">  
-
-                        <div class="diagnostico-detalhe-cabecalho">  
-
-                            <strong>  
-                                ${icone}  
-                                ${escaparHTML(teste.titulo)}  
-                            </strong>  
-
-                        </div>  
-
-
-                        <div class="diagnostico-detalhe-descricao">  
-
-                            ${escaparHTML(teste.descricao)}  
-
-                        </div>  
-
-
-                        <div class="diagnostico-detalhe-bloco">  
-
-                            <strong>🔎 Detalhes</strong>  
-
-                            <div>  
-                                ${escaparHTML(teste.detalhes)}  
-                            </div>  
-
-                        </div>  
-
-
-                        <div class="diagnostico-detalhe-bloco">  
-
-                            <strong>⚠️ Impacto</strong>  
-
-                            <div>  
-                                ${escaparHTML(teste.impacto)}  
-                            </div>  
-
-                        </div>  
-
-
-                        <div class="diagnostico-detalhe-bloco">  
-
-                            <strong>🧩 Possíveis causas</strong>  
-
-                            ${causas}  
-
-                        </div>  
-
-
-                        <div class="diagnostico-detalhe-bloco">  
-
-                            <strong>🛠️ Recomendação</strong>  
-
-                            <div>  
-                                ${escaparHTML(teste.recomendacao)}  
-                            </div>  
-
-                        </div>  
-
-                    </article>  
-
-                `;  
-
-            }  
-        )  
-        .join("");  
-
-}  
-
-
-function atualizarRelatorio() {  
-
-    const elemento =  
-        document.getElementById(  
-            "diagnostico-detalhes"  
-        );  
-
-
-    if (!elemento) return;  
-
-
-    elemento.innerHTML =  
-        gerarRelatorio();  
-
-}  
-
-
-/* =====================================================  
-   SINCRONIZAÇÃO MANUAL  
-===================================================== */  
-
-async function sincronizarAgora() {  
-
-    registrar(  
-        "info",  
-        "Solicitando sincronização manual..."  
-    );  
-
-
-    try {  
-
-        if (  
-            window.MesaRPG &&  
-            typeof window.MesaRPG.carregarJogadoresDaCampanha ===  
-            "function"  
-        ) {  
-
-            await window.MesaRPG.carregarJogadoresDaCampanha();  
-
-
-            registrar(  
-                "sucesso",  
-                "Sincronização da campanha concluída."  
-            );  
-
-
-            await atualizarDiagnostico();  
-
-            return;  
-
-        }  
-
-
-        if (  
-            typeof window.sincronizarPersonagensMesa ===  
-            "function"  
-        ) {  
-
-            await window.sincronizarPersonagensMesa();  
-
-
-            registrar(  
-                "sucesso",  
-                "Sincronização local executada."  
-            );  
-
-
-            await atualizarDiagnostico();  
-
-            return;  
-
-        }  
-
-
-        registrar(  
-            "erro",  
-            "Nenhuma função de sincronização foi encontrada. Verifique o diagnóstico de Funções da Mesa."  
-        );  
-
-
-    } catch (erro) {  
-
-        registrar(  
-            "erro",  
-            "Erro durante a sincronização: " +  
-            obterMensagemErro(erro)  
-        );  
-
-
-        definirTeste(  
-            "sincronizacao",  
-            "erro",  
-            "Sincronização",  
-            "A tentativa de sincronização manual falhou.",  
-            obterMensagemErro(erro),  
-            "Os dados da Mesa podem permanecer desatualizados.",  
-            [  
-                "Erro no banco de dados.",  
-                "Sessão inválida.",  
-                "Função de sincronização com erro.",  
-                "Problema de conexão."  
-            ],  
-            "Verifique os detalhes do erro e execute o diagnóstico novamente."  
-        );  
-
-
-        atualizarRelatorio();  
-
-    }  
-
-}  
-
-
-/* =====================================================  
-   EVENTOS DA MESA  
-===================================================== */  
-
-function registrarEventos() {  
-
-    document.addEventListener(  
-        "mesa:jogadoresAtualizados",  
-        evento => {  
-
-            const personagens =  
-                evento?.detail?.personagens;  
-
-
-            const quantidade =  
-                Array.isArray(personagens)  
-                    ? personagens.length  
-                    : 0;  
-
-
-            Diagnostico.ultimoRealtime =  
-                new Date();  
-
-
-            registrar(  
-                "sucesso",  
-                `Realtime atualizou personagens: ${quantidade}`  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    document.addEventListener(  
-        "mesa:estadoJogadoresAtualizado",  
-        () => {  
-
-            registrar(  
-                "info",  
-                "Estado dos jogadores atualizado."  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    document.addEventListener(  
-        "mesa:jogadorAtualizado",  
-        evento => {  
-
-            const detalhe =  
-                evento?.detail;  
-
-
-            const id =  
-                detalhe?.jogadorId ??  
-                detalhe?.id ??  
-                "desconhecido";  
-
-
-            registrar(  
-                "info",  
-                `Jogador atualizado: ${id}`  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    document.addEventListener(  
-        "rpg:campanhaAtualizada",  
-        () => {  
-
-            registrar(  
-                "info",  
-                "Campanha atualizada."  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    document.addEventListener(  
-        "mesa:jogadores:personagensSincronizados",  
-        evento => {  
-
-            const quantidade =  
-                evento?.detail?.personagens?.length ??  
-                evento?.detail?.length ??  
-                0;  
-
-
-            registrar(  
-                "info",  
-                `Cards sincronizados: ${quantidade} personagens.`  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    window.addEventListener(  
-        "supabase:mesaPronto",  
-        () => {  
-
-            registrar(  
-                "sucesso",  
-                "SupabaseMesa informou que o cliente foi criado."  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    window.addEventListener(  
-        "supabase:mesaContextoRecebido",  
-        () => {  
-
-            registrar(  
-                "sucesso",  
-                "SupabaseMesa recebeu o contexto da Mesa."  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    window.addEventListener(  
-        "supabase:entradaPronta",  
-        evento => {  
-
-            const pagina =  
-                evento?.detail?.pagina ||  
-                "desconhecida";  
-
-
-            registrar(  
-                "info",  
-                `SupabaseEntrada pronta. Página: ${pagina}`  
-            );  
-
-
-            atualizarDiagnostico();  
-
-        }  
-    );  
-
-
-    window.addEventListener(  
-        "error",  
-        evento => {  
-
-            registrar(  
-                "erro",  
-                `Erro JavaScript: ${  
-                    evento?.message ||  
-                    "Erro desconhecido."  
-                }`  
-            );  
-
-        }  
-    );  
-
-
-    window.addEventListener(  
-        "unhandledrejection",  
-        evento => {  
-
-            const erro =  
-                evento?.reason;  
-
-
-            registrar(  
-                "erro",  
-                "Promise rejeitada: " +  
-                obterMensagemErro(erro)  
-            );  
-
-        }  
-    );  
-
-}  
-
-
-/* =====================================================  
-   INTERFACE  
-===================================================== */  
-
-function abrir() {  
-
-    const painel =  
-        document.getElementById(  
-            "mesa-diagnostico"  
-        );  
-
-
-    if (!painel) {  
-
-        console.error(  
-            "[MesaDiagnostico] Painel #mesa-diagnostico não encontrado."  
-        );  
-
-        return;  
-
-    }  
-
-
-    painel.hidden = false;  
-
-    Diagnostico.aberto = true;  
-
-
-    registrar(  
-        "info",  
-        "Executando diagnóstico completo..."  
-    );  
-
-
-    atualizarDiagnostico()  
-        .then(  
-            () => {  
-
-                atualizarRelatorio();  
-
-                registrar(  
-                    "sucesso",  
-                    "Diagnóstico completo concluído."  
-                );  
-
-                atualizarRelatorio();  
-
-            }  
-        )  
-        .catch(  
-            erro => {  
-
-                registrar(  
-                    "erro",  
-                    "Falha durante o diagnóstico: " +  
-                    obterMensagemErro(erro)  
-                );  
-
-                atualizarRelatorio();  
-
-            }  
-        );  
-
-}  
-
-
-function fechar() {  
-
-    const painel =  
-        document.getElementById(  
-            "mesa-diagnostico"  
-        );  
-
-
-    if (!painel) return;  
-
-
-    painel.hidden = true;  
-
-    Diagnostico.aberto = false;  
-
-}  
-
-
-function limparLogs() {  
-
-    Diagnostico.logs = [];  
-
-    atualizarLog();  
-
-
-    registrar(  
-        "info",  
-        "Registros limpos."  
-    );  
-
-}  
-
-
-/* =====================================================  
-   CLIQUE DO BOTÃO DE DIAGNÓSTICO  
-===================================================== */  
-
-function registrarCliqueDiagnostico() {  
-
-    document.addEventListener(  
-        "click",  
-        evento => {  
-
-            const botao =  
-                evento.target.closest(  
-                    "#btn-diagnostico"  
-                );  
-
-
-            if (!botao) return;  
-
-
-            evento.preventDefault();  
-
-            evento.stopPropagation();  
-
-
-            abrir();  
-
-        },  
-        true  
-    );  
-
-}  
-
-
-/* =====================================================  
-   CLIQUES INTERNOS DO PAINEL  
-===================================================== */  
-
-function registrarCliquesPainel() {  
-
-    document.addEventListener(  
-        "click",  
-        evento => {  
-
-            const fecharBotao =  
-                evento.target.closest(  
-                    "#btn-fechar-diagnostico"  
-                );  
-
-
-            if (fecharBotao) {  
-
-                evento.preventDefault();  
-
-                evento.stopPropagation();  
-
-                fechar();  
-
-                return;  
-
-            }  
-
-
-            const limparBotao =  
-                evento.target.closest(  
-                    "#btn-limpar-diagnostico"  
-                );  
-
-
-            if (limparBotao) {  
-
-                evento.preventDefault();  
-
-                evento.stopPropagation();  
-
-                limparLogs();  
-
-                return;  
-
-            }  
-
-
-            const sincronizarBotao =  
-                evento.target.closest(  
-                    "#btn-sincronizar-diagnostico"  
-                );  
-
-
-            if (sincronizarBotao) {  
-
-                evento.preventDefault();  
-
-                evento.stopPropagation();  
-
-                sincronizarAgora();  
-
-                return;  
-
-            }  
-
-
-            const atualizarBotao =  
-                evento.target.closest(  
-                    "#btn-atualizar-diagnostico"  
-                );  
-
-
-            if (atualizarBotao) {  
-
-                evento.preventDefault();  
-
-                evento.stopPropagation();  
-
-
-                atualizarDiagnostico()  
-                    .then(  
-                        () => {  
-
-                            atualizarRelatorio();  
-
-                            registrar(  
-                                "sucesso",  
-                                "Diagnóstico atualizado."  
-                            );  
-
-                        }  
-                    )  
-                    .catch(  
-                        erro => {  
-
-                            registrar(  
-                                "erro",  
-                                "Erro ao atualizar diagnóstico: " +  
-                                obterMensagemErro(erro)  
-                            );  
-
-                            atualizarRelatorio();  
-
-                        }  
-                    );  
-
-            }  
-
-        },  
-        true  
-    );  
-
-}  
-
-
-/* =====================================================  
-   INICIALIZAÇÃO  
-===================================================== */  
-
-function inicializar() {  
-
-    if (  
-        Diagnostico.inicializado  
-    ) {  
-
-        return;  
-
-    }  
-
-
-    Diagnostico.inicializado =  
-        true;  
-
-
-    registrarCliqueDiagnostico();  
-
-    registrarCliquesPainel();  
-
-    registrarEventos();  
-
-
-    registrar(  
-        "sucesso",  
-        "Sistema de diagnóstico iniciado."  
-    );  
-
-
-    setTimeout(  
-        () => {  
-
-            atualizarDiagnostico()  
-                .then(  
-                    () => atualizarRelatorio()  
-                )  
-                .catch(  
-                    erro => {  
-
-                        registrar(  
-                            "erro",  
-                            "Falha na leitura inicial: " +  
-                            obterMensagemErro(erro)  
-                        );  
-
-                        atualizarRelatorio();  
-
-                    }  
-                );  
-
-        },  
-        300  
-    );  
-
-
-    setInterval(  
-        () => {  
-
-            if (  
-                Diagnostico.aberto  
-            ) {  
-
-                atualizarDiagnostico()  
-                    .then(  
-                        () => atualizarRelatorio()  
-                    )  
-                    .catch(  
-                        erro => {  
-
-                            registrar(  
-                                "erro",  
-                                "Erro na atualização automática: " +  
-                                obterMensagemErro(erro)  
-                            );  
-
-                            atualizarRelatorio();  
-
-                        }  
-                    );  
-
-            }  
-
-        },  
-        5000  
-    );  
-
-}  
-
-
-/* =====================================================  
-   API GLOBAL  
-===================================================== */  
-
-window.MesaDiagnostico = {  
-
-    abrir,  
-
-    fechar,  
-
-    registrar,  
-
-    atualizar: atualizarDiagnostico,  
-
-    sincronizar: sincronizarAgora,  
-
-    relatorio: function () {  
-
-        return Diagnostico.testes;  
-
-    }  
-
-};  
-
-
-/* =====================================================  
-   DOM READY  
-===================================================== */  
-
-if (  
-    document.readyState ===  
-    "loading"  
-) {  
-
-    document.addEventListener(  
-        "DOMContentLoaded",  
-        inicializar  
-    );  
-
-} else {  
-
-    inicializar();  
-
-}
 
 })();
