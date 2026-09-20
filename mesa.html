@@ -1105,7 +1105,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- ======================================
-   🔵 TUDO DA MESA — PRIMEIRO, SEMPRE
+   🔵 TUDO DA MESA — PRIMEIRO
    ====================================== -->
 <script src="config-mesa.js"></script>
 <script src="mesa.js"></script>
@@ -1123,52 +1123,42 @@
 <script src="sistema-dano.js"></script>
 
 <!-- ======================================
-   🟣 SUPABASE — ISOLADO, NÃO QUEBRA CLIQUES
+   🟣 SUPABASE — CARREGA NORMAL, NO FINAL
    ====================================== -->
 <script>
-(function() {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    
-    iframe.contentWindow.document.open();
-    iframe.contentWindow.document.write(`
-        <html><body>
-        <script>
-            // COMPARTILHA O LOCALSTORAGE COM A JANELA PRINCIPAL
-            Object.defineProperty(window, 'localStorage', {
-                get: () => window.parent.localStorage
-            });
-        <\/script>
-        <script src="supabase.js"><\/script>
-        <script>
-            function esperarEEnviar() {
-                if (window.supabaseClient && window.parent) {
-                    window.parent.supabaseClient = window.supabaseClient;
-                    console.log('✅ Supabase conectado!');
-                    
-                    // Carrega entrada
-                    const s = document.createElement('script');
-                    s.src = 'supabase-entrada.js';
-                    window.parent.document.body.appendChild(s);
-                    
-                    // Carrega supabase-mesa DEPOIS do entrada
-                    setTimeout(function() {
-                        const s2 = document.createElement('script');
-                        s2.src = 'supabase-mesa.js';
-                        window.parent.document.body.appendChild(s2);
-                        console.log('✅ supabase-mesa carregado!');
-                    }, 500);
-                } else {
-                    setTimeout(esperarEEnviar, 50);
-                }
-            }
-            esperarEEnviar();
-        <\/script>
-        </body></html>
-    `);
-    iframe.contentWindow.document.close();
-})();
+// Salva as funções de clique ANTES do Supabase carregar
+window._preservedEvents = {
+    onclick: document.body.onclick,
+    clickHandlers: []
+};
+
+// Captura todos os eventos de clique já registrados
+document.querySelectorAll('button, [onclick]').forEach(el => {
+    if (el.onclick) window._preservedEvents.clickHandlers.push({el, handler: el.onclick});
+});
+</script>
+
+<!-- Agora carrega o Supabase NORMALMENTE -->
+<script src="supabase.js"></script>
+<script src="supabase-entrada.js"></script>
+<script src="supabase-mesa.js"></script>
+
+<!-- Restaura os cliques DEPOIS que o Supabase carregou -->
+<script>
+// Restaura os cliques que o Supabase pode ter apagado
+function restaurarCliques() {
+    if (window._preservedEvents) {
+        window._preservedEvents.clickHandlers.forEach(({el, handler}) => {
+            if (!el.onclick) el.onclick = handler;
+        });
+        console.log('✅ Cliques restaurados!');
+    }
+}
+
+// Restaura depois que tudo carregou
+window.addEventListener('load', function() {
+    setTimeout(restaurarCliques, 100);
+});
 </script>
 
 </body>
