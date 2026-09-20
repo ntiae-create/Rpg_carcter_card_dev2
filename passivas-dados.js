@@ -1161,37 +1161,17 @@
         },
 
 
-        listarPorClasse: function (classe) {
-
-            const normalizar = function (s) {
-                return String(s || "")
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[\u0300-\u036f]/g, "");
-            };
-
-            return Object.values(PASSIVAS)
-                .filter(function (passiva) {
-
-                    return normalizar(passiva.classe) === normalizar(classe);
-
-                });
-
-        },
-
-
-        existe: function (id) {
-
-            return Boolean(PASSIVAS[id]);
-
-        }
-
-    };
-
-
-    console.log(
-        "[Passivas] Dados oficiais carregados:",
-        Object.keys(PASSIVAS).length
-    );
-
-})();
+        // Substitua a função listarPorClasse por esta:
+function listarPorClasse(nomeClasse) {
+    if (!nomeClasse || typeof nomeClasse !== "string") return [];
+    
+    // Normaliza: remove acentos, minúsculas, sem espaços extras
+    const normalizar = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const classeNormalizada = normalizar(nomeClasse);
+    
+    return todasPassivas.filter(passiva => {
+        if (!passiva.classe) return false;
+        const classes = Array.isArray(passiva.classe) ? passiva.classe : [passiva.classe];
+        return classes.some(c => normalizar(c) === classeNormalizada);
+    });
+}
