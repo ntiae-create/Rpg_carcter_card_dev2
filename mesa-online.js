@@ -1,27 +1,12 @@
 /* =========================================================
-   MESA ONLINE
-   Integração Online da Mesa RPG com Supabase
+   MESA ONLINE — ABLY
+   PRIMEIRO TESTE DE MULTIPLAYER
 
-   RESPONSABILIDADES:
-   - Conectar a Mesa ao Supabase
-   - Identificar a campanha atual
-   - Identificar o jogador atual
-   - Sincronizar slots
-   - Escutar alterações em tempo real
-   - Enviar alterações para o Supabase
-   - Expor eventos para mesa.js
+   NÃO ALTERA mesa.js
+   NÃO ALTERA OS CLIQUES EXISTENTES
+========================================================= */
 
-   NÃO RESPONSABILIDADES:
-   - Botões
-   - Clique dos cards
-   - Interface visual
-   - Animações
-   - HTML
-   - Regras visuais da Mesa
-
-   ========================================================= */
-
-(function () {
+(() => {
 
     "use strict";
 
@@ -30,1234 +15,541 @@
        CONFIGURAÇÃO
     ===================================================== */
 
-    const MesaOnline = {
-
-        supabase: null,
-
-        campanhaId: null,
-
-        usuarioId: null,
-
-        personagemId: null,
-
-        slotId: null,
-
-        inscrito: false,
-
-        canais: [],
-
-        estado: {
-
-            campanha: null,
-
-            jogadores: [],
-
-            slots: [],
-
-            personagens: [],
-
-            combate: null
-
-        },
-
-        listeners: {},
-
-        inicializado: false
-
-    };
+    const ABLY_API_KEY = "COLE_SUA_CHAVE_AQUI";
 
 
     /* =====================================================
-       EVENTOS INTERNOS
+       ESTADO
     ===================================================== */
 
-    function emitir(evento, dados = null) {
+    let ably = null;
+    let channel = null;
 
-        const lista = MesaOnline.listeners[evento];
-
-        if (!lista) {
-            return;
-        }
-
-        lista.forEach(callback => {
-
-            try {
-
-                callback(dados);
-
-            } catch (erro) {
-
-                console.error(
-                    `[MESA ONLINE] Erro no evento "${evento}":`,
-                    erro
-                );
-
-            }
-
-        });
-
-    }
-
-
-    MesaOnline.on = function (evento, callback) {
-
-        if (typeof callback !== "function") {
-            return () => {};
-        }
-
-        if (!MesaOnline.listeners[evento]) {
-            MesaOnline.listeners[evento] = [];
-        }
-
-        MesaOnline.listeners[evento].push(callback);
-
-        return function removerListener() {
-
-            MesaOnline.listeners[evento] =
-                MesaOnline.listeners[evento].filter(
-                    fn => fn !== callback
-                );
-
-        };
-
-    };
+    let roomId = null;
+    let clientId = null;
 
 
     /* =====================================================
-       OBTÉM O CLIENTE SUPABASE
+       LOG
     ===================================================== */
 
-    function obterSupabase() {
+    function log(...args) {
 
-        if (window.supabaseClient) {
-
-            return window.supabaseClient;
-
-        }
-
-        /*
-         * Compatibilidade caso o projeto antigo tenha
-         * colocado o cliente em outro nome.
-         */
-
-        if (window.supabase) {
-
-            /*
-             * Evita confundir a biblioteca global
-             * com o cliente criado pelo projeto.
-             */
-
-            if (
-                typeof window.supabase.from === "function"
-            ) {
-
-                return window.supabase;
-
-            }
-
-        }
-
-        return null;
+        console.log(
+            "[MESA ONLINE]",
+            ...args
+        );
 
     }
 
 
     /* =====================================================
-       INICIALIZAÇÃO
+       PEGAR DADOS DA CAMPANHA
     ===================================================== */
 
-    MesaOnline.iniciar = async function (opcoes = {}) {
-
-        if (MesaOnline.inicializado) {
-
-            console.warn(
-                "[MESA ONLINE] Já foi inicializado."
-            );
-
-            return MesaOnline;
-
-        }
-
-
-        MesaOnline.supabase = obterSupabase();
-
-
-        if (!MesaOnline.supabase) {
-
-            console.error(
-                "[MESA ONLINE] Cliente Supabase não encontrado."
-            );
-
-            emitir("erro", {
-                tipo: "SUPABASE_NAO_ENCONTRADO"
-            });
-
-            return null;
-
-        }
-
-
-        /*
-         * Permite passar IDs diretamente:
-         *
-         * MesaOnline.iniciar({
-         *     campanhaId: "...",
-         *     usuarioId: "..."
-         * });
-         */
-
-        MesaOnline.campanhaId =
-            opcoes.campanhaId ||
-            obterCampanhaDaPagina();
-
-
-        MesaOnline.usuarioId =
-            opcoes.usuarioId ||
-            await obterUsuarioAtual();
-
-
-        if (!MesaOnline.usuarioId) {
-
-            console.warn(
-                "[MESA ONLINE] Usuário não autenticado."
-            );
-
-            emitir("erro", {
-                tipo: "USUARIO_NAO_AUTENTICADO"
-            });
-
-            return null;
-
-        }
-
-
-        if (!MesaOnline.campanhaId) {
-
-            console.warn(
-                "[MESA ONLINE] Campanha não identificada."
-            );
-
-            emitir("erro", {
-                tipo: "CAMPANHA_NAO_IDENTIFICADA"
-            });
-
-            return null;
-
-        }
-
-
-        MesaOnline.inicializado = true;
-
-
-        emitir("iniciando", {
-
-            campanhaId: MesaOnline.campanhaId,
-
-            usuarioId: MesaOnline.usuarioId
-
-        });
-
+    function obterCampanha() {
 
         try {
 
-            await carregarEstadoInicial();
+            const dados =
+                JSON.parse(
+                    localStorage.getItem("rpg_mesa_ativa")
+                );
 
-            iniciarRealtime();
+            if (!dados) {
+                return null;
+            }
 
-            emitir("online", MesaOnline.estado);
-
-            return MesaOnline;
+            return dados;
 
         } catch (erro) {
 
             console.error(
-                "[MESA ONLINE] Falha ao iniciar:",
+                "[MESA ONLINE] Erro ao ler campanha:",
                 erro
             );
 
-            emitir("erro", erro);
-
             return null;
-
         }
-
-    };
+    }
 
 
     /* =====================================================
-       DESCOBRIR CAMPANHA
+       CRIAR ID DO CLIENTE
     ===================================================== */
 
-    function obterCampanhaDaPagina() {
+    function obterClientId(campanha) {
 
         /*
-         * Ordem de prioridade:
-         *
-         * 1. window.campanhaId
-         * 2. data-campanha-id do body
-         * 3. URL ?campanha=
-         * 4. URL ?campanha_id=
-         * 5. localStorage
+         * Primeiro tentamos usar o personagem.
          */
 
-        if (window.campanhaId) {
+        if (campanha?.characterId) {
 
-            return window.campanhaId;
-
-        }
-
-
-        const bodyId =
-            document.body?.dataset?.campanhaId;
-
-        if (bodyId) {
-
-            return bodyId;
+            return `character-${campanha.characterId}`;
 
         }
 
 
-        const params =
-            new URLSearchParams(
-                window.location.search
+        /*
+         * Depois tentamos o usuário.
+         */
+
+        if (campanha?.userId) {
+
+            return `user-${campanha.userId}`;
+
+        }
+
+
+        /*
+         * Último recurso:
+         * identificador persistente do navegador.
+         */
+
+        let id =
+            localStorage.getItem(
+                "rpg_mesa_client_id"
             );
 
+        if (!id) {
 
-        const urlId =
-            params.get("campanha") ||
-            params.get("campanha_id");
+            id =
+                "browser-" +
+                crypto.randomUUID();
+
+            localStorage.setItem(
+                "rpg_mesa_client_id",
+                id
+            );
+
+        }
+
+        return id;
+    }
 
 
-        if (urlId) {
+    /* =====================================================
+       PEGAR ROOM DA CAMPANHA
+    ===================================================== */
 
-            return urlId;
+    function obterRoom(campanha) {
 
+        if (!campanha?.campaignId) {
+
+            throw new Error(
+                "campaignId não encontrado."
+            );
+
+        }
+
+        return `rpg-mesa-${campanha.campaignId}`;
+    }
+
+
+    /* =====================================================
+       INICIAR
+    ===================================================== */
+
+    async function iniciarMesaOnline() {
+
+        log("Iniciando multiplayer...");
+
+
+        const campanha =
+            obterCampanha();
+
+
+        if (!campanha) {
+
+            console.warn(
+                "[MESA ONLINE] Nenhuma campanha encontrada."
+            );
+
+            return;
+        }
+
+
+        roomId =
+            obterRoom(campanha);
+
+
+        clientId =
+            obterClientId(campanha);
+
+
+        log("Room:", roomId);
+        log("Client ID:", clientId);
+
+
+        /*
+         * Cria conexão com Ably.
+         */
+
+        ably =
+            new Ably.Realtime({
+
+                key: ABLY_API_KEY,
+
+                clientId: clientId
+
+            });
+
+
+        /*
+         * Monitora conexão.
+         */
+
+        ably.connection.on(
+            (stateChange) => {
+
+                log(
+                    "Conexão:",
+                    stateChange.current
+                );
+
+                atualizarDiagnostico(
+                    stateChange.current
+                );
+
+            }
+        );
+
+
+        /*
+         * Aguarda conexão.
+         */
+
+        await ably.connection.once(
+            "connected"
+        );
+
+
+        log("ABLY CONECTADO");
+
+
+        /*
+         * Obtém o canal da campanha.
+         */
+
+        channel =
+            ably.channels.get(roomId);
+
+
+        /*
+         * Eventos de presença.
+         */
+
+        await channel.presence.subscribe(
+            "enter",
+            membro => {
+
+                log(
+                    "ENTROU:",
+                    membro.clientId
+                );
+
+                atualizarJogadoresOnline();
+
+            }
+        );
+
+
+        await channel.presence.subscribe(
+            "leave",
+            membro => {
+
+                log(
+                    "SAIU:",
+                    membro.clientId
+                );
+
+                atualizarJogadoresOnline();
+
+            }
+        );
+
+
+        /*
+         * Entra na presença da Mesa.
+         */
+
+        await channel.presence.enter({
+
+            campaignId:
+                campanha.campaignId,
+
+            characterId:
+                campanha.characterId ?? null,
+
+            slot:
+                campanha.slot ?? null,
+
+            master:
+                campanha.masterId ===
+                campanha.userId
+
+        });
+
+
+        log(
+            "ENTROU NA MESA ONLINE"
+        );
+
+
+        /*
+         * Atualiza lista inicial.
+         */
+
+        await atualizarJogadoresOnline();
+
+    }
+
+
+    /* =====================================================
+       LISTAR JOGADORES ONLINE
+    ===================================================== */
+
+    async function atualizarJogadoresOnline() {
+
+        if (!channel) {
+            return;
         }
 
 
         try {
 
-            return localStorage.getItem(
-                "campanhaId"
+            const membros =
+                await channel.presence.get();
+
+
+            log(
+                "Jogadores online:",
+                membros
             );
 
-        } catch {
-
-            return null;
-
-        }
-
-    }
-
-
-    /* =====================================================
-       USUÁRIO ATUAL
-    ===================================================== */
-
-    async function obterUsuarioAtual() {
-
-        const {
-            data,
-            error
-        } = await MesaOnline.supabase.auth.getUser();
-
-
-        if (error) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao obter usuário:",
-                error
-            );
-
-            return null;
-
-        }
-
-
-        return data?.user?.id || null;
-
-    }
-
-
-    /* =====================================================
-       ESTADO INICIAL
-    ===================================================== */
-
-    async function carregarEstadoInicial() {
-
-        /*
-         * A partir daqui mantemos a estrutura do estado
-         * independente da interface.
-         *
-         * As consultas específicas podem ser adaptadas
-         * às tabelas definitivas do projeto.
-         */
-
-
-        await carregarCampanha();
-
-        await carregarJogadores();
-
-        await carregarSlots();
-
-        await carregarPersonagens();
-
-
-        emitir(
-            "estado-inicial",
-            MesaOnline.estado
-        );
-
-    }
-
-
-    /* =====================================================
-       CAMPANHA
-    ===================================================== */
-
-    async function carregarCampanha() {
-
-        const {
-            data,
-            error
-        } = await MesaOnline.supabase
-            .from("campanhas")
-            .select("*")
-            .eq("id", MesaOnline.campanhaId)
-            .maybeSingle();
-
-
-        if (error) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao carregar campanha:",
-                error
-            );
-
-            throw error;
-
-        }
-
-
-        MesaOnline.estado.campanha = data;
-
-    }
-
-
-    /* =====================================================
-       JOGADORES
-    ===================================================== */
-
-    async function carregarJogadores() {
-
-        const {
-            data,
-            error
-        } = await MesaOnline.supabase
-            .from("campanha_usuarios")
-            .select("*")
-            .eq(
-                "campanha_id",
-                MesaOnline.campanhaId
-            );
-
-
-        if (error) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao carregar jogadores:",
-                error
-            );
 
             /*
-             * Não derruba toda a Mesa caso a tabela
-             * tenha nome diferente.
+             * Guarda globalmente para outros módulos.
              */
 
-            emitir("aviso", {
-                tipo: "JOGADORES_NAO_CARREGADOS",
-                erro
-            });
+            window.rpgMesaOnlinePlayers =
+                membros;
 
-            return;
+
+            /*
+             * Atualiza visual.
+             */
+
+            marcarJogadoresOnline(
+                membros
+            );
+
+
+            /*
+             * Diagnóstico.
+             */
+
+            const elemento =
+                document.querySelector(
+                    '[data-diagnostico="realtime"]'
+                );
+
+            if (elemento) {
+
+                elemento.textContent =
+                    `🟢 ${membros.length} online`;
+
+            }
+
+        } catch (erro) {
+
+            console.error(
+                "[MESA ONLINE] Erro ao obter presença:",
+                erro
+            );
 
         }
-
-
-        MesaOnline.estado.jogadores =
-            data || [];
 
     }
 
 
     /* =====================================================
-       SLOTS
+       MARCAR CARDS ONLINE
     ===================================================== */
 
-    async function carregarSlots() {
+    function marcarJogadoresOnline(
+        membros
+    ) {
 
-        const {
-            data,
-            error
-        } = await MesaOnline.supabase
-            .from("slots_personagem")
-            .select("*")
-            .eq(
-                "campanha_id",
-                MesaOnline.campanhaId
+        /*
+         * Primeiro limpamos apenas a nossa
+         * marcação visual.
+         *
+         * Não removemos classes usadas pelo mesa.js.
+         */
+
+        document
+            .querySelectorAll(
+                ".player-card"
             )
-            .order(
-                "numero",
-                {
-                    ascending: true
+            .forEach(card => {
+
+                card.removeAttribute(
+                    "data-online"
+                );
+
+            });
+
+
+        /*
+         * Para o primeiro teste:
+         * tentamos associar o slot enviado
+         * pela presença.
+         */
+
+        membros.forEach(
+            membro => {
+
+                const dados =
+                    membro.data || {};
+
+
+                if (
+                    dados.slot === null ||
+                    dados.slot === undefined
+                ) {
+                    return;
                 }
-            );
 
 
-        if (error) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao carregar slots:",
-                error
-            );
-
-            emitir("aviso", {
-                tipo: "SLOTS_NAO_CARREGADOS",
-                erro
-            });
-
-            return;
-
-        }
+                const card =
+                    document.querySelector(
+                        `.player-card[data-seat="${dados.slot}"]`
+                    );
 
 
-        MesaOnline.estado.slots =
-            data || [];
+                if (!card) {
+                    return;
+                }
 
 
-        identificarMeuSlot();
-
-    }
-
-
-    /* =====================================================
-       IDENTIFICAR SLOT DO USUÁRIO
-    ===================================================== */
-
-    function identificarMeuSlot() {
-
-        const slot =
-            MesaOnline.estado.slots.find(
-                item =>
-                    item.usuario_id ===
-                    MesaOnline.usuarioId
-            );
-
-
-        if (!slot) {
-
-            MesaOnline.slotId = null;
-
-            MesaOnline.personagemId = null;
-
-            return;
-
-        }
-
-
-        MesaOnline.slotId = slot.id;
-
-        MesaOnline.personagemId =
-            slot.personagem_id || null;
-
-    }
-
-
-    /* =====================================================
-       PERSONAGENS
-    ===================================================== */
-
-    async function carregarPersonagens() {
-
-        /*
-         * Carregamos apenas personagens relacionados
-         * à campanha.
-         */
-
-        const {
-            data,
-            error
-        } = await MesaOnline.supabase
-            .from("personagens")
-            .select("*")
-            .eq(
-                "campanha_id",
-                MesaOnline.campanhaId
-            );
-
-
-        if (error) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao carregar personagens:",
-                error
-            );
-
-            emitir("aviso", {
-                tipo: "PERSONAGENS_NAO_CARREGADOS",
-                erro
-            });
-
-            return;
-
-        }
-
-
-        MesaOnline.estado.personagens =
-            data || [];
-
-    }
-
-
-    /* =====================================================
-       REALTIME
-    ===================================================== */
-
-    function iniciarRealtime() {
-
-        if (MesaOnline.inscrito) {
-            return;
-        }
-
-
-        const canal =
-            MesaOnline.supabase
-                .channel(
-                    `mesa-${MesaOnline.campanhaId}`
-                );
-
-
-        /*
-         * -------------------------------------------------
-         * ALTERAÇÕES DE SLOTS
-         * -------------------------------------------------
-         */
-
-        canal.on(
-
-            "postgres_changes",
-
-            {
-                event: "*",
-
-                schema: "public",
-
-                table: "slots_personagem",
-
-                filter:
-                    `campanha_id=eq.${MesaOnline.campanhaId}`
-
-            },
-
-            payload => {
-
-                processarAlteracaoSlot(
-                    payload
+                card.setAttribute(
+                    "data-online",
+                    "true"
                 );
 
             }
-
         );
 
-
-        /*
-         * -------------------------------------------------
-         * ALTERAÇÕES DE PERSONAGENS
-         * -------------------------------------------------
-         */
-
-        canal.on(
-
-            "postgres_changes",
-
-            {
-                event: "*",
-
-                schema: "public",
-
-                table: "personagens",
-
-                filter:
-                    `campanha_id=eq.${MesaOnline.campanhaId}`
-
-            },
-
-            payload => {
-
-                processarAlteracaoPersonagem(
-                    payload
-                );
-
-            }
-
-        );
-
-
-        /*
-         * -------------------------------------------------
-         * ALTERAÇÕES DA CAMPANHA
-         * -------------------------------------------------
-         */
-
-        canal.on(
-
-            "postgres_changes",
-
-            {
-                event: "*",
-
-                schema: "public",
-
-                table: "campanhas",
-
-                filter:
-                    `id=eq.${MesaOnline.campanhaId}`
-
-            },
-
-            payload => {
-
-                processarAlteracaoCampanha(
-                    payload
-                );
-
-            }
-
-        );
-
-
-        /*
-         * -------------------------------------------------
-         * CONECTAR
-         * -------------------------------------------------
-         */
-
-        canal.subscribe(status => {
-
-            console.log(
-                "[MESA ONLINE] Realtime:",
-                status
-            );
-
-
-            if (status === "SUBSCRIBED") {
-
-                MesaOnline.inscrito = true;
-
-                emitir(
-                    "realtime-conectado"
-                );
-
-            }
-
-
-            if (
-                status === "CHANNEL_ERROR" ||
-                status === "TIMED_OUT"
-            ) {
-
-                emitir(
-                    "realtime-erro",
-                    status
-                );
-
-            }
-
-        });
-
-
-        MesaOnline.canais.push(canal);
-
     }
 
 
     /* =====================================================
-       PROCESSAR SLOT
+       DIAGNÓSTICO
     ===================================================== */
 
-    function processarAlteracaoSlot(
-        payload
+    function atualizarDiagnostico(
+        estado
     ) {
 
-        const novo =
-            payload.new;
-
-        const antigo =
-            payload.old;
-
-
-        if (payload.eventType === "INSERT") {
-
-            MesaOnline.estado.slots.push(
-                novo
+        const elemento =
+            document.querySelector(
+                '[data-diagnostico="realtime"]'
             );
 
+        if (!elemento) {
+            return;
         }
 
 
-        else if (
-            payload.eventType === "UPDATE"
-        ) {
+        const estadosOnline = [
+            "connected",
+            "attaching",
+            "attached"
+        ];
 
-            const index =
-                MesaOnline.estado.slots.findIndex(
-                    slot =>
-                        slot.id === novo.id
-                );
-
-
-            if (index !== -1) {
-
-                MesaOnline.estado.slots[index] =
-                    novo;
-
-            }
-
-            else {
-
-                MesaOnline.estado.slots.push(
-                    novo
-                );
-
-            }
-
-        }
-
-
-        else if (
-            payload.eventType === "DELETE"
-        ) {
-
-            MesaOnline.estado.slots =
-                MesaOnline.estado.slots.filter(
-                    slot =>
-                        slot.id !== antigo.id
-                );
-
-        }
-
-
-        identificarMeuSlot();
-
-
-        emitir(
-            "slot-alterado",
-            {
-                payload,
-                slots:
-                    MesaOnline.estado.slots
-            }
-        );
-
-    }
-
-
-    /* =====================================================
-       PROCESSAR PERSONAGEM
-    ===================================================== */
-
-    function processarAlteracaoPersonagem(
-        payload
-    ) {
-
-        const novo =
-            payload.new;
-
-        const antigo =
-            payload.old;
-
-
-        if (payload.eventType === "INSERT") {
-
-            MesaOnline.estado.personagens.push(
-                novo
-            );
-
-        }
-
-
-        else if (
-            payload.eventType === "UPDATE"
-        ) {
-
-            const index =
-                MesaOnline.estado.personagens.findIndex(
-                    personagem =>
-                        personagem.id === novo.id
-                );
-
-
-            if (index !== -1) {
-
-                MesaOnline.estado.personagens[index] =
-                    novo;
-
-            }
-
-            else {
-
-                MesaOnline.estado.personagens.push(
-                    novo
-                );
-
-            }
-
-        }
-
-
-        else if (
-            payload.eventType === "DELETE"
-        ) {
-
-            MesaOnline.estado.personagens =
-                MesaOnline.estado.personagens.filter(
-                    personagem =>
-                        personagem.id !== antigo.id
-                );
-
-        }
-
-
-        emitir(
-            "personagem-alterado",
-            {
-                payload,
-                personagens:
-                    MesaOnline.estado.personagens
-            }
-        );
-
-    }
-
-
-    /* =====================================================
-       PROCESSAR CAMPANHA
-    ===================================================== */
-
-    function processarAlteracaoCampanha(
-        payload
-    ) {
 
         if (
-            payload.eventType === "DELETE"
+            estadosOnline.includes(
+                estado
+            )
         ) {
 
-            MesaOnline.estado.campanha =
-                null;
+            elemento.textContent =
+                "🟢 Conectado";
+
+        } else {
+
+            elemento.textContent =
+                `🔴 ${estado}`;
 
         }
-
-        else {
-
-            MesaOnline.estado.campanha =
-                payload.new;
-
-        }
-
-
-        emitir(
-            "campanha-alterada",
-            payload
-        );
 
     }
 
 
     /* =====================================================
-       ATUALIZAR SLOT
+       API PÚBLICA
     ===================================================== */
 
-    MesaOnline.atualizarSlot = async function (
-        slotId,
-        dados
+    window.rpgMesaOnline = {
+
+        getChannel() {
+
+            return channel;
+
+        },
+
+        getPlayers() {
+
+            return (
+                window.rpgMesaOnlinePlayers ||
+                []
+            );
+
+        },
+
+        getRoomId() {
+
+            return roomId;
+
+        },
+
+        getClientId() {
+
+            return clientId;
+
+        },
+
+        async refresh() {
+
+            await atualizarJogadoresOnline();
+
+        }
+
+    };
+
+
+    /* =====================================================
+       INICIAR QUANDO A PÁGINA ESTIVER PRONTA
+    ===================================================== */
+
+    if (
+        document.readyState ===
+        "loading"
     ) {
 
-        if (!MesaOnline.supabase) {
-            throw new Error(
-                "Supabase não inicializado."
-            );
-        }
-
-
-        if (!MesaOnline.campanhaId) {
-            throw new Error(
-                "Campanha não identificada."
-            );
-        }
-
-
-        const {
-            data,
-            error
-        } = await MesaOnline.supabase
-            .from("slots_personagem")
-            .update(dados)
-            .eq("id", slotId)
-            .eq(
-                "campanha_id",
-                MesaOnline.campanhaId
-            )
-            .select()
-            .single();
-
-
-        if (error) {
-
-            console.error(
-                "[MESA ONLINE] Erro ao atualizar slot:",
-                error
-            );
-
-            emitir(
-                "erro-operacao",
-                error
-            );
-
-            throw error;
-
-        }
-
-
-        return data;
-
-    };
-
-
-    /* =====================================================
-       ATUALIZAR PERSONAGEM
-    ===================================================== */
-
-    MesaOnline.atualizarPersonagem =
-        async function (
-            personagemId,
-            dados
-        ) {
-
-            if (!MesaOnline.supabase) {
-
-                throw new Error(
-                    "Supabase não inicializado."
-                );
-
-            }
-
-
-            const {
-                data,
-                error
-            } =
-                await MesaOnline.supabase
-                    .from("personagens")
-                    .update(dados)
-                    .eq(
-                        "id",
-                        personagemId
-                    )
-                    .eq(
-                        "campanha_id",
-                        MesaOnline.campanhaId
-                    )
-                    .select()
-                    .single();
-
-
-            if (error) {
-
-                console.error(
-                    "[MESA ONLINE] Erro ao atualizar personagem:",
-                    error
-                );
-
-                emitir(
-                    "erro-operacao",
-                    error
-                );
-
-                throw error;
-
-            }
-
-
-            return data;
-
-        };
-
-
-    /* =====================================================
-       ATUALIZAR MEU PERSONAGEM
-    ===================================================== */
-
-    MesaOnline.atualizarMeuPersonagem =
-        async function (
-            dados
-        ) {
-
-            if (
-                !MesaOnline.personagemId
-            ) {
-
-                throw new Error(
-                    "Este jogador não possui personagem."
-                );
-
-            }
-
-
-            return MesaOnline.atualizarPersonagem(
-                MesaOnline.personagemId,
-                dados
-            );
-
-        };
-
-
-    /* =====================================================
-       ENVIAR ESTADO DE COMBATE
-    ===================================================== */
-
-    MesaOnline.enviarEstadoCombate =
-        async function (
-            dados
-        ) {
-
-            /*
-             * Esta função fica preparada para a tabela
-             * definitiva do sistema de combate.
-             *
-             * NÃO cria uma tabela automaticamente.
-             */
-
-            emitir(
-                "combate-enviado",
-                dados
-            );
-
-
-            return dados;
-
-        };
-
-
-    /* =====================================================
-       RECARREGAR ESTADO
-    ===================================================== */
-
-    MesaOnline.recarregar = async function () {
-
-        await carregarEstadoInicial();
-
-        emitir(
-            "estado-recarregado",
-            MesaOnline.estado
+        document.addEventListener(
+            "DOMContentLoaded",
+            iniciarMesaOnline
         );
 
+    } else {
 
-        return MesaOnline.estado;
+        iniciarMesaOnline();
 
-    };
-
-
-    /* =====================================================
-       GETTERS
-    ===================================================== */
-
-    MesaOnline.getEstado = function () {
-
-        return MesaOnline.estado;
-
-    };
-
-
-    MesaOnline.getCampanhaId = function () {
-
-        return MesaOnline.campanhaId;
-
-    };
-
-
-    MesaOnline.getUsuarioId = function () {
-
-        return MesaOnline.usuarioId;
-
-    };
-
-
-    MesaOnline.getPersonagemId = function () {
-
-        return MesaOnline.personagemId;
-
-    };
-
-
-    MesaOnline.getSlotId = function () {
-
-        return MesaOnline.slotId;
-
-    };
-
-
-    /* =====================================================
-       DESCONECTAR
-    ===================================================== */
-
-    MesaOnline.desconectar = async function () {
-
-        MesaOnline.canais.forEach(
-            canal => {
-
-                try {
-
-                    MesaOnline.supabase.removeChannel(
-                        canal
-                    );
-
-                } catch (erro) {
-
-                    console.warn(
-                        "[MESA ONLINE] Erro ao remover canal:",
-                        erro
-                    );
-
-                }
-
-            }
-        );
-
-
-        MesaOnline.canais = [];
-
-        MesaOnline.inscrito = false;
-
-        MesaOnline.inicializado = false;
-
-
-        emitir(
-            "desconectado"
-        );
-
-    };
-
-
-    /* =====================================================
-       EXPOR GLOBALMENTE
-    ===================================================== */
-
-    window.MesaOnline = MesaOnline;
-
-
-    console.log(
-        "[MESA ONLINE] módulo carregado."
-    );
+    }
 
 
 })();
