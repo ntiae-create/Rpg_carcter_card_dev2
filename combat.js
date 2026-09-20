@@ -14,7 +14,7 @@ const CombatModule = (() => {
         Assassino: {
             name: "Ponto Cego",
             description:
-                "Ataques realizados pelas costas causam dano adicional equivalente a 10% do HP máximo do próprio Assassino."
+                "Ataques realizados pelas costas causam dano adicional equivalente a 10% do HP máximo do próprio Assassino. Ao acertar, ganha marca do assassino por 2 turno. marca do assassino: entra em modo furtivo"
         },
 
         Berserk: {
@@ -26,7 +26,7 @@ const CombatModule = (() => {
         Guerreiro: {
             name: "Postura de Combate",
             description:
-                "Ao causar ou receber dano, o Guerreiro ganha 1 Stack de Postura. Cada Stack concede +2% de Defesa e +1% de Dano. Máximo de 10 Stacks: +20% Defesa e +10% Dano."
+                "Ao causar ou receber dano, o Guerreiro ganha 1 Stack de Postura. Cada Stack concede +2% de Defesa e +1% de Dano. Máximo de 10 Stacks: +20% Defesa e +10% Dano. Ao acertar um contra-ataque, ele consegue +1 stack"
         },
 
         Tank: {
@@ -44,19 +44,19 @@ const CombatModule = (() => {
         Mago: {
             name: "Sete Grimórios",
             description:
-                "O Mago possui 7 Grimórios. Cada Grimório utilizado concede +2% de ATK Mágico. Máximo de 7 Grimórios = +14% de ATK Mágico. Ao utilizar os sete, causa Confusão em todos os inimigos por 2 turnos."
+                "O Mago possui 7 Grimórios. Cada Grimório utilizado concede +2% de ATK Mágico. Máximo de 7 Grimórios = +14% de ATK Mágico. Ao utilizar os sete, causa Confusão em todos os inimigos por 2 turnos. No final, ao conseguir usar todos os grimorios, sua mana é recuperada em 100%"
         },
 
         Bufão: {
             name: "Carta do Louco",
             description:
-                "Ao entrar em batalha, o Bufão recebe 1 Joker. Depois, recebe mais 1 Joker a cada dois rounds, no 3º e 5º turno. Cada Joker concede +5% de AGI. Máximo de 3 Jokers = +15% de AGI. Ao conseguir os 3 Jokers, consome os 3 e converte toda a AGI acumulada pelo Bufão em ATK. O ataque possui acerto garantido e recebe +5% de Chance de Crítico."
+                "Ao entrar em batalha, o Bufão recebe 1 Joker. Depois, recebe mais 1 Joker a cada dois rounds, no 3º,5º,7° e 9° turno. Cada Joker concede +5% de AGI. Máximo de 3 Jokers = +25% de AGI. Ao conseguir os 3 Jokers, consome os 3 e converte toda a AGI acumulada pelo Bufão em ATK. O ataque possui acerto garantido e recebe +10% de Chance de Crítico."
         },
 
         Bufao: {
             name: "Carta do Louco",
             description:
-                "Ao entrar em batalha, o Bufão recebe 1 Joker. Depois, recebe mais 1 Joker a cada dois rounds, no 3º e 5º turno. Cada Joker concede +5% de AGI. Máximo de 3 Jokers = +15% de AGI. Ao conseguir os 3 Jokers, consome os 3 e converte toda a AGI acumulada pelo Bufão em ATK. O ataque possui acerto garantido e recebe +5% de Chance de Crítico."
+                "Ao entrar em batalha, o Bufão recebe 1 Joker. Depois, recebe mais 1 Joker a cada dois rounds, no 3º,5º,7° e 9° turno. Cada Joker concede +5% de AGI. Máximo de 3 Jokers = +25% de AGI. Ao conseguir os 3 Jokers, consome os 3 e converte toda a AGI acumulada pelo Bufão em ATK. O ataque possui acerto garantido e recebe +10% de Chance de Crítico."
         },
 
         Alquimista: {
@@ -68,7 +68,7 @@ const CombatModule = (() => {
         Artifice: {
             name: "Engenharia de Combate",
             description:
-                "Cada tipo diferente de engenhoca utilizada concede 1 Stack de Engenharia. Repetir a mesma engenhoca não gera Stack. Cada Stack concede +2% de Dano das engenhocas e +1% de Defesa. Máximo de 10 Stacks. Ao atingir o máximo, a próxima engenhoca utilizada recebe +50% de potência e consome os Stacks acumulados."
+                "Cada tipo diferente de engenhoca utilizada concede 1 Stack de Engenharia. Repetir a mesma engenhoca não gera Stack. Cada Stack concede +2% de Dano das engenhocas e +1% de Defesa. Máximo de 10 Stacks. Ao atingir o máximo, a próxima engenhoca utilizada recebe +50% de potência (equivalente ao hp máximo) e consome os Stacks acumulados."
         },
 
         Arqueiro: {
@@ -140,7 +140,9 @@ const CombatModule = (() => {
         Duelista: {
             name: "Ritmo do Duelo",
             description:
-                "O Duelista mantém seu ritmo de combate através da sequência de ataques e confrontos individuais. A mecânica detalhada do Ritmo do Duelo será aplicada pelo sistema de combate."
+                "nome: 
+
+ "A cada acerto, o Duelista recebe 1 Stack de Duelo. Ao alcançar 4 Stacks, ele leva o inimigo atingido para seu Domínio, onde o combate ocorre separadamente em um confronto individual. Dentro do Domínio, o Duelista pode criar 1 Clone com 50% de seus atributos reduzindo 50% dos seus proprios, permitindo combates de 2x1, 2x2 ou 3x1. Se o Original ou o Clone for derrotado, o sobrevivente assume a condição de Original e recupera seus atributos normais. Ao derrotar o inimigo no Domínio, os Stacks são reiniciados e, no próximo acionamento, o Duelista pode levar até 2 personagens atingidos por seu golpe. Caso perca o duelo, sua EST é reduzida a 0 e ele fica fora de combate, tornando-se vulnerável aos demais inimigos. O Duelista não possui Ataque Mágico, e todas as suas habilidades utilizam EST, salvo ataques mágicos obtidos através de combos."
         },
 
         /* -------------------------------------------------
