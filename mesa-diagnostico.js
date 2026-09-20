@@ -2258,7 +2258,7 @@
 
         const painel =
             document.getElementById(
-                "diagnostico-panel"
+                "mesa-diagnostico"
             );
 
         if (!painel) {
@@ -2274,6 +2274,9 @@
 
         Diagnostico.aberto =
             true;
+
+        painel.hidden =
+            false;
 
         painel.style.display =
             "flex";
@@ -2311,13 +2314,16 @@
 
         const painel =
             document.getElementById(
-                "diagnostico-panel"
+                "mesa-diagnostico"
             );
 
         Diagnostico.aberto =
             false;
 
         if (painel) {
+
+            painel.hidden =
+                true;
 
             painel.style.display =
                 "none";
