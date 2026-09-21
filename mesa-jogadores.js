@@ -74,7 +74,8 @@ let personagensMesaRealtimeAtivo = false;
 ============================================================ */
 
 function sincronizarDadosRealtime(
-    personagens = []
+    personagens = [],
+    emitirEvento = true
 ) {
 
     personagensMesaRealtime =
@@ -130,22 +131,36 @@ function sincronizarDadosRealtime(
 
     /*
         Notifica outros sistemas da Mesa.
+
+        IMPORTANTE:
+
+        Quando esta função for chamada pelo próprio
+        evento "mesa:jogadoresAtualizados", não
+        emitimos o evento novamente.
+
+        Isso evita um loop infinito.
     */
 
-    document.dispatchEvent(
-        new CustomEvent(
-            "mesa:jogadoresAtualizados",
-            {
-                detail: {
+    if (
+        emitirEvento
+    ) {
 
-                    personagens:
-                        personagensMesaRealtime
+        document.dispatchEvent(
+            new CustomEvent(
+                "mesa:jogadoresAtualizados",
+                {
+                    detail: {
+
+                        personagens:
+                            personagensMesaRealtime
+
+                    }
 
                 }
+            )
+        );
 
-            }
-        )
-    );
+    }
 
 }
 
@@ -199,6 +214,22 @@ async function inicializarMesaJogadores() {
        REALTIME — PERSONAGENS ATUALIZADOS
     ======================================================== */
 
+    /*
+        ESTE É O EVENTO OFICIAL ENVIADO PELO MESA.JS.
+
+        O mesa.js já consultou o Supabase e está
+        entregando a lista pronta.
+
+        Portanto:
+
+        - recebemos os personagens;
+        - atualizamos o cache;
+        - NÃO emitimos o mesmo evento novamente.
+
+        Isso elimina o loop:
+        mesa.js → mesa-jogadores → mesa.js → ...
+    */
+
     document.addEventListener(
         "mesa:jogadoresAtualizados",
         evento => {
@@ -214,7 +245,8 @@ async function inicializarMesaJogadores() {
             ) {
 
                 sincronizarDadosRealtime(
-                    personagens
+                    personagens,
+                    false
                 );
 
             }
@@ -224,40 +256,11 @@ async function inicializarMesaJogadores() {
 
 
     /* ========================================================
-       MESA.JS — PERSONAGENS CARREGADOS
+       EVENTO ESPECÍFICO DE REALTIME
     ======================================================== */
 
     document.addEventListener(
         "mesa:jogadores:realtime",
-        evento => {
-
-            const personagens =
-                evento.detail?.personagens;
-
-
-            if (
-                Array.isArray(
-                    personagens
-                )
-            ) {
-
-                sincronizarDadosRealtime(
-                    personagens
-                );
-
-            }
-
-        }
-    );
-
-
-    /*
-        Evento enviado pelo mesa.js
-        depois que a campanha é atualizada.
-    */
-
-    document.addEventListener(
-        "mesa:jogadoresAtualizados",
         evento => {
 
             const personagens =
