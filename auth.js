@@ -11,24 +11,41 @@
     // ==========================================
 
     window.rpgAuth = {
+
         user: null,
         session: null,
 
         // Campanha atualmente ativa.
-        // IMPORTANTE:
-        // Nunca escolher automaticamente a primeira campanha.
+        // Nunca escolher automaticamente
+        // a primeira campanha.
         campaign: null,
 
-        // Todas as campanhas que pertencem
-        // ou estão vinculadas ao usuário.
+        // Todas as campanhas vinculadas
+        // ao usuário.
         campaigns: [],
 
-        // Verdadeiro somente quando a campanha
-        // ativa pertence ao usuário como mestre.
+        // Verdadeiro somente quando o usuário
+        // logado é o mestre da campanha ativa.
         isMaster: false,
 
+        // Todos os membros da campanha ativa.
         campaignMembers: [],
+
+        // TODOS os personagens da campanha ativa.
+        //
+        // IMPORTANTE:
+        // Este array NÃO representa apenas
+        // o personagem do usuário logado.
         campaignCharacters: [],
+
+        // Personagem pertencente ao usuário
+        // atualmente autenticado.
+        //
+        // Pode ser null.
+        //
+        // Isso é especialmente importante para
+        // o Mestre, que pode não possuir personagem.
+        currentCharacter: null,
 
         profile: null
     };
@@ -205,6 +222,72 @@
 
 
     // ==========================================
+    // ENCONTRAR PERSONAGEM DO USUÁRIO
+    // ==========================================
+    //
+    // IMPORTANTE:
+    //
+    // campaignCharacters contém TODOS os
+    // personagens da campanha.
+    //
+    // currentCharacter contém SOMENTE o
+    // personagem pertencente ao usuário logado.
+    //
+    // O Mestre pode perfeitamente ter:
+    //
+    // currentCharacter = null
+    //
+    // enquanto:
+    //
+    // campaignCharacters = [jogadores...]
+    //
+    // Isso NÃO significa que a campanha
+    // esteja sem personagens.
+    // ==========================================
+
+    function atualizarPersonagemAtual() {
+
+        const usuario =
+            window.rpgAuth.user;
+
+        const personagens =
+            Array.isArray(
+                window.rpgAuth.campaignCharacters
+            )
+                ? window.rpgAuth.campaignCharacters
+                : [];
+
+
+        if (!usuario) {
+
+            window.rpgAuth.currentCharacter =
+                null;
+
+            return null;
+
+        }
+
+
+        const personagem =
+            personagens.find(
+                character =>
+                    character &&
+                    character.user_id &&
+                    String(character.user_id) ===
+                    String(usuario.id)
+            ) || null;
+
+
+        window.rpgAuth.currentCharacter =
+            personagem;
+
+
+        return personagem;
+
+    }
+
+
+    // ==========================================
     // ATUALIZAR STATUS DE MESTRE
     // ==========================================
 
@@ -243,21 +326,6 @@
             usuarioId === mestreId;
 
 
-        console.log(
-            "🎲 RPG AUTH — Verificação de Mestre:",
-            {
-                usuarioId,
-                mestreId,
-                campanha:
-                    campanha.name ||
-                    campanha.nome ||
-                    campanha.id,
-                isMaster:
-                    window.rpgAuth.isMaster
-            }
-        );
-
-
         return window.rpgAuth.isMaster;
 
     }
@@ -265,13 +333,6 @@
 
     // ==========================================
     // SINCRONIZAR CAMPANHA ATIVA
-    // ==========================================
-    //
-    // Esta função é usada pelo campaign.js.
-    //
-    // Quando campaign.js define uma campanha,
-    // o auth.js recebe essa campanha e recalcula
-    // imediatamente se o usuário é o mestre.
     // ==========================================
 
     async function sincronizarCampanhaAtiva(
@@ -292,7 +353,11 @@
             window.rpgAuth.campaignCharacters =
                 [];
 
+            window.rpgAuth.currentCharacter =
+                null;
+
             return false;
+
         }
 
 
@@ -315,14 +380,6 @@
 
         else {
 
-            /*
-             * A campanha pode ter acabado de ser
-             * criada ou carregada pelo campaign.js.
-             *
-             * Nesse caso preservamos os dados
-             * recebidos, desde que exista ID.
-             */
-
             window.rpgAuth.campaign =
                 campanha;
 
@@ -332,18 +389,8 @@
         atualizarStatusMestre();
 
 
-        /*
-         * Carrega os membros/personagens somente
-         * depois de definir a campanha ativa.
-         */
-
         await carregarDadosCampanha();
 
-
-        /*
-         * Informa ao restante do sistema que o
-         * contexto de autenticação foi atualizado.
-         */
 
         try {
 
@@ -356,7 +403,15 @@
                                 window.rpgAuth.campaign,
 
                             isMaster:
-                                window.rpgAuth.isMaster
+                                window.rpgAuth.isMaster,
+
+                            personagens:
+                                window.rpgAuth
+                                    .campaignCharacters,
+
+                            personagemAtual:
+                                window.rpgAuth
+                                    .currentCharacter
                         }
                     }
                 )
@@ -366,10 +421,8 @@
 
         catch (error) {
 
-            console.warn(
-                "⚠️ Não foi possível disparar evento de sincronização:",
-                error
-            );
+            // Falha no evento não deve impedir
+            // o restante da autenticação.
 
         }
 
@@ -400,6 +453,9 @@
         window.rpgAuth.campaignCharacters =
             [];
 
+        window.rpgAuth.currentCharacter =
+            null;
+
     }
 
 
@@ -412,6 +468,7 @@
         if (!window.supabaseClient) {
 
             return false;
+
         }
 
 
@@ -421,6 +478,7 @@
                 null;
 
             return false;
+
         }
 
 
@@ -444,15 +502,11 @@
 
             if (error) {
 
-                console.error(
-                    "❌ ERRO AO CARREGAR PERFIL:",
-                    error
-                );
-
                 window.rpgAuth.profile =
                     null;
 
                 return false;
+
             }
 
 
@@ -466,15 +520,11 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO CARREGAR PERFIL:",
-                error
-            );
-
             window.rpgAuth.profile =
                 null;
 
             return false;
+
         }
 
     }
@@ -492,12 +542,14 @@
         if (!window.supabaseClient) {
 
             return false;
+
         }
 
 
         if (!user || !username) {
 
             return false;
+
         }
 
 
@@ -526,19 +578,13 @@
 
             if (error) {
 
-                console.error(
-                    "❌ ERRO AO CRIAR PERFIL:",
-                    error
-                );
-
-
                 mostrarDiagnostico(
                     `❌ Não foi possível criar o perfil: ${error.message}`,
                     "erro"
                 );
 
-
                 return false;
+
             }
 
 
@@ -552,13 +598,8 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO CRIAR PERFIL:",
-                error
-            );
-
-
             return false;
+
         }
 
     }
@@ -579,6 +620,7 @@
             );
 
             return false;
+
         }
 
 
@@ -593,6 +635,7 @@
             );
 
             return false;
+
         }
 
 
@@ -620,12 +663,6 @@
 
             if (error) {
 
-                console.error(
-                    "❌ ERRO AO REENVIAR CONFIRMAÇÃO:",
-                    error
-                );
-
-
                 mostrarMensagem(
                     `Não foi possível reenviar: ${error.message}`
                 );
@@ -638,6 +675,7 @@
 
 
                 return false;
+
             }
 
 
@@ -659,18 +697,13 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO REENVIAR CONFIRMAÇÃO:",
-                error
-            );
-
-
             mostrarMensagem(
                 "Não foi possível reenviar o e-mail."
             );
 
 
             return false;
+
         }
 
     }
@@ -738,7 +771,6 @@
                 botao.disabled =
                     true;
 
-
                 botao.style.opacity =
                     "0.6";
 
@@ -750,7 +782,6 @@
 
                 botao.disabled =
                     false;
-
 
                 botao.style.opacity =
                     "1";
@@ -777,6 +808,7 @@
         if (!window.supabaseClient) {
 
             return false;
+
         }
 
 
@@ -786,6 +818,7 @@
                 [];
 
             return false;
+
         }
 
 
@@ -808,22 +841,16 @@
 
             if (error) {
 
-                console.error(
-                    "❌ ERRO AO CONSULTAR CAMPAIGN_MEMBERS:",
-                    error
-                );
-
+                window.rpgAuth.campaignMembers =
+                    [];
 
                 mostrarDiagnostico(
                     `❌ Erro ao carregar jogadores: ${error.message}`,
                     "erro"
                 );
 
-
-                window.rpgAuth.campaignMembers =
-                    [];
-
                 return false;
+
             }
 
 
@@ -837,16 +864,11 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO CARREGAR MEMBROS:",
-                error
-            );
-
-
             window.rpgAuth.campaignMembers =
                 [];
 
             return false;
+
         }
 
     }
@@ -854,6 +876,21 @@
 
     // ==========================================
     // CARREGAR PERSONAGENS DA CAMPANHA
+    // ==========================================
+    //
+    // ATENÇÃO:
+    //
+    // Esta consulta é POR CAMPANHA.
+    //
+    // NÃO fazemos:
+    //
+    // .eq("user_id", usuario.id)
+    //
+    // porque isso faria o Mestre enxergar
+    // somente personagens dele.
+    //
+    // A Mesa precisa receber todos os
+    // personagens que pertencem à campanha.
     // ==========================================
 
     async function carregarPersonagensCampanha(
@@ -863,6 +900,7 @@
         if (!window.supabaseClient) {
 
             return false;
+
         }
 
 
@@ -871,17 +909,15 @@
             window.rpgAuth.campaignCharacters =
                 [];
 
+            window.rpgAuth.currentCharacter =
+                null;
+
             return false;
+
         }
 
 
         try {
-
-            console.log(
-                "🔎 RPG AUTH — Buscando personagens da campanha:",
-                campaignId
-            );
-
 
             const {
                 data,
@@ -898,56 +934,46 @@
 
             if (error) {
 
-                console.error(
-                    "❌ ERRO AO CONSULTAR CHARACTERS:",
-                    error
-                );
+                window.rpgAuth.campaignCharacters =
+                    [];
+
+                window.rpgAuth.currentCharacter =
+                    null;
 
 
                 mostrarDiagnostico(
-                    `❌ Erro ao carregar personagens: ${error.message}`,
+                    `❌ Erro ao carregar personagens da campanha: ${error.message}`,
                     "erro"
                 );
 
 
-                window.rpgAuth.campaignCharacters =
-                    [];
-
                 return false;
+
             }
+
+
+            const personagens =
+                Array.isArray(data)
+                    ? data
+                    : [];
 
 
             window.rpgAuth.campaignCharacters =
-                data || [];
+                personagens;
 
 
-            console.log(
-                "✅ RPG AUTH — Personagens encontrados:",
-                window.rpgAuth.campaignCharacters
-            );
+            /*
+             * Agora, separadamente, descobrimos
+             * se o usuário atual possui um
+             * personagem dentro dessa campanha.
+             *
+             * Se for o Mestre e não possuir,
+             * currentCharacter simplesmente fica null.
+             *
+             * Isso NÃO altera campaignCharacters.
+             */
 
-
-            console.log(
-                "📊 RPG AUTH — Quantidade de personagens:",
-                window.rpgAuth.campaignCharacters.length
-            );
-
-
-            if (
-                window.rpgAuth.campaignCharacters.length === 0
-            ) {
-
-                console.warn(
-                    "⚠️ Nenhum personagem encontrado para esta conta/campanha.",
-                    {
-                        campaignId,
-                        userId:
-                            window.rpgAuth.user?.id ||
-                            null
-                    }
-                );
-
-            }
+            atualizarPersonagemAtual();
 
 
             return true;
@@ -956,14 +982,11 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO CARREGAR PERSONAGENS:",
-                error
-            );
-
-
             window.rpgAuth.campaignCharacters =
                 [];
+
+            window.rpgAuth.currentCharacter =
+                null;
 
 
             mostrarDiagnostico(
@@ -973,6 +996,7 @@
 
 
             return false;
+
         }
 
     }
@@ -994,7 +1018,11 @@
             window.rpgAuth.campaignCharacters =
                 [];
 
+            window.rpgAuth.currentCharacter =
+                null;
+
             return false;
+
         }
 
 
@@ -1010,22 +1038,13 @@
             window.rpgAuth.campaignCharacters =
                 [];
 
+            window.rpgAuth.currentCharacter =
+                null;
+
             return false;
+
         }
 
-
-        /*
-         * Membros e personagens são carregados
-         * separadamente.
-         *
-         * O carregamento de characters NÃO depende
-         * do carregamento de campaign_members.
-         *
-         * Isso é importante porque o usuário pode
-         * possuir permissão para visualizar os
-         * personagens mesmo que a consulta de
-         * campaign_members falhe.
-         */
 
         const membrosCarregados =
             await carregarMembrosCampanha(
@@ -1040,18 +1059,12 @@
 
 
         /*
-         * Consideramos o carregamento concluído
-         * quando pelo menos uma das duas consultas
-         * foi executada com sucesso.
-         *
-         * Principalmente:
-         *
-         * personagensCarregados
-         *
-         * não depende mais de:
-         *
-         * membrosCarregados
+         * O personagem atual é derivado
+         * DEPOIS da lista completa.
          */
+
+        atualizarPersonagemAtual();
+
 
         return (
             membrosCarregados ||
@@ -1077,12 +1090,14 @@
             );
 
             return false;
+
         }
 
 
         if (!user) {
 
             return false;
+
         }
 
 
@@ -1109,19 +1124,13 @@
 
             if (erroMestre) {
 
-                console.error(
-                    "❌ ERRO AO CONSULTAR CAMPANHAS DO MESTRE:",
-                    erroMestre
-                );
-
-
                 mostrarDiagnostico(
                     `❌ Erro ao consultar campanhas: ${erroMestre.message}`,
                     "erro"
                 );
 
-
                 return false;
+
             }
 
 
@@ -1146,19 +1155,13 @@
 
             if (erroParticipacoes) {
 
-                console.error(
-                    "❌ ERRO AO CONSULTAR PARTICIPAÇÕES:",
-                    erroParticipacoes
-                );
-
-
                 mostrarDiagnostico(
                     `❌ Erro ao consultar participações: ${erroParticipacoes.message}`,
                     "erro"
                 );
 
-
                 return false;
+
             }
 
 
@@ -1203,19 +1206,13 @@
 
                 if (error) {
 
-                    console.error(
-                        "❌ ERRO AO CONSULTAR CAMPANHAS DOS MEMBROS:",
-                        error
-                    );
-
-
                     mostrarDiagnostico(
                         `❌ Erro ao consultar campanhas: ${error.message}`,
                         "erro"
                     );
 
-
                     return false;
+
                 }
 
 
@@ -1258,6 +1255,7 @@
                 ) {
 
                     continue;
+
                 }
 
 
@@ -1274,6 +1272,7 @@
                 ) {
 
                     continue;
+
                 }
 
 
@@ -1289,13 +1288,6 @@
             }
 
 
-            /*
-             * IMPORTANTE:
-             *
-             * Aqui armazenamos todas as campanhas,
-             * mas NÃO ativamos nenhuma.
-             */
-
             window.rpgAuth.campaigns =
                 campanhasUnicas;
 
@@ -1308,17 +1300,20 @@
                 window.rpgAuth.campaigns.length === 0
             ) {
 
-                limparDadosCampanha();
+                window.rpgAuth.campaign =
+                    null;
 
+                window.rpgAuth.isMaster =
+                    false;
 
-                /*
-                 * limparDadosCampanha também limpa
-                 * campaigns, então restauramos o
-                 * array vazio explicitamente.
-                 */
-
-                window.rpgAuth.campaigns =
+                window.rpgAuth.campaignMembers =
                     [];
+
+                window.rpgAuth.campaignCharacters =
+                    [];
+
+                window.rpgAuth.currentCharacter =
+                    null;
 
 
                 mostrarDiagnostico(
@@ -1328,11 +1323,12 @@
 
 
                 return true;
+
             }
 
 
             // ==================================
-            // RECUPERAR CAMPANHA QUE JÁ ESTAVA ATIVA
+            // RECUPERAR CAMPANHA ATIVA
             // ==================================
 
             let campanhaAtiva =
@@ -1355,11 +1351,6 @@
                 }
 
                 catch (error) {
-
-                    console.warn(
-                        "⚠️ Não foi possível obter campanha ativa pelo campaign.js:",
-                        error
-                    );
 
                     campanhaAtiva =
                         null;
@@ -1401,11 +1392,6 @@
 
                 else {
 
-                    /*
-                     * A campanha salva anteriormente
-                     * não pertence mais ao usuário.
-                     */
-
                     window.rpgAuth.campaign =
                         null;
 
@@ -1414,12 +1400,6 @@
             }
 
             else {
-
-                /*
-                 * NÃO EXISTE campanha ativa.
-                 *
-                 * Isso é intencional.
-                 */
 
                 window.rpgAuth.campaign =
                     null;
@@ -1435,7 +1415,7 @@
 
 
             // ==================================
-            // CARREGAR DADOS DA CAMPANHA ATIVA
+            // CARREGAR CAMPANHA ATIVA
             // ==================================
 
             if (
@@ -1453,6 +1433,9 @@
 
                 window.rpgAuth.campaignCharacters =
                     [];
+
+                window.rpgAuth.currentCharacter =
+                    null;
 
             }
 
@@ -1488,12 +1471,6 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO CARREGAR CAMPANHAS:",
-                error
-            );
-
-
             mostrarDiagnostico(
                 `⚠️ Login realizado, mas houve um problema ao carregar a campanha: ${error.message}`,
                 "aviso"
@@ -1501,6 +1478,7 @@
 
 
             return false;
+
         }
 
     }
@@ -1530,6 +1508,7 @@
                 null;
 
             return;
+
         }
 
 
@@ -1543,13 +1522,10 @@
         );
 
 
-        /*
-         * Garantia adicional:
-         * se já existir campanha ativa,
-         * recalculamos o status do mestre.
-         */
-
         atualizarStatusMestre();
+
+
+        atualizarPersonagemAtual();
 
     }
 
@@ -1570,6 +1546,7 @@
             );
 
             return false;
+
         }
 
 
@@ -1580,6 +1557,7 @@
             );
 
             return false;
+
         }
 
 
@@ -1626,16 +1604,6 @@
 
             if (error) {
 
-                console.error(
-                    "Erro de autenticação:",
-                    error
-                );
-
-
-                // ==============================
-                // E-MAIL NÃO CONFIRMADO
-                // ==============================
-
                 if (
                     error.code ===
                     "email_not_confirmed" ||
@@ -1668,10 +1636,6 @@
                 }
 
 
-                // ==============================
-                // CREDENCIAIS INVÁLIDAS
-                // ==============================
-
                 if (
                     error.code ===
                     "invalid_credentials"
@@ -1693,10 +1657,6 @@
                 }
 
 
-                // ==============================
-                // OUTROS ERROS
-                // ==============================
-
                 mostrarMensagem(
                     "Não foi possível entrar."
                 );
@@ -1709,13 +1669,8 @@
 
 
                 return false;
+
             }
-
-
-            console.log(
-                "Usuário autenticado:",
-                data.user
-            );
 
 
             await atualizarEstadoSessao(
@@ -1735,12 +1690,6 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO NO LOGIN:",
-                error
-            );
-
-
             mostrarMensagem(
                 "Não foi possível entrar."
             );
@@ -1753,6 +1702,7 @@
 
 
             return false;
+
         }
 
     }
@@ -1775,6 +1725,7 @@
             );
 
             return false;
+
         }
 
 
@@ -1796,6 +1747,7 @@
             );
 
             return false;
+
         }
 
 
@@ -1808,6 +1760,7 @@
             );
 
             return false;
+
         }
 
 
@@ -1820,6 +1773,7 @@
             );
 
             return false;
+
         }
 
 
@@ -1859,12 +1813,6 @@
 
             if (error) {
 
-                console.error(
-                    "❌ ERRO AO CRIAR CONTA:",
-                    error
-                );
-
-
                 mostrarMensagem(
                     `Não foi possível criar a conta: ${error.message}`
                 );
@@ -1877,13 +1825,8 @@
 
 
                 return false;
+
             }
-
-
-            console.log(
-                "✅ Conta criada:",
-                data.user
-            );
 
 
             if (
@@ -1937,18 +1880,13 @@
 
         catch (error) {
 
-            console.error(
-                "❌ EXCEÇÃO AO CRIAR CONTA:",
-                error
-            );
-
-
             mostrarMensagem(
                 `Erro ao criar conta: ${error.message}`
             );
 
 
             return false;
+
         }
 
     }
@@ -1970,11 +1908,6 @@
         reenviarConfirmacaoEmail;
 
 
-    /*
-     * Disponibiliza a sincronização para
-     * campaign.js.
-     */
-
     window.sincronizarCampanhaAuth =
         sincronizarCampanhaAtiva;
 
@@ -1992,6 +1925,7 @@
         ) {
 
             return;
+
         }
 
 
@@ -2268,10 +2202,6 @@
         );
 
 
-        // ==================================
-        // ELEMENTOS DE LOGIN
-        // ==================================
-
         const botaoLogin =
             document.getElementById(
                 "auth-login-button"
@@ -2289,10 +2219,6 @@
                 "auth-password"
             );
 
-
-        // ==================================
-        // ELEMENTOS DE CADASTRO
-        // ==================================
 
         const username =
             document.getElementById(
@@ -2348,10 +2274,6 @@
             );
 
 
-        // ==================================
-        // ENTRAR
-        // ==================================
-
         botaoLogin.addEventListener(
             "click",
             async function () {
@@ -2389,10 +2311,6 @@
         );
 
 
-        // ==================================
-        // MOSTRAR CADASTRO
-        // ==================================
-
         botaoMostrarCadastro.addEventListener(
             "click",
             function () {
@@ -2413,10 +2331,6 @@
         );
 
 
-        // ==================================
-        // VOLTAR PARA LOGIN
-        // ==================================
-
         botaoVoltarLogin.addEventListener(
             "click",
             function () {
@@ -2436,10 +2350,6 @@
             }
         );
 
-
-        // ==================================
-        // CRIAR CONTA
-        // ==================================
 
         botaoCriarConta.addEventListener(
             "click",
@@ -2514,8 +2424,8 @@
                 "erro"
             );
 
-
             return;
+
         }
 
 
@@ -2529,12 +2439,6 @@
 
         if (error) {
 
-            console.error(
-                "Erro ao recuperar sessão:",
-                error
-            );
-
-
             mostrarDiagnostico(
                 `❌ Erro ao recuperar sessão: ${error.message}`,
                 "erro"
@@ -2545,6 +2449,7 @@
 
 
             return;
+
         }
 
 
@@ -2556,6 +2461,7 @@
 
 
             return;
+
         }
 
 
@@ -2576,7 +2482,7 @@
             ) {
 
                 setTimeout(
-                    () => {
+                    function () {
 
                         atualizarEstadoSessao(
                             session
@@ -2592,15 +2498,6 @@
 
     // ==========================================
     // OBSERVAR ALTERAÇÃO DA CAMPANHA
-    // ==========================================
-    //
-    // O campaign.js dispara:
-    //
-    // mesa:campanhaAlterada
-    //
-    // quando a campanha ativa muda.
-    //
-    // Aqui sincronizamos o auth.js novamente.
     // ==========================================
 
     window.addEventListener(
@@ -2626,11 +2523,6 @@
 
             else {
 
-                /*
-                 * Se a campanha foi removida/desativada,
-                 * limpamos apenas o contexto ativo.
-                 */
-
                 window.rpgAuth.campaign =
                     null;
 
@@ -2642,6 +2534,9 @@
 
                 window.rpgAuth.campaignCharacters =
                     [];
+
+                window.rpgAuth.currentCharacter =
+                    null;
 
             }
 
@@ -2664,6 +2559,10 @@
         };
 
 
+    // ==========================================
+    // TODOS OS PERSONAGENS DA CAMPANHA
+    // ==========================================
+
     window.obterPersonagensCampanha =
         function () {
 
@@ -2674,6 +2573,25 @@
 
         };
 
+
+    // ==========================================
+    // PERSONAGEM DO USUÁRIO ATUAL
+    // ==========================================
+
+    window.obterPersonagemAtual =
+        function () {
+
+            return (
+                window.rpgAuth
+                    .currentCharacter || null
+            );
+
+        };
+
+
+    // ==========================================
+    // CAMPANHA ATUAL
+    // ==========================================
 
     window.obterCampanhaAtual =
         function () {
@@ -2686,14 +2604,12 @@
         };
 
 
+    // ==========================================
+    // VERIFICAR MESTRE
+    // ==========================================
+
     window.usuarioEhMestre =
         function () {
-
-            /*
-             * Fazemos uma verificação direta também,
-             * para evitar depender exclusivamente
-             * de uma variável antiga.
-             */
 
             const usuario =
                 window.rpgAuth.user;
@@ -2718,10 +2634,6 @@
                 String(campanha.master_id);
 
 
-            /*
-             * Mantém o estado sincronizado.
-             */
-
             window.rpgAuth.isMaster =
                 resultado;
 
@@ -2730,6 +2642,10 @@
 
         };
 
+
+    // ==========================================
+    // PERFIL
+    // ==========================================
 
     window.obterPerfilUsuario =
         function () {
@@ -2742,12 +2658,24 @@
         };
 
 
+    // ==========================================
+    // RECARREGAR CAMPANHA
+    // ==========================================
+
     window.recarregarDadosCampanha =
         carregarDadosCampanha;
 
 
     // ==========================================
-    // INICIAR QUANDO O DOM ESTIVER PRONTO
+    // RECARREGAR PERSONAGENS
+    // ==========================================
+
+    window.recarregarPersonagensCampanha =
+        carregarPersonagensCampanha;
+
+
+    // ==========================================
+    // INICIAR QUANDO DOM ESTIVER PRONTO
     // ==========================================
 
     if (
