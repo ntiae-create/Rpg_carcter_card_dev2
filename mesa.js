@@ -2,3749 +2,570 @@
 
 /*
 ==============================================================
- MESA RPG ONLINE
- CORE / ORQUESTRADOR
-==============================================================
-
- RESPONSABILIDADES:
-
- - Inicializar a mesa
- - Identificar campanha ativa
- - Identificar Mestre / Jogador
- - Controlar o modo atual
- - Controlar a área central
- - Encaminhar ações de aventura
- - Controlar CTE
- - Manter os 8 lugares
- - Sincronizar campanha
- - SINCRONIZAR JOGADORES EM TEMPO REAL
- - Processar interações
- - Conversar com mesa-jogadores.js
- - Conversar com mesa-aventura.js
-
+ MESA RPG ONLINE - CORE (versão corrigida)
 ==============================================================
 */
 
-
-/* ============================================================
-   CONFIGURAÇÃO
-============================================================ */
-
 const MESA_CONFIG = {
-
     maxJogadores: 8,
-
     modos: {
-
         NORMAL: "normal",
-
         AVENTURA: "aventura",
-
         BATALHA: "batalha"
-
     },
-
     cte: {
-
         disponivel: true,
-
         tempoPadrao: 1000,
-
         quantidadePadrao: 1
-
     }
-
 };
-
-
-/* ============================================================
-   ESTADO CENTRAL
-============================================================ */
 
 const mesaState = {
-
     inicializado: false,
-
-    modoAtual:
-        MESA_CONFIG.modos.NORMAL,
-
-
+    modoAtual: MESA_CONFIG.modos.NORMAL,
     campanha: {
-
         id: null,
-
         nome: "Campanha",
-
         codigoMesa: null,
-
         masterId: null
-
     },
-
-
     usuario: {
-
         id: null,
-
         nome: null,
-
         email: null,
-
         isMaster: false,
-
         isPlayer: false
-
     },
-
-
     jogadorAtual: {
-
         characterId: null,
-
         slot: null
-
     },
-
-
-    jogadores:
-
-        Array.from(
-
-            {
-                length:
-                    MESA_CONFIG.maxJogadores
-            },
-
-            (_, index) => ({
-
-                slot:
-                    index + 1,
-
-                ocupado:
-                    false,
-
-                characterId:
-                    null,
-
-                userId:
-                    null
-
-            })
-
-        ),
-
-
+    jogadores: Array.from({ length: MESA_CONFIG.maxJogadores }, (_, i) => ({
+        slot: i + 1,
+        ocupado: false,
+        characterId: null,
+        userId: null
+    })),
     aventura: {
-
-        aberta:
-            false,
-
-        tipo:
-            null,
-
-        dados:
-            null
-
+        aberta: false,
+        tipo: null,
+        dados: null
     },
-
-
     batalha: {
-
-        ativa:
-            false,
-
-        rodada:
-            0,
-
-        turno:
-            null,
-
-        participantes:
-            []
-
+        ativa: false,
+        rodada: 0,
+        turno: null,
+        participantes: []
     },
-
-
     cte: {
-
-        ativo:
-            false,
-
-        tempo:
-            MESA_CONFIG.cte.tempoPadrao,
-
-        quantidade:
-            MESA_CONFIG.cte.quantidadePadrao,
-
-        cliques:
-            0,
-
-        resultados:
-            [],
-
-        inicio:
-            null
-
+        ativo: false,
+        tempo: MESA_CONFIG.cte.tempoPadrao,
+        quantidade: MESA_CONFIG.cte.quantidadePadrao,
+        cliques: 0,
+        resultados: [],
+        inicio: null
     }
-
 };
 
-
-/* ============================================================
-   REALTIME
-============================================================ */
-
 let mesaRealtimeChannel = null;
-
 let mesaRealtimeCampaignId = null;
 
+const MesaUI = {
+    container: null,
+    layout: null,
+    jogadores: null,
+    screen: null,
+    screenContent: null,
+    nomeCampanha: null
+};
 
 /* ============================================================
    OBTER CLIENTE SUPABASE
-============================================================
-
- IMPORTANTE:
-
- O mesa.js NÃO cria cliente Supabase.
-
- O cliente oficial pertence ao:
-
-     supabase.js
-
- O SupabaseMesa funciona como camada intermediária:
-
-     mesa.js
-        ↓
-     SupabaseMesa
-        ↓
-     window.supabaseClient
 ============================================================ */
-
 function obterSupabaseMesa() {
-
-    if (
-
-        window.SupabaseMesa &&
-
-        typeof window.SupabaseMesa.obterCliente ===
-        "function"
-
-    ) {
-
-        const cliente =
-            window.SupabaseMesa.obterCliente();
-
-
-        if (
-
-            cliente &&
-
-            typeof cliente.from ===
-            "function"
-
-        ) {
-
+    if (window.SupabaseMesa && typeof window.SupabaseMesa.obterCliente === "function") {
+        const cliente = window.SupabaseMesa.obterCliente();
+        if (cliente && typeof cliente.from === "function") {
             return cliente;
-
         }
-
     }
-
-
-    console.warn(
-        "[Mesa] SupabaseMesa não possui um cliente Supabase disponível."
-    );
-
-
+    console.warn("[Mesa] SupabaseMesa não disponível.");
     return null;
-
 }
 
-
 /* ============================================================
-   CARREGAR JOGADORES DA CAMPANHA
+   LOCALSTORAGE
 ============================================================ */
-
-async function carregarJogadoresDaCampanha() {
-
-    const campanhaId =
-        mesaState.campanha.id;
-
-
-    if (!campanhaId) {
-
-        console.warn(
-            "[Mesa Realtime] Nenhuma campanha ativa para carregar jogadores."
-        );
-
-        return [];
-
-    }
-
-
-    const supabase =
-        obterSupabaseMesa();
-
-
-    if (!supabase) {
-
-        console.warn(
-            "[Mesa Realtime] Cliente Supabase não encontrado através do SupabaseMesa."
-        );
-
-        return [];
-
-    }
-
-
-    try {
-
-        const {
-
-            data: personagens,
-
-            error
-
-        } = await supabase
-
-            .from("characters")
-
-            .select("*")
-
-            .eq(
-                "campaign_id",
-                campanhaId
-            )
-
-            .order(
-                "slot",
-                {
-                    ascending:
-                        true,
-
-                    nullsFirst:
-                        false
-                }
-            );
-
-
-        if (error) {
-
-            console.error(
-                "[Mesa Realtime] Erro ao carregar personagens:",
-                error
-            );
-
-            return [];
-
-        }
-
-
-        const lista =
-
-            Array.isArray(personagens)
-
-                ? personagens
-
-                : [];
-
-
-        /*
-         ------------------------------------------------------
-         ATUALIZAR CACHE GLOBAL
-         ------------------------------------------------------
-        */
-
-        if (window.rpgAuth) {
-
-            window.rpgAuth.campaignCharacters =
-                lista;
-
-        }
-
-
-        /*
-         ------------------------------------------------------
-         ATUALIZAR OS 8 ASSENTOS
-         ------------------------------------------------------
-        */
-
-        sincronizarJogadoresRealtime(
-            lista
-        );
-
-
-        /*
-         ------------------------------------------------------
-         AVISAR OS OUTROS MÓDULOS
-         ------------------------------------------------------
-        */
-
-        document.dispatchEvent(
-
-            new CustomEvent(
-                "rpg:campanhaAtualizada",
-                {
-
-                    detail: {
-
-                        campanha:
-                            mesaState.campanha,
-
-                        personagens:
-                            lista
-
-                    }
-
-                }
-
-            )
-
-        );
-
-
-        document.dispatchEvent(
-
-            new CustomEvent(
-                "mesa:jogadoresAtualizados",
-                {
-
-                    detail: {
-
-                        personagens:
-                            lista
-
-                    }
-
-                }
-
-            )
-
-        );
-
-
-        return lista;
-
-    } catch (erro) {
-
-        console.error(
-            "[Mesa Realtime] Falha ao sincronizar jogadores:",
-            erro
-        );
-
-        return [];
-
-    }
-
-}
-
-
-/* ============================================================
-   SINCRONIZAR ASSENTOS PELO REALTIME
-============================================================ */
-
-function sincronizarJogadoresRealtime(
-    personagens = []
-) {
-
-    const lista =
-
-        Array.isArray(personagens)
-
-            ? personagens
-
-            : [];
-
-
-    const jogadores =
-
-        lista
-
-            .filter(
-                personagem => {
-
-                    const slot =
-                        Number(
-                            personagem?.slot
-                        );
-
-                    return (
-
-                        Number.isInteger(slot) &&
-
-                        slot >= 1 &&
-
-                        slot <=
-                            MESA_CONFIG.maxJogadores
-
-                    );
-
-                }
-            )
-
-            .map(
-                personagem => ({
-
-                    slot:
-                        Number(
-                            personagem.slot
-                        ),
-
-                    ocupado:
-                        true,
-
-                    characterId:
-                        personagem.id ||
-                        null,
-
-                    userId:
-                        personagem.user_id ||
-                        null
-
-                })
-
-            );
-
-
-    definirAssentos(
-        jogadores
-    );
-
-
-    /*
-     ----------------------------------------------------------
-     ATUALIZAR O JOGADOR ATUAL
-     ----------------------------------------------------------
-
-     IMPORTANTE:
-
-     Aqui corrigimos um problema do código anterior.
-
-     Se o jogador não estiver mais na lista de personagens,
-     não podemos manter um characterId/slot antigo.
-    */
-
-    const usuarioId =
-        mesaState.usuario.id;
-
-
-    if (usuarioId) {
-
-        const meuPersonagem =
-
-            lista.find(
-
-                personagem =>
-
-                    String(
-                        personagem?.user_id
-                    ) ===
-                    String(
-                        usuarioId
-                    )
-
-            );
-
-
-        if (meuPersonagem) {
-
-            mesaState.jogadorAtual.characterId =
-
-                meuPersonagem.id ||
-
-                null;
-
-
-            mesaState.jogadorAtual.slot =
-
-                Number(
-                    meuPersonagem.slot
-                ) ||
-
-                null;
-
-        } else {
-
-            /*
-             O usuário não possui personagem nessa campanha.
-             Limpamos qualquer informação antiga.
-            */
-
-            mesaState.jogadorAtual.characterId =
-                null;
-
-            mesaState.jogadorAtual.slot =
-                null;
-
-        }
-
-    }
-
-
-    console.log(
-        "[Mesa Realtime] Jogadores sincronizados:",
-        lista
-    );
-
-}
-
-
-/* ============================================================
-   INICIAR REALTIME DA CAMPANHA
-============================================================ */
-
-async function iniciarRealtimeMesa() {
-
-    const campanhaId =
-        mesaState.campanha.id;
-
-
-    if (!campanhaId) {
-
-        console.warn(
-            "[Mesa Realtime] Não foi possível iniciar: campanha sem ID."
-        );
-
-        return;
-
-    }
-
-
-    const supabase =
-        obterSupabaseMesa();
-
-
-    if (!supabase) {
-
-        console.warn(
-            "[Mesa Realtime] Não foi possível iniciar: Supabase não encontrado através do SupabaseMesa."
-        );
-
-        return;
-
-    }
-
-
-    if (
-
-        mesaRealtimeChannel &&
-
-        mesaRealtimeCampaignId ===
-            String(campanhaId)
-
-    ) {
-
-        return;
-
-    }
-
-
-    await pararRealtimeMesa();
-
-
-    mesaRealtimeCampaignId =
-        String(campanhaId);
-
-
-    const nomeCanal =
-
-        `mesa-campanha-${campanhaId}`;
-
-
-    console.log(
-        "[Mesa Realtime] Iniciando canal:",
-        nomeCanal
-    );
-
-
-    mesaRealtimeChannel =
-
-        supabase
-
-            .channel(
-                nomeCanal
-            )
-
-            .on(
-
-                "postgres_changes",
-
-                {
-
-                    event:
-                        "*",
-
-                    schema:
-                        "public",
-
-                    table:
-                        "characters",
-
-                    filter:
-                        `campaign_id=eq.${campanhaId}`
-
-                },
-
-                payload => {
-
-                    console.log(
-                        "[Mesa Realtime] Alteração recebida:",
-                        payload
-                    );
-
-
-                    carregarJogadoresDaCampanha();
-
-                }
-
-            )
-
-            .subscribe(
-
-                status => {
-
-                    console.log(
-                        "[Mesa Realtime] Status:",
-                        status
-                    );
-
-
-                    if (
-                        status ===
-                        "SUBSCRIBED"
-                    ) {
-
-                        console.log(
-                            "[Mesa Realtime] Conectado à campanha:",
-                            campanhaId
-                        );
-
-                    }
-
-                }
-
-            );
-
-}
-
-
-/* ============================================================
-   PARAR REALTIME
-============================================================ */
-
-async function pararRealtimeMesa() {
-
-    if (!mesaRealtimeChannel) {
-
-        mesaRealtimeCampaignId =
-            null;
-
-        return;
-
-    }
-
-
-    const supabase =
-        obterSupabaseMesa();
-
-
-    try {
-
-        if (supabase) {
-
-            await supabase.removeChannel(
-                mesaRealtimeChannel
-            );
-
-        }
-
-    } catch (erro) {
-
-        console.warn(
-            "[Mesa Realtime] Erro ao remover canal:",
-            erro
-        );
-
-    }
-
-
-    mesaRealtimeChannel =
-        null;
-
-
-    mesaRealtimeCampaignId =
-        null;
-
-
-    console.log(
-        "[Mesa Realtime] Canal encerrado."
-    );
-
-}
-
-
-/* ============================================================
-   SINCRONIZAR REALTIME COM A CAMPANHA ATUAL
-============================================================ */
-
-async function sincronizarRealtimeCampanha() {
-
-    if (!mesaState.campanha.id) {
-
-        await pararRealtimeMesa();
-
-        return;
-
-    }
-
-
-    await carregarJogadoresDaCampanha();
-
-    await iniciarRealtimeMesa();
-
-}
-
-
-/* ============================================================
-   REFERÊNCIAS DA INTERFACE
-============================================================ */
-
-const MesaUI = {
-
-    container:
-        null,
-
-    layout:
-        null,
-
-    jogadores:
-        null,
-
-    stage:
-        null,
-
-    screen:
-        null,
-
-    screenContent:
-        null,
-
-    nomeCampanha:
-        null
-
-};
-
-
-/* ============================================================
-   LER MESA SALVA
-============================================================ */
-
 function obterMesaSalva() {
-
     try {
-
-        const salvo =
-            localStorage.getItem(
-                "rpg_mesa_ativa"
-            );
-
-
-        if (!salvo) {
-
-            return null;
-
-        }
-
-
-        const dados =
-            JSON.parse(
-                salvo
-            );
-
-
-        if (
-            !dados ||
-            !dados.campaignId
-        ) {
-
-            return null;
-
-        }
-
-
-        return dados;
-
-    } catch (erro) {
-
-        console.warn(
-            "[Mesa] Erro ao ler rpg_mesa_ativa:",
-            erro
-        );
-
+        const salvo = localStorage.getItem("rpg_mesa_ativa");
+        if (!salvo) return null;
+        const dados = JSON.parse(salvo);
+        return dados?.campaignId ? dados : null;
+    } catch (e) {
+        console.warn("[Mesa] Erro ao ler localStorage:", e);
         return null;
-
     }
-
 }
 
-
 /* ============================================================
-   INICIALIZAÇÃO
+   INICIALIZAÇÃO PRINCIPAL
 ============================================================ */
-
 function inicializarMesa() {
+    if (mesaState.inicializado) return;
 
-    if (
-        mesaState.inicializado
-    ) {
-
-        return;
-
-    }
-
-
-    MesaUI.container =
-        document.getElementById(
-            "online-table-panel"
-        );
-
-
-    MesaUI.layout =
-        document.querySelector(
-            ".mesa-layout"
-        );
-
-
-    MesaUI.jogadores =
-        document.getElementById(
-            "jogadores"
-        );
-
-
-    MesaUI.stage =
-        document.getElementById(
-            "mesa-stage"
-        );
-
-
-    MesaUI.screen =
-        document.getElementById(
-            "mesa-screen"
-        );
-
-
-    MesaUI.screenContent =
-        document.getElementById(
-            "mesa-screen-content"
-        );
-
-
-    MesaUI.nomeCampanha =
-        document.getElementById(
-            "nome-campanha"
-        );
-
+    MesaUI.container = document.getElementById("online-table-panel");
+    MesaUI.layout = document.querySelector(".mesa-layout");
+    MesaUI.jogadores = document.getElementById("jogadores");
+    MesaUI.screen = document.getElementById("mesa-screen");
+    MesaUI.screenContent = document.getElementById("mesa-screen-content");
+    MesaUI.nomeCampanha = document.getElementById("nome-campanha");
 
     if (!MesaUI.container) {
-
-        console.warn(
-            "[Mesa] #online-table-panel não encontrado."
-        );
-
+        console.warn("[Mesa] #online-table-panel não encontrado.");
         return;
-
     }
 
-
     carregarContextoUsuario();
-
-
-    mesaState.inicializado =
-        true;
-
-
-    registrarEventos();
-
+    registrarEventosGlobais();     // ← usa delegação de eventos
     atualizarCampanhaVisual();
-
     atualizarModoVisual();
-
     atualizarAssentos();
 
-    inicializarSubmodulos();
+    mesaState.inicializado = true;
 
+    // Aguarda um pouco para garantir que os outros módulos carregaram
+    setTimeout(() => {
+        sincronizarRealtimeCampanha();
+        document.dispatchEvent(new CustomEvent("mesa:inicializada", {
+            detail: mesaState
+        }));
+    }, 150);
 
-    setTimeout(
-
-        () => {
-
-            sincronizarRealtimeCampanha();
-
-        },
-
-        0
-
-    );
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:inicializada",
-            {
-                detail:
-                    mesaState
-            }
-        )
-
-    );
-
-
-    console.log(
-        "[Mesa] Mesa RPG inicializada.",
-        {
-            usuario:
-                mesaState.usuario,
-
-            campanha:
-                mesaState.campanha,
-
-            mestre:
-                mesaState.usuario.isMaster
-        }
-    );
-
+    console.log("[Mesa] Inicializada com sucesso.");
 }
-
 
 /* ============================================================
    CONTEXTO DO USUÁRIO
 ============================================================ */
-
 function carregarContextoUsuario() {
+    const auth = window.rpgAuth || {};
+    const salvo = obterMesaSalva();
+    const campanha = obterCampanhaAtiva();
 
-    const auth =
-        window.rpgAuth || null;
-
-
-    const salvo =
-        obterMesaSalva();
-
-
-    const campanha =
-        obterCampanhaAtiva();
-
-
-    let usuarioId =
-        null;
-
-    let usuarioNome =
-        null;
-
-    let usuarioEmail =
-        null;
-
-
-    if (
-        auth?.user
-    ) {
-
-        usuarioId =
-            auth.user.id ||
-            null;
-
-
-        usuarioNome =
-
-            auth.user.user_metadata?.name ||
-
-            auth.user.user_metadata?.full_name ||
-
-            auth.user.email ||
-
-            null;
-
-
-        usuarioEmail =
-            auth.user.email ||
-            null;
-
-    }
-
-
-    if (
-        !usuarioId &&
-        salvo?.userId
-    ) {
-
-        usuarioId =
-            salvo.userId;
-
-    }
-
-
-    if (
-        !usuarioNome &&
-        salvo?.userName
-    ) {
-
-        usuarioNome =
-            salvo.userName;
-
-    }
-
-
-    if (
-        !usuarioEmail &&
-        salvo?.userEmail
-    ) {
-
-        usuarioEmail =
-            salvo.userEmail;
-
-    }
-
-
-    mesaState.usuario.id =
-        usuarioId;
-
-
-    mesaState.usuario.nome =
-        usuarioNome ||
-        "Jogador";
-
-
-    mesaState.usuario.email =
-        usuarioEmail ||
-        null;
-
+    mesaState.usuario.id = auth.user?.id || salvo?.userId || null;
+    mesaState.usuario.nome = auth.user?.user_metadata?.name || auth.user?.email || salvo?.userName || "Jogador";
+    mesaState.usuario.email = auth.user?.email || salvo?.userEmail || null;
 
     if (campanha) {
-
-        mesaState.campanha.id =
-            campanha.id ||
-            null;
-
-
-        mesaState.campanha.nome =
-
-            campanha.name ||
-
-            campanha.nome ||
-
-            "Campanha";
-
-
-        mesaState.campanha.codigoMesa =
-
-            campanha.codigo_mesa ||
-
-            campanha.codigoMesa ||
-
-            null;
-
-
-        mesaState.campanha.masterId =
-
-            campanha.master_id ||
-
-            campanha.masterId ||
-
-            null;
-
+        mesaState.campanha.id = campanha.id || null;
+        mesaState.campanha.nome = campanha.name || campanha.nome || "Campanha";
+        mesaState.campanha.codigoMesa = campanha.codigo_mesa || campanha.codigoMesa || null;
+        mesaState.campanha.masterId = campanha.master_id || campanha.masterId || null;
     }
-
-
-    if (
-        !mesaState.campanha.masterId &&
-        salvo?.masterId
-    ) {
-
-        mesaState.campanha.masterId =
-            salvo.masterId;
-
-    }
-
 
     atualizarPermissaoUsuario();
-
     descobrirJogadorAtual();
-
 }
-
-
-/* ============================================================
-   ATUALIZAR PERMISSÃO
-============================================================ */
 
 function atualizarPermissaoUsuario() {
+    const usuarioId = mesaState.usuario.id;
+    const masterId = mesaState.campanha.masterId;
 
-    const usuarioId =
-        mesaState.usuario.id;
-
-
-    const masterId =
-        mesaState.campanha.masterId;
-
-
-    const mestrePorCampanha =
-        Boolean(
-
-            usuarioId &&
-
-            masterId &&
-
-            String(usuarioId).trim().toLowerCase() ===
-
-            String(masterId).trim().toLowerCase()
-
-        );
-
-
-    const mestrePorAuth =
-        Boolean(
-            window.rpgAuth?.isMaster === true
-        );
-
-
-    let mestrePorInterface =
-        false;
-
-
-    if (
-        typeof window.usuarioEhMestreInterface ===
-        "function"
-    ) {
-
-        try {
-
-            mestrePorInterface =
-                window.usuarioEhMestreInterface() ===
-                true;
-
-        } catch (erro) {
-
-            console.warn(
-                "[Mesa] Falha ao verificar mestre pela interface:",
-                erro
-            );
-
-        }
-
-    }
-
-
-    mesaState.usuario.isMaster =
-
-        mestrePorCampanha ||
-
-        mestrePorAuth ||
-
-        mestrePorInterface;
-
-
-    mesaState.usuario.isPlayer =
-
-        Boolean(
-            usuarioId
-        ) &&
-
-        !mesaState.usuario.isMaster;
-
-
-    if (
-        window.rpgAuth
-    ) {
-
-        window.rpgAuth.isMaster =
-            mesaState.usuario.isMaster;
-
-    }
-
-
-    console.log(
-        "[Mesa] Permissão determinada:",
-        {
-
-            usuarioId,
-
-            masterId,
-
-            mestrePorCampanha,
-
-            mestrePorAuth,
-
-            mestrePorInterface,
-
-            isMaster:
-                mesaState.usuario.isMaster,
-
-            isPlayer:
-                mesaState.usuario.isPlayer
-
-        }
+    const mestrePorCampanha = Boolean(
+        usuarioId && masterId &&
+        String(usuarioId).toLowerCase() === String(masterId).toLowerCase()
     );
 
+    const mestrePorAuth = Boolean(window.rpgAuth?.isMaster === true);
+
+    mesaState.usuario.isMaster = mestrePorCampanha || mestrePorAuth;
+    mesaState.usuario.isPlayer = Boolean(usuarioId) && !mesaState.usuario.isMaster;
+
+    if (window.rpgAuth) {
+        window.rpgAuth.isMaster = mesaState.usuario.isMaster;
+    }
 }
-
-
-/* ============================================================
-   CAMPANHA ATIVA
-============================================================ */
 
 function obterCampanhaAtiva() {
-
-    if (
-
-        window.rpgCampaign &&
-
-        typeof window.rpgCampaign.obterCampanhaAtiva ===
-        "function"
-
-    ) {
-
+    if (window.rpgCampaign?.obterCampanhaAtiva) {
         try {
-
-            const campanha =
-                window.rpgCampaign
-                    .obterCampanhaAtiva();
-
-
-            if (campanha) {
-
-                return campanha;
-
-            }
-
-        } catch (erro) {
-
-            console.warn(
-                "[Mesa] Erro ao obter campanha pelo campaign.js:",
-                erro
-            );
-
-        }
-
+            return window.rpgCampaign.obterCampanhaAtiva();
+        } catch (e) {}
     }
+    if (window.rpgAuth?.campaign) return window.rpgAuth.campaign;
 
-
-    if (
-        window.rpgAuth?.campaign
-    ) {
-
-        return window.rpgAuth.campaign;
-
-    }
-
-
-    const salvo =
-        obterMesaSalva();
-
-
-    if (
-        salvo?.campaignId
-    ) {
-
+    const salvo = obterMesaSalva();
+    if (salvo?.campaignId) {
         return {
-
-            id:
-                salvo.campaignId,
-
-            name:
-                salvo.campaignName ||
-
-                salvo.name ||
-
-                "Campanha",
-
-            codigo_mesa:
-
-                salvo.campaignCode ||
-
-                salvo.codigoMesa ||
-
-                null,
-
-            master_id:
-
-                salvo.masterId ||
-
-                salvo.master_id ||
-
-                null
-
+            id: salvo.campaignId,
+            name: salvo.campaignName || "Campanha",
+            codigo_mesa: salvo.campaignCode || null,
+            master_id: salvo.masterId || null
         };
-
     }
-
-
     return null;
-
 }
-
-
-/* ============================================================
-   DESCOBRIR JOGADOR ATUAL
-============================================================ */
 
 function descobrirJogadorAtual() {
-
-    const salvo =
-        obterMesaSalva();
-
-
+    const salvo = obterMesaSalva();
     if (salvo) {
-
-        mesaState.jogadorAtual.characterId =
-
-            salvo.characterId ||
-
-            null;
-
-
-        mesaState.jogadorAtual.slot =
-
-            Number(salvo.slot) ||
-
-            null;
-
+        mesaState.jogadorAtual.characterId = salvo.characterId || null;
+        mesaState.jogadorAtual.slot = Number(salvo.slot) || null;
     }
 
-
-    if (
-
-        !mesaState.jogadorAtual.characterId &&
-
-        window.rpgAuth
-
-    ) {
-
-        const personagem =
-
-            window.rpgAuth.currentCharacter ||
-
-            window.rpgAuth.campaignCharacter ||
-
-            null;
-
-
+    if (!mesaState.jogadorAtual.characterId && window.rpgAuth) {
+        const personagem = window.rpgAuth.currentCharacter || window.rpgAuth.campaignCharacter;
         if (personagem) {
-
-            mesaState.jogadorAtual.characterId =
-
-                personagem.id ||
-
-                null;
-
-
-            mesaState.jogadorAtual.slot =
-
-                Number(
-                    personagem.slot
-                ) ||
-
-                null;
-
+            mesaState.jogadorAtual.characterId = personagem.id || null;
+            mesaState.jogadorAtual.slot = Number(personagem.slot) || null;
         }
-
     }
-
-
-    if (
-
-        !mesaState.jogadorAtual.characterId &&
-
-        Array.isArray(
-            window.rpgAuth?.campaignCharacters
-        )
-
-    ) {
-
-        const usuarioId =
-            mesaState.usuario.id;
-
-
-        const personagem =
-
-            window.rpgAuth
-                .campaignCharacters
-                .find(
-
-                    character =>
-
-                        String(
-                            character.user_id
-                        ) ===
-
-                        String(
-                            usuarioId
-                        )
-
-                );
-
-
-        if (personagem) {
-
-            mesaState.jogadorAtual.characterId =
-
-                personagem.id ||
-
-                null;
-
-
-            mesaState.jogadorAtual.slot =
-
-                Number(
-                    personagem.slot
-                ) ||
-
-                null;
-
-        }
-
-    }
-
 }
 
-
 /* ============================================================
-   EVENTOS
+   EVENTOS GLOBAIS (DELEGAÇÃO - NÃO PERDE OS CLIQUES)
 ============================================================ */
-
-function registrarEventos() {
-
-    document.addEventListener(
-
-        "mesa:jogadorAtualizado",
-
-        event => {
-
-            if (
-                event.detail?.slot
-            ) {
-
-                atualizarAssento(
-
-                    event.detail.slot,
-
-                    event.detail
-
-                );
-
-            }
-
+function registrarEventosGlobais() {
+    // Clique nos cards de jogador (delegação)
+    document.addEventListener("click", (e) => {
+        const card = e.target.closest(".jogador-card, .player-card");
+        if (card) {
+            const slot = Number(card.dataset.player || card.dataset.seat);
+            if (slot) selecionarJogador(slot);
+            return;
         }
 
-    );
-
-
-    document.addEventListener(
-
-        "mesa:jogadoresAtualizados",
-
-        () => {
-
-            atualizarAssentos();
-
+        // Botão de diagnóstico
+        if (e.target.closest("#btn-diagnostico")) {
+            document.dispatchEvent(new CustomEvent("mesa:abrirDiagnostico"));
+            return;
         }
 
-    );
-
-
-    /*
-     ===========================================================
-     CORREÇÃO IMPORTANTE
-     ===========================================================
-
-     campaign.js dispara:
-
-         window.dispatchEvent(
-             new CustomEvent("mesa:campanhaAlterada")
-         );
-
-     Portanto, o Mesa precisa escutar no WINDOW.
-
-     Antes estava em DOCUMENT, fazendo com que a mudança
-     de campanha não chegasse corretamente ao core da mesa.
-    */
-
-    window.addEventListener(
-
-        "mesa:campanhaAlterada",
-
-        event => {
-
-            const detalhe =
-                event.detail || null;
-
-
-            const campanha =
-
-                detalhe?.campanha ||
-
-                detalhe?.campaign ||
-
-                detalhe;
-
-
-            if (campanha) {
-
-                sincronizarCampanha(
-                    campanha
-                );
-
-            }
-
+        // Botão de configurações
+        if (e.target.closest("#btn-configuracoes")) {
+            document.dispatchEvent(new CustomEvent("mesa:abrirConfiguracoes"));
+            return;
         }
 
-    );
+        // Clique do CTE
+        if (e.target.closest("#cte-click-button, [data-cte-action='clique']")) {
+            executarCliqueCTE();
+            return;
+        }
+    });
 
+    // Eventos customizados
+    document.addEventListener("mesa:jogadoresAtualizados", () => {
+        atualizarAssentos();
+    });
+
+    window.addEventListener("mesa:campanhaAlterada", (event) => {
+        const campanha = event.detail?.campanha || event.detail?.campaign || event.detail;
+        if (campanha) sincronizarCampanha(campanha);
+    });
 }
 
-
 /* ============================================================
-   SINCRONIZAR CAMPANHA
+   REALTIME
 ============================================================ */
-
-function sincronizarCampanha(
-    campanha
-) {
-
-    if (!campanha) {
-
-        return;
-
-    }
-
-
-    const campanhaAnterior =
-        mesaState.campanha.id;
-
-
-    mesaState.campanha.id =
-
-        campanha.id ||
-
-        mesaState.campanha.id;
-
-
-    mesaState.campanha.nome =
-
-        campanha.name ||
-
-        campanha.nome ||
-
-        mesaState.campanha.nome;
-
-
-    mesaState.campanha.codigoMesa =
-
-        campanha.codigo_mesa ||
-
-        campanha.codigoMesa ||
-
-        mesaState.campanha.codigoMesa;
-
-
-    mesaState.campanha.masterId =
-
-        campanha.master_id ||
-
-        campanha.masterId ||
-
-        mesaState.campanha.masterId;
-
-
-    atualizarPermissaoUsuario();
-
-    atualizarCampanhaVisual();
-
-
-    /*
-     Se a campanha mudou, trocamos o canal Realtime.
-
-     Se for a mesma campanha, garantimos que a sincronização
-     continue ativa.
-    */
-
-    if (
-        campanhaAnterior !==
-        mesaState.campanha.id
-    ) {
-
-        sincronizarRealtimeCampanha();
-
-    } else {
-
-        sincronizarRealtimeCampanha();
-
-    }
-
-}
-
-
-/* ============================================================
-   SELECIONAR JOGADOR
-============================================================ */
-
-function selecionarJogador(
-    slot
-) {
-
-    const numeroSlot =
-        Number(slot);
-
-
-    if (
-
-        !numeroSlot ||
-
-        numeroSlot < 1 ||
-
-        numeroSlot >
-            MESA_CONFIG.maxJogadores
-
-    ) {
-
-        return;
-
-    }
-
-
-    const jogador =
-        mesaState.jogadores[
-            numeroSlot - 1
-        ];
-
-
-    if (!jogador) {
-
-        return;
-
-    }
-
-
-    const slotAtual =
-        Number(
-            mesaState.jogadorAtual.slot
-        );
-
-
-    const ehProprioJogador =
-        slotAtual ===
-        numeroSlot;
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:jogadorSelecionado",
-            {
-
-                detail: {
-
-                    slot:
-                        numeroSlot,
-
-                    jogador,
-
-                    ehProprioJogador
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    if (ehProprioJogador) {
-
-        if (
-
-            typeof window.abrirFichaJogador ===
-            "function"
-
-        ) {
-
-            window.abrirFichaJogador(
-                numeroSlot
-            );
-
+async function carregarJogadoresDaCampanha() {
+    const campanhaId = mesaState.campanha.id;
+    if (!campanhaId) return [];
+
+    const supabase = obterSupabaseMesa();
+    if (!supabase) return [];
+
+    try {
+        const { data, error } = await supabase
+            .from("characters")
+            .select("*")
+            .eq("campaign_id", campanhaId)
+            .order("slot", { ascending: true });
+
+        if (error) {
+            console.error("[Mesa Realtime] Erro:", error);
+            return [];
         }
 
-        return;
+        const lista = Array.isArray(data) ? data : [];
+        sincronizarJogadoresRealtime(lista);
 
+        document.dispatchEvent(new CustomEvent("mesa:jogadoresAtualizados", {
+            detail: { personagens: lista }
+        }));
+
+        return lista;
+    } catch (erro) {
+        console.error("[Mesa Realtime] Falha:", erro);
+        return [];
     }
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:interacaoJogador",
-            {
-
-                detail: {
-
-                    origem:
-                        slotAtual,
-
-                    alvo:
-                        numeroSlot
-
-                }
-
-            }
-
-        )
-
-    );
-
 }
 
+function sincronizarJogadoresRealtime(personagens = []) {
+    const lista = Array.isArray(personagens) ? personagens : [];
 
-/* ============================================================
-   MODO
-============================================================ */
+    // Limpa os assentos
+    mesaState.jogadores.forEach(j => {
+        j.ocupado = false;
+        j.characterId = null;
+        j.userId = null;
+    });
 
-function mudarModo(
-    modo
-) {
+    lista.forEach(p => {
+        const slot = Number(p.slot);
+        if (slot >= 1 && slot <= MESA_CONFIG.maxJogadores) {
+            const jogador = mesaState.jogadores[slot - 1];
+            jogador.ocupado = true;
+            jogador.characterId = p.id || null;
+            jogador.userId = p.user_id || null;
+        }
+    });
 
-    if (
-
-        !Object.values(
-            MESA_CONFIG.modos
-        ).includes(modo)
-
-    ) {
-
-        console.warn(
-            "[Mesa] Modo inválido:",
-            modo
-        );
-
-        return;
-
+    // Atualiza jogador atual
+    if (mesaState.usuario.id) {
+        const meu = lista.find(p => String(p.user_id) === String(mesaState.usuario.id));
+        if (meu) {
+            mesaState.jogadorAtual.characterId = meu.id || null;
+            mesaState.jogadorAtual.slot = Number(meu.slot) || null;
+        }
     }
-
-
-    mesaState.modoAtual =
-        modo;
-
-
-    atualizarModoVisual();
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:modoAlterado",
-            {
-
-                detail: {
-
-                    modo,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
 }
 
+async function iniciarRealtimeMesa() {
+    const campanhaId = mesaState.campanha.id;
+    if (!campanhaId) return;
+
+    const supabase = obterSupabaseMesa();
+    if (!supabase) return;
+
+    if (mesaRealtimeChannel && mesaRealtimeCampaignId === String(campanhaId)) return;
+
+    await pararRealtimeMesa();
+
+    mesaRealtimeCampaignId = String(campanhaId);
+    const nomeCanal = `mesa-campanha-${campanhaId}`;
+
+    mesaRealtimeChannel = supabase
+        .channel(nomeCanal)
+        .on("postgres_changes", {
+            event: "*",
+            schema: "public",
+            table: "characters",
+            filter: `campaign_id=eq.${campanhaId}`
+        }, () => {
+            carregarJogadoresDaCampanha();
+        })
+        .subscribe((status) => {
+            console.log("[Mesa Realtime] Status:", status);
+        });
+}
+
+async function pararRealtimeMesa() {
+    if (!mesaRealtimeChannel) return;
+
+    const supabase = obterSupabaseMesa();
+    try {
+        if (supabase) await supabase.removeChannel(mesaRealtimeChannel);
+    } catch (e) {}
+
+    mesaRealtimeChannel = null;
+    mesaRealtimeCampaignId = null;
+}
+
+async function sincronizarRealtimeCampanha() {
+    if (!mesaState.campanha.id) {
+        await pararRealtimeMesa();
+        return;
+    }
+    await carregarJogadoresDaCampanha();
+    await iniciarRealtimeMesa();
+}
 
 /* ============================================================
-   VISUAL DO MODO
+   FUNÇÕES DE INTERFACE BÁSICAS
 ============================================================ */
+function atualizarCampanhaVisual() {
+    if (MesaUI.nomeCampanha) {
+        MesaUI.nomeCampanha.textContent = mesaState.campanha.nome || "Campanha";
+    }
+}
 
 function atualizarModoVisual() {
-
-    if (!MesaUI.container) {
-
-        return;
-
-    }
-
-
-    MesaUI.container.dataset.modo =
-        mesaState.modoAtual;
-
-
-    MesaUI.container.classList.remove(
-
-        "modo-normal",
-
-        "modo-aventura",
-
-        "modo-batalha"
-
-    );
-
-
-    MesaUI.container.classList.add(
-
-        `modo-${mesaState.modoAtual}`
-
-    );
-
+    if (!MesaUI.container) return;
+    MesaUI.container.dataset.modo = mesaState.modoAtual;
+    MesaUI.container.classList.remove("modo-normal", "modo-aventura", "modo-batalha");
+    MesaUI.container.classList.add(`modo-${mesaState.modoAtual}`);
 }
-
-
-/* ============================================================
-   MESA NORMAL
-============================================================ */
-
-function voltarParaMesaNormal() {
-
-    if (
-        mesaState.cte.ativo
-    ) {
-
-        limparCTE();
-
-    }
-
-
-    mesaState.modoAtual =
-        MESA_CONFIG.modos.NORMAL;
-
-
-    mesaState.aventura.aberta =
-        false;
-
-
-    mesaState.aventura.tipo =
-        null;
-
-
-    atualizarModoVisual();
-
-    mostrarTelaPrincipal();
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:modoNormal",
-            {
-
-                detail:
-                    mesaState
-
-            }
-
-        )
-
-    );
-
-}
-
-
-/* ============================================================
-   AVENTURA
-============================================================ */
-
-function abrirAventura(
-    tipo,
-    dados = {}
-) {
-
-    mesaState.aventura.aberta =
-        true;
-
-
-    mesaState.aventura.tipo =
-        tipo;
-
-
-    mesaState.aventura.dados =
-        dados;
-
-
-    mudarModo(
-        MESA_CONFIG.modos.AVENTURA
-    );
-
-
-    mostrarTela(
-        "🎲 Preparando aventura..."
-    );
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:aventuraAberta",
-            {
-
-                detail: {
-
-                    tipo,
-
-                    dados,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    if (
-
-        window.MesaAventura &&
-
-        typeof window.MesaAventura.abrir ===
-        "function"
-
-    ) {
-
-        window.MesaAventura.abrir(
-
-            tipo,
-
-            dados
-
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   BATALHA
-============================================================ */
-
-function iniciarBatalha(
-    participantes = null
-) {
-
-    mesaState.batalha.ativa =
-        true;
-
-
-    mesaState.batalha.rodada =
-        1;
-
-
-    mesaState.batalha.turno =
-        null;
-
-
-    if (
-        Array.isArray(
-            participantes
-        )
-    ) {
-
-        mesaState.batalha.participantes =
-            participantes;
-
-    } else {
-
-        mesaState.batalha.participantes =
-
-            mesaState.jogadores
-
-                .filter(
-                    jogador =>
-                        jogador.ocupado
-                )
-
-                .map(
-                    jogador =>
-                        jogador.slot
-                );
-
-    }
-
-
-    mudarModo(
-        MESA_CONFIG.modos.BATALHA
-    );
-
-
-    mostrarTela(
-        "⚔️ Preparando combate..."
-    );
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:batalhaIniciada",
-            {
-
-                detail: {
-
-                    participantes:
-
-                        mesaState.batalha
-                            .participantes,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    if (
-
-        typeof window.inicializarMesaBatalha ===
-        "function"
-
-    ) {
-
-        window.inicializarMesaBatalha(
-            mesaState
-        );
-
-    }
-
-
-    return mesaState.batalha;
-
-}
-
-
-/* ============================================================
-   FINALIZAR BATALHA
-============================================================ */
-
-function finalizarBatalha(
-    resultado = null
-) {
-
-    mesaState.batalha.ativa =
-        false;
-
-
-    mesaState.batalha.turno =
-        null;
-
-
-    mesaState.batalha.rodada =
-        0;
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:batalhaFinalizada",
-            {
-
-                detail: {
-
-                    resultado,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    if (
-
-        typeof window.restaurarMesaBatalha ===
-        "function"
-
-    ) {
-
-        window.restaurarMesaBatalha();
-
-    }
-
-
-    voltarParaMesaNormal();
-
-}
-
-
-/* ============================================================
-   BOSS
-============================================================ */
-
-function iniciarBoss(
-    dados = {}
-) {
-
-    mesaState.aventura.aberta =
-        true;
-
-
-    mesaState.aventura.tipo =
-        "boss";
-
-
-    mesaState.aventura.dados =
-        dados;
-
-
-    mudarModo(
-        MESA_CONFIG.modos.AVENTURA
-    );
-
-
-    mostrarTela(
-        "👹 Um Boss está se aproximando..."
-    );
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:bossIniciado",
-            {
-
-                detail: {
-
-                    dados,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    if (
-
-        window.MesaAventura &&
-
-        typeof window.MesaAventura.boss ===
-        "function"
-
-    ) {
-
-        window.MesaAventura.boss(
-            dados
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   CTE
-============================================================ */
-
-function iniciarCTE(
-    opcoes = {}
-) {
-
-    if (
-        !MESA_CONFIG.cte.disponivel
-    ) {
-
-        console.warn(
-            "[Mesa] CTE está desativado."
-        );
-
-        return;
-
-    }
-
-
-    if (
-        mesaState.cte.ativo
-    ) {
-
-        return;
-
-    }
-
-
-    let tempo =
-
-        Number(
-            opcoes.tempo
-        );
-
-
-    if (
-        !Number.isFinite(tempo) ||
-        tempo <= 0
-    ) {
-
-        tempo =
-            Number(
-                opcoes.duracao
-            );
-
-    }
-
-
-    if (
-        !Number.isFinite(tempo) ||
-        tempo <= 0
-    ) {
-
-        tempo =
-            MESA_CONFIG.cte.tempoPadrao;
-
-    }
-
-
-    let quantidade =
-
-        Number(
-            opcoes.quantidade
-        );
-
-
-    if (
-        !Number.isFinite(quantidade) ||
-        quantidade < 1
-    ) {
-
-        quantidade =
-            MESA_CONFIG.cte.quantidadePadrao;
-
-    }
-
-
-    quantidade =
-        Math.floor(
-            quantidade
-        );
-
-
-    mesaState.cte.ativo =
-        true;
-
-
-    mesaState.cte.tempo =
-        tempo;
-
-
-    mesaState.cte.quantidade =
-        quantidade;
-
-
-    mesaState.cte.cliques =
-        0;
-
-
-    mesaState.cte.resultados =
-        [];
-
-
-    mesaState.cte.inicio =
-        performance.now();
-
-
-    criarTelaCTE();
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:cteIniciado",
-            {
-
-                detail: {
-
-                    tempo,
-
-                    quantidade,
-
-                    inicio:
-                        mesaState.cte.inicio,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    executarContagemCTE();
-
-}
-
-
-/* ============================================================
-   TELA CENTRAL DO CTE
-============================================================ */
-
-function criarTelaCTE() {
-
-    if (!MesaUI.screenContent) {
-
-        console.warn(
-            "[Mesa] #mesa-screen-content não encontrado."
-        );
-
-        return;
-
-    }
-
-
-    MesaUI.screenContent.innerHTML = `
-
-        <div
-            class="mesa-cte"
-            id="mesa-cte">
-
-            <div class="mesa-cte-header">
-
-                <span class="mesa-cte-icon">
-                    ⚡
-                </span>
-
-                <div>
-
-                    <span class="mesa-cte-label">
-                        CLICK TIME EVENT
-                    </span>
-
-                    <h2>
-                        Prepare-se
-                    </h2>
-
-                </div>
-
-            </div>
-
-
-            <p
-                class="mesa-cte-instruction"
-                id="cte-instruction">
-
-                Clique quando estiver pronto!
-
-            </p>
-
-
-            <div class="mesa-cte-timer">
-
-                <span
-                    id="cte-timer-value">
-                    1.000
-                </span>
-
-                <small>
-                    segundos
-                </small>
-
-            </div>
-
-
-            <div class="mesa-cte-progress">
-
-                <div
-                    id="cte-progress-bar"
-                    class="mesa-cte-progress-bar">
-                </div>
-
-            </div>
-
-
-            <button
-                type="button"
-                class="mesa-cte-click"
-                id="cte-click-button"
-                data-mesa-action="cte"
-                data-cte-action="clique">
-
-                <span class="mesa-cte-click-icon">
-                    ⚡
-                </span>
-
-                <span>
-                    CLIQUE!
-                </span>
-
-            </button>
-
-
-            <div
-                class="mesa-cte-counter"
-                id="cte-click-counter">
-
-                0 / ${mesaState.cte.quantidade}
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   CONTAGEM / JANELA DE TEMPO DO CTE
-============================================================ */
-
-function executarContagemCTE() {
-
-    if (
-        !mesaState.cte.ativo
-    ) {
-
-        return;
-
-    }
-
-
-    const inicio =
-        mesaState.cte.inicio;
-
-
-    const tempo =
-        mesaState.cte.tempo;
-
-
-    function atualizar() {
-
-        if (
-            !mesaState.cte.ativo
-        ) {
-
-            return;
-
-        }
-
-
-        const agora =
-            performance.now();
-
-
-        const decorrido =
-            agora -
-            inicio;
-
-
-        const restante =
-            Math.max(
-
-                0,
-
-                tempo -
-                decorrido
-
-            );
-
-
-        const percentual =
-
-            Math.min(
-
-                100,
-
-                (
-                    decorrido /
-                    tempo
-                ) * 100
-
-            );
-
-
-        const timer =
-            document.getElementById(
-                "cte-timer-value"
-            );
-
-
-        const progress =
-            document.getElementById(
-                "cte-progress-bar"
-            );
-
-
-        if (timer) {
-
-            timer.textContent =
-
-                (
-                    restante /
-                    1000
-
-                ).toFixed(3);
-
-        }
-
-
-        if (progress) {
-
-            progress.style.width =
-                `${percentual}%`;
-
-        }
-
-
-        if (
-            restante <= 0
-        ) {
-
-            finalizarCTEPorTempo();
-
-            return;
-
-        }
-
-
-        requestAnimationFrame(
-            atualizar
-        );
-
-    }
-
-
-    atualizar();
-
-}
-
-
-/* ============================================================
-   CLIQUE REAL DO CTE
-============================================================ */
-
-function executarCliqueCTE(
-    elemento = null,
-    evento = null
-) {
-
-    if (
-        !mesaState.cte.ativo
-    ) {
-
-        return;
-
-    }
-
-
-    const agora =
-        performance.now();
-
-
-    const decorrido =
-        agora -
-        mesaState.cte.inicio;
-
-
-    if (
-        decorrido >
-        mesaState.cte.tempo
-    ) {
-
-        finalizarCTEPorTempo();
-
-        return;
-
-    }
-
-
-    mesaState.cte.cliques++;
-
-
-    const cliqueAtual =
-        mesaState.cte.cliques;
-
-
-    const quantidade =
-        mesaState.cte.quantidade;
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:cteClique",
-            {
-
-                detail: {
-
-                    clique:
-                        cliqueAtual,
-
-                    quantidade,
-
-                    tempoDecorrido:
-                        decorrido,
-
-                    tempoRestante:
-
-                        Math.max(
-
-                            0,
-
-                            mesaState.cte.tempo -
-                            decorrido
-
-                        ),
-
-                    elemento,
-
-                    evento,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-
-    const contador =
-        document.getElementById(
-            "cte-click-counter"
-        );
-
-
-    if (contador) {
-
-        contador.textContent =
-
-            `${cliqueAtual} / ${quantidade}`;
-
-    }
-
-
-    if (
-        cliqueAtual >=
-        quantidade
-    ) {
-
-        finalizarCTESucesso(
-            decorrido
-        );
-
-        return;
-
-    }
-
-
-    const instrucao =
-        document.getElementById(
-            "cte-instruction"
-        );
-
-
-    if (instrucao) {
-
-        instrucao.textContent =
-
-            `Clique novamente! ${cliqueAtual} / ${quantidade}`;
-
-    }
-
-}
-
-
-/* ============================================================
-   CTE — SUCESSO
-============================================================ */
-
-function finalizarCTESucesso(
-    tempoDecorrido
-) {
-
-    if (
-        !mesaState.cte.ativo
-    ) {
-
-        return;
-
-    }
-
-
-    mesaState.cte.ativo =
-        false;
-
-
-    const resultado = {
-
-        sucesso:
-            true,
-
-        cliques:
-            mesaState.cte.cliques,
-
-        quantidade:
-            mesaState.cte.quantidade,
-
-        tempo:
-            mesaState.cte.tempo,
-
-        tempoDecorrido,
-
-        tempoRestante:
-
-            Math.max(
-
-                0,
-
-                mesaState.cte.tempo -
-                tempoDecorrido
-
-            ),
-
-        timestamp:
-            Date.now()
-
-    };
-
-
-    mesaState.cte.resultados.push(
-        resultado
-    );
-
-
-    mostrarResultadoCTE(
-        resultado
-    );
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:cteResultado",
-            {
-
-                detail: {
-
-                    resultado,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-}
-
-
-/* ============================================================
-   CTE — FALHA POR TEMPO
-============================================================ */
-
-function finalizarCTEPorTempo() {
-
-    if (
-        !mesaState.cte.ativo
-    ) {
-
-        return;
-
-    }
-
-
-    mesaState.cte.ativo =
-        false;
-
-
-    const resultado = {
-
-        sucesso:
-            false,
-
-        motivo:
-            "tempo_esgotado",
-
-        cliques:
-            mesaState.cte.cliques,
-
-        quantidade:
-            mesaState.cte.quantidade,
-
-        tempo:
-            mesaState.cte.tempo,
-
-        tempoDecorrido:
-            mesaState.cte.tempo,
-
-        tempoRestante:
-            0,
-
-        timestamp:
-            Date.now()
-
-    };
-
-
-    mesaState.cte.resultados.push(
-        resultado
-    );
-
-
-    mostrarResultadoCTE(
-        resultado
-    );
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:cteResultado",
-            {
-
-                detail: {
-
-                    resultado,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-}
-
-
-/* ============================================================
-   MOSTRAR RESULTADO CTE
-============================================================ */
-
-function mostrarResultadoCTE(
-    resultado
-) {
-
-    if (!MesaUI.screenContent) {
-
-        return;
-
-    }
-
-
-    const sucesso =
-        resultado?.sucesso === true;
-
-
-    if (sucesso) {
-
-        MesaUI.screenContent.innerHTML = `
-
-            <div
-                class="mesa-cte-result mesa-cte-success">
-
-                <div class="mesa-cte-result-icon">
-                    ✓
-                </div>
-
-                <span class="mesa-cte-label">
-                    CLICK TIME EVENT
-                </span>
-
-                <h2>
-                    CTE CONCLUÍDO
-                </h2>
-
-                <p>
-                    Clique realizado no tempo certo.
-                </p>
-
-                <div class="mesa-cte-result-time">
-
-                    ${(
-                        resultado.tempoDecorrido /
-                        1000
-                    ).toFixed(3)}s
-
-                </div>
-
-            </div>
-
-        `;
-
-    } else {
-
-        MesaUI.screenContent.innerHTML = `
-
-            <div
-                class="mesa-cte-result mesa-cte-fail">
-
-                <div class="mesa-cte-result-icon">
-                    ×
-                </div>
-
-                <span class="mesa-cte-label">
-                    CLICK TIME EVENT
-                </span>
-
-                <h2>
-                    CTE FALHOU
-                </h2>
-
-                <p>
-                    O tempo acabou antes do clique necessário.
-                </p>
-
-            </div>
-
-        `;
-
-    }
-
-
-    setTimeout(
-
-        () => {
-
-            mostrarTelaPrincipal();
-
-            document.dispatchEvent(
-
-                new CustomEvent(
-                    "mesa:cteFinalizado",
-                    {
-
-                        detail: {
-
-                            resultados:
-                                mesaState.cte.resultados,
-
-                            estado:
-                                mesaState
-
-                        }
-
-                    }
-
-                )
-
-            );
-
-        },
-
-        1500
-
-    );
-
-}
-
-
-/* ============================================================
-   LIMPAR CTE
-============================================================ */
-
-function limparCTE() {
-
-    mesaState.cte.ativo =
-        false;
-
-
-    mesaState.cte.inicio =
-        null;
-
-
-    mostrarTelaPrincipal();
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:cteFinalizado",
-            {
-
-                detail: {
-
-                    resultados:
-                        mesaState.cte.resultados,
-
-                    estado:
-                        mesaState
-
-                }
-
-            }
-
-        )
-
-    );
-
-}
-
-
-/* ============================================================
-   TELA PRINCIPAL
-============================================================ */
-
-function mostrarTelaPrincipal() {
-
-    if (!MesaUI.screenContent) {
-
-        return;
-
-    }
-
-
-    MesaUI.screenContent.innerHTML = `
-
-        <div class="mesa-welcome">
-
-            <div class="mesa-welcome-icon">
-                🎲
-            </div>
-
-            <h2>
-                Mesa de RPG
-            </h2>
-
-            <p>
-                Aguardando o início da aventura...
-            </p>
-
-        </div>
-
-    `;
-
-}
-
-
-/* ============================================================
-   MOSTRAR TELA
-============================================================ */
-
-function mostrarTela(
-    conteudo
-) {
-
-    if (!MesaUI.screenContent) {
-
-        return;
-
-    }
-
-
-    if (
-        typeof conteudo ===
-        "string"
-    ) {
-
-        MesaUI.screenContent.innerHTML = `
-
-            <div class="mesa-screen-message">
-
-                ${conteudo}
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    if (
-        conteudo instanceof HTMLElement
-    ) {
-
-        MesaUI.screenContent.innerHTML =
-            "";
-
-        MesaUI.screenContent.appendChild(
-            conteudo
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   ASSENTOS
-============================================================ */
 
 function atualizarAssentos() {
+    // Esta função será chamada pelos outros módulos (mesa-jogadores.js)
+    // Por enquanto só dispara o evento
+    document.dispatchEvent(new CustomEvent("mesa:assentosAtualizados", {
+        detail: { jogadores: mesaState.jogadores }
+    }));
+}
 
-    if (!MesaUI.jogadores) {
+function selecionarJogador(slot) {
+    const numero = Number(slot);
+    if (!numero || numero < 1 || numero > MESA_CONFIG.maxJogadores) return;
 
-        return;
+    const ehProprio = Number(mesaState.jogadorAtual.slot) === numero;
 
-    }
-
-
-    const cards =
-        Array.from(
-
-            MesaUI.jogadores
-                .querySelectorAll(
-                    "[data-player]"
-                )
-
-        );
-
-
-    cards.forEach(
-
-        card => {
-
-            const slot =
-                Number(
-                    card.dataset.player
-                );
-
-
-            const assento =
-                mesaState.jogadores[
-                    slot - 1
-                ];
-
-
-            if (!assento) {
-
-                return;
-
-            }
-
-
-            atualizarAssento(
-                slot,
-                assento
-            );
-
+    document.dispatchEvent(new CustomEvent("mesa:jogadorSelecionado", {
+        detail: {
+            slot: numero,
+            jogador: mesaState.jogadores[numero - 1],
+            ehProprioJogador: ehProprio
         }
-
-    );
-
-
+    }));
 }
 
-
 /* ============================================================
-   ATUALIZAR ASSENTO
+   CTE (Click Time Event) - versão estável
 ============================================================ */
-
-function atualizarAssento(
-    slot,
-    dados = {}
-) {
-
-    const card =
-        MesaUI.jogadores?.querySelector(
-
-            `[data-player="${slot}"]`
-
-        );
-
-
-    const assento =
-        mesaState.jogadores[
-            Number(slot) - 1
-        ];
-
-
-    if (!assento) {
-
-        return;
-
-    }
-
-
-    if (
-        typeof dados.ocupado !==
-        "undefined"
-    ) {
-
-        assento.ocupado =
-            Boolean(
-                dados.ocupado
-            );
-
-    }
-
-
-    if (
-        typeof dados.characterId !==
-        "undefined"
-    ) {
-
-        assento.characterId =
-            dados.characterId ||
-            null;
-
-    }
-
-
-    if (
-        typeof dados.userId !==
-        "undefined"
-    ) {
-
-        assento.userId =
-            dados.userId ||
-            null;
-
-    }
-
-
-    if (!card) {
-
-        return;
-
-    }
-
-
-    card.classList.toggle(
-        "ocupado",
-        assento.ocupado
-    );
-
-
-    card.classList.toggle(
-        "vazio",
-        !assento.ocupado
-    );
-
-}
-
-
-/* ============================================================
-   CAMPANHA VISUAL
-============================================================ */
-
-function atualizarCampanhaVisual() {
-
-    if (!MesaUI.nomeCampanha) {
-
-        return;
-
-    }
-
-
-    MesaUI.nomeCampanha.textContent =
-
-        mesaState.campanha.nome ||
-
-        "Campanha";
-
-}
-
-
-/* ============================================================
-   DEFINIR ASSENTOS
-============================================================ */
-
-function definirAssentos(
-    jogadores = []
-) {
-
-    mesaState.jogadores =
-
-        Array.from(
-
-            {
-                length:
-                    MESA_CONFIG.maxJogadores
-            },
-
-            (_, index) => {
-
-                const jogador =
-
-                    jogadores.find(
-
-                        item =>
-
-                            Number(
-                                item.slot
-                            ) ===
-                            index + 1
-
-                    );
-
-
-                if (!jogador) {
-
-                    return {
-
-                        slot:
-                            index + 1,
-
-                        ocupado:
-                            false,
-
-                        characterId:
-                            null,
-
-                        userId:
-                            null
-
-                    };
-
-                }
-
-
-                return {
-
-                    slot:
-                        index + 1,
-
-                    ocupado:
-                        Boolean(
-                            jogador.ocupado !==
-                            false
-                        ),
-
-                    characterId:
-
-                        jogador.characterId ||
-
-                        jogador.id ||
-
-                        null,
-
-                    userId:
-
-                        jogador.userId ||
-
-                        jogador.user_id ||
-
-                        null
-
-                };
-
-            }
-
-        );
-
-
-    atualizarAssentos();
-
-
-    document.dispatchEvent(
-
-        new CustomEvent(
-            "mesa:assentosAtualizados",
-            {
-
-                detail:
-                    mesaState.jogadores
-
-            }
-
-        )
-
-    );
-
-}
-
-
-/* ============================================================
-   RESET VISUAL
-============================================================ */
-
-function resetarMesaVisual() {
-
-    voltarParaMesaNormal();
-
-    atualizarCampanhaVisual();
-
-    atualizarAssentos();
-
-}
-
-
-/* ============================================================
-   SUBMÓDULOS
-============================================================ */
-
-function inicializarSubmodulos() {
-
-    if (
-
-        window.MesaJogadores &&
-
-        typeof window.MesaJogadores.inicializar ===
-        "function"
-
-    ) {
-
-        try {
-
-            window.MesaJogadores.inicializar();
-
-        } catch (erro) {
-
-            console.warn(
-                "[Mesa] Erro ao inicializar MesaJogadores:",
-                erro
-            );
-
+function iniciarCTE(opcoes = {}) {
+    if (!MESA_CONFIG.cte.disponivel || mesaState.cte.ativo) return;
+
+    mesaState.cte.ativo = true;
+    mesaState.cte.tempo = Number(opcoes.tempo) || MESA_CONFIG.cte.tempoPadrao;
+    mesaState.cte.quantidade = Math.max(1, Number(opcoes.quantidade) || 1);
+    mesaState.cte.cliques = 0;
+    mesaState.cte.resultados = [];
+    mesaState.cte.inicio = performance.now();
+
+    criarTelaCTE();
+    executarContagemCTE();
+
+    document.dispatchEvent(new CustomEvent("mesa:cteIniciado", {
+        detail: {
+            tempo: mesaState.cte.tempo,
+            quantidade: mesaState.cte.quantidade
         }
-
-    }
-
-
-    if (
-
-        window.MesaAventura &&
-
-        typeof window.MesaAventura.inicializar ===
-        "function"
-
-    ) {
-
-        try {
-
-            window.MesaAventura.inicializar();
-
-        } catch (erro) {
-
-            console.warn(
-                "[Mesa] Erro ao inicializar MesaAventura:",
-                erro
-            );
-
-        }
-
-    }
-
+    }));
 }
 
+function criarTelaCTE() {
+    if (!MesaUI.screenContent) return;
+
+    MesaUI.screenContent.innerHTML = `
+        <div class="mesa-cte" id="mesa-cte">
+            <div class="mesa-cte-header">
+                <span class="mesa-cte-icon">⚡</span>
+                <div>
+                    <span class="mesa-cte-label">CLICK TIME EVENT</span>
+                    <h2>Prepare-se</h2>
+                </div>
+            </div>
+            <p class="mesa-cte-instruction" id="cte-instruction">Clique quando estiver pronto!</p>
+            <div class="mesa-cte-timer">
+                <span id="cte-timer-value">1.000</span>
+                <small>segundos</small>
+            </div>
+            <div class="mesa-cte-progress">
+                <div id="cte-progress-bar" class="mesa-cte-progress-bar"></div>
+            </div>
+            <button type="button" class="mesa-cte-click" id="cte-click-button" data-cte-action="clique">
+                <span class="mesa-cte-click-icon">⚡</span>
+                <span>CLIQUE!</span>
+            </button>
+            <div class="mesa-cte-counter" id="cte-click-counter">
+                0 / ${mesaState.cte.quantidade}
+            </div>
+        </div>
+    `;
+}
+
+function executarContagemCTE() {
+    if (!mesaState.cte.ativo) return;
+
+    const atualizar = () => {
+        if (!mesaState.cte.ativo) return;
+
+        const decorrido = performance.now() - mesaState.cte.inicio;
+        const restante = Math.max(0, mesaState.cte.tempo - decorrido);
+        const percentual = Math.min(100, (decorrido / mesaState.cte.tempo) * 100);
+
+        const timer = document.getElementById("cte-timer-value");
+        const progress = document.getElementById("cte-progress-bar");
+
+        if (timer) timer.textContent = (restante / 1000).toFixed(3);
+        if (progress) progress.style.width = `${percentual}%`;
+
+        if (restante <= 0) {
+            finalizarCTEPorTempo();
+            return;
+        }
+        requestAnimationFrame(atualizar);
+    };
+    atualizar();
+}
+
+function executarCliqueCTE() {
+    if (!mesaState.cte.ativo) return;
+
+    const decorrido = performance.now() - mesaState.cte.inicio;
+    if (decorrido > mesaState.cte.tempo) {
+        finalizarCTEPorTempo();
+        return;
+    }
+
+    mesaState.cte.cliques++;
+    const counter = document.getElementById("cte-click-counter");
+    if (counter) {
+        counter.textContent = `${mesaState.cte.cliques} / ${mesaState.cte.quantidade}`;
+    }
+
+    document.dispatchEvent(new CustomEvent("mesa:cteClique", {
+        detail: {
+            clique: mesaState.cte.cliques,
+            quantidade: mesaState.cte.quantidade,
+            tempoDecorrido: decorrido
+        }
+    }));
+
+    if (mesaState.cte.cliques >= mesaState.cte.quantidade) {
+        finalizarCTESucesso();
+    }
+}
+
+function finalizarCTEPorTempo() {
+    mesaState.cte.ativo = false;
+    document.dispatchEvent(new CustomEvent("mesa:cteFalhaGlobal"));
+}
+
+function finalizarCTESucesso() {
+    mesaState.cte.ativo = false;
+    document.dispatchEvent(new CustomEvent("mesa:cteFinalizado", {
+        detail: { sucesso: true, cliques: mesaState.cte.cliques }
+    }));
+}
 
 /* ============================================================
    API PÚBLICA
 ============================================================ */
-
 window.MesaRPG = {
-
-    estado:
-        obterEstadoMesa,
-
-    campanha:
-        obterCampanhaMesa,
-
-    sincronizarCampanha,
-
-    usuarioEhMestre,
-
-    usuarioEhJogador,
-
-    obterSlotAtual,
-
+    estado: () => mesaState,
+    inicializar: inicializarMesa,
     selecionarJogador,
-
-    definirAssentos,
-
-    atualizarAssentos,
-
-    mudarModo,
-
-    voltarParaMesaNormal,
-
-    abrirAventura,
-
-    iniciarBatalha,
-
-    finalizarBatalha,
-
-    iniciarBoss,
-
     iniciarCTE,
-
-    executarCliqueCTE,
-
-    limparCTE,
-
-    mostrarTela,
-
-    mostrarTelaPrincipal,
-
-    resetarMesaVisual,
-
-    carregarJogadoresDaCampanha,
-
-    iniciarRealtimeMesa,
-
-    pararRealtimeMesa,
-
-    sincronizarRealtimeCampanha
-
+    iniciarBatalha: function() { /* será expandido depois */ },
+    mudarModo: function(modo) {
+        if (Object.values(MESA_CONFIG.modos).includes(modo)) {
+            mesaState.modoAtual = modo;
+            atualizarModoVisual();
+        }
+    }
 };
 
-
 /* ============================================================
-   FUNÇÕES AUXILIARES
+   AUTO-INICIALIZAÇÃO
 ============================================================ */
-
-function obterEstadoMesa() {
-
-    return mesaState;
-
-}
-
-
-function usuarioEhMestre() {
-
-    return (
-        mesaState.usuario.isMaster ===
-        true
-    );
-
-}
-
-
-function usuarioEhJogador() {
-
-    return (
-        mesaState.usuario.isPlayer ===
-        true
-    );
-
-}
-
-
-function obterSlotAtual() {
-
-    return (
-
-        mesaState.jogadorAtual.slot ||
-
-        null
-
-    );
-
-}
-
-
-function obterCampanhaMesa() {
-
-    return {
-
-        ...mesaState.campanha
-
-    };
-
-}
-
-
-/* ============================================================
-   COMPATIBILIDADE GLOBAL
-============================================================ */
-
-window.inicializarMesa =
-    inicializarMesa;
-
-
-window.mudarModoMesa =
-    mudarModo;
-
-
-window.abrirMesaAventura =
-    abrirAventura;
-
-
-window.iniciarMesaBatalha =
-    iniciarBatalha;
-
-
-window.finalizarMesaBatalha =
-    finalizarBatalha;
-
-
-window.iniciarMesaBoss =
-    iniciarBoss;
-
-
-window.iniciarMesaCTE =
-    iniciarCTE;
-
-
-window.executarCliqueMesaCTE =
-    executarCliqueCTE;
-
-
-window.limparMesaCTE =
-    limparCTE;
-
-
-window.obterEstadoMesa =
-    obterEstadoMesa;
-
-
-window.usuarioEhMestreMesa =
-    usuarioEhMestre;
-
-
-window.usuarioEhJogadorMesa =
-    usuarioEhJogador;
-
-
-window.carregarJogadoresDaCampanha =
-    carregarJogadoresDaCampanha;
-
-
-window.iniciarRealtimeMesa =
-    iniciarRealtimeMesa;
-
-
-window.pararRealtimeMesa =
-    pararRealtimeMesa;
-
-
-/* ============================================================
-   DOM READY
-============================================================ */
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-
-        "DOMContentLoaded",
-
-        inicializarMesa
-
-    );
-
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+        // Espera um pouco mais para garantir que supabase e outros módulos carregaram
+        setTimeout(inicializarMesa, 200);
+    });
 } else {
-
-    inicializarMesa();
-
+    setTimeout(inicializarMesa, 200);
 }
