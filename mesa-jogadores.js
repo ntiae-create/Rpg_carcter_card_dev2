@@ -18,13 +18,14 @@ function obterEstadoMesa() {
         typeof window.MesaRPG ===
         "undefined"
     ) {
-
-        console.warn(
-            "MesaRPG ainda não foi inicializado."
-        );
-
         return null;
+    }
 
+    if (
+        typeof window.MesaRPG.estado !==
+        "function"
+    ) {
+        return null;
     }
 
     return window.MesaRPG.estado();
@@ -42,26 +43,27 @@ const MesaJogadoresUI = {
 
     cards: [],
 
-    ficha: null
+    ficha: null,
+
+    inicializado: false
 
 };
 
 
 /* ============================================================
-   CACHE REALTIME DOS PERSONAGENS
+   CACHE DOS PERSONAGENS DA CAMPANHA
 ============================================================ */
 
 /*
     IMPORTANTE:
 
-    Este cache recebe diretamente os personagens
-    carregados pelo mesa.js através do Supabase.
+    Este array representa TODOS os personagens da campanha.
 
-    Enquanto o Realtime ainda não respondeu,
-    usamos os dados do auth.js.
+    NÃO representa apenas o personagem do usuário atual.
 
-    Depois que o Realtime respondeu uma vez,
-    ele passa a ser a fonte principal.
+    Isso é fundamental porque o Mestre pode não possuir
+    personagem próprio e, mesmo assim, precisa enxergar
+    todos os jogadores da campanha.
 */
 
 let personagensMesaRealtime = [];
@@ -69,31 +71,41 @@ let personagensMesaRealtime = [];
 let personagensMesaRealtimeAtivo = false;
 
 
+/*
+    Controle para impedir chamadas simultâneas
+    desnecessárias ao carregamento do MesaRPG.
+*/
+
+let carregamentoRealtimeEmAndamento = false;
+
+
 /* ============================================================
-   RECEBER PERSONAGENS DO REALTIME
+   SINCRONIZAR DADOS RECEBIDOS
 ============================================================ */
 
 function sincronizarDadosRealtime(
     personagens = [],
-    emitirEvento = true
+    emitirEvento = false
 ) {
 
-    personagensMesaRealtime =
+    const lista =
         Array.isArray(personagens)
-            ? personagens
+            ? personagens.filter(Boolean)
             : [];
 
 
+    personagensMesaRealtime =
+        lista;
+
+
     /*
-        A partir deste momento sabemos que
-        o carregamento oficial do Supabase
-        já aconteceu.
+        A partir daqui a fonte oficial da campanha
+        já foi carregada.
 
-        Inclusive se o resultado for [].
+        IMPORTANTE:
 
-        Isso é importante para que um jogador
-        que sair da mesa não permaneça preso
-        no cache antigo.
+        Mesmo que a lista seja vazia, isso significa
+        que o Supabase respondeu oficialmente.
     */
 
     personagensMesaRealtimeAtivo =
@@ -101,8 +113,7 @@ function sincronizarDadosRealtime(
 
 
     /*
-        Atualiza também o auth para manter
-        compatibilidade com outros sistemas.
+        Mantém compatibilidade com auth.js.
     */
 
     if (
@@ -116,29 +127,29 @@ function sincronizarDadosRealtime(
 
 
     /*
-        Sincroniza os 8 slots.
+        Atualiza os 8 slots.
     */
 
     sincronizarPersonagensCampanha();
 
 
     /*
-        Atualiza os cards imediatamente.
+        Atualiza visualmente os cards.
     */
 
     atualizarTodosOsCards();
 
 
     /*
-        Notifica outros sistemas da Mesa.
+        Por padrão NÃO emitimos
+        "mesa:jogadoresAtualizados".
 
-        IMPORTANTE:
+        O mesa.js já é o responsável por consultar
+        o Supabase e emitir esse evento.
 
-        Quando esta função for chamada pelo próprio
-        evento "mesa:jogadoresAtualizados", não
-        emitimos o evento novamente.
-
-        Isso evita um loop infinito.
+        Caso outro sistema chame explicitamente
+        esta função com emitirEvento=true,
+        podemos avisar os demais sistemas.
     */
 
     if (
@@ -147,20 +158,20 @@ function sincronizarDadosRealtime(
 
         document.dispatchEvent(
             new CustomEvent(
-                "mesa:jogadoresAtualizados",
+                "mesa:jogadores:realtime",
                 {
                     detail: {
-
                         personagens:
                             personagensMesaRealtime
-
                     }
-
                 }
             )
         );
 
     }
+
+
+    return personagensMesaRealtime;
 
 }
 
@@ -179,7 +190,18 @@ document.addEventListener(
 );
 
 
-async function inicializarMesaJogadores() {
+function inicializarMesaJogadores() {
+
+    if (
+        MesaJogadoresUI.inicializado
+    ) {
+        return;
+    }
+
+
+    MesaJogadoresUI.inicializado =
+        true;
+
 
     MesaJogadoresUI.jogadores =
         document.getElementById(
@@ -199,59 +221,22 @@ async function inicializarMesaJogadores() {
 
 
     /*
-        Primeiro tentamos sincronizar
-        usando o que já estiver disponível
-        localmente.
+        Primeiro usamos qualquer informação
+        que já tenha chegado do auth ou do Mesa.
     */
 
     sincronizarPersonagensCampanha();
-
 
     atualizarTodosOsCards();
 
 
     /* ========================================================
-       REALTIME — PERSONAGENS ATUALIZADOS
+       EVENTO OFICIAL DO MESA.JS
     ======================================================== */
-
-    /*
-        ESTE É O EVENTO OFICIAL ENVIADO PELO MESA.JS.
-
-        O mesa.js já consultou o Supabase e está
-        entregando a lista pronta.
-
-        Portanto:
-
-        - recebemos os personagens;
-        - atualizamos o cache;
-        - NÃO emitimos o mesmo evento novamente.
-
-        Isso elimina o loop:
-        mesa.js → mesa-jogadores → mesa.js → ...
-    */
 
     document.addEventListener(
         "mesa:jogadoresAtualizados",
-        evento => {
-
-            const personagens =
-                evento.detail?.personagens;
-
-
-            if (
-                Array.isArray(
-                    personagens
-                )
-            ) {
-
-                sincronizarDadosRealtime(
-                    personagens,
-                    false
-                );
-
-            }
-
-        }
+        receberPersonagensMesa
     );
 
 
@@ -261,30 +246,12 @@ async function inicializarMesaJogadores() {
 
     document.addEventListener(
         "mesa:jogadores:realtime",
-        evento => {
-
-            const personagens =
-                evento.detail?.personagens;
-
-
-            if (
-                Array.isArray(
-                    personagens
-                )
-            ) {
-
-                sincronizarDadosRealtime(
-                    personagens
-                );
-
-            }
-
-        }
+        receberPersonagensRealtime
     );
 
 
     /* ========================================================
-       EVENTOS EXISTENTES DA MESA
+       EVENTOS DE JOGADORES
     ======================================================== */
 
     document.addEventListener(
@@ -295,7 +262,10 @@ async function inicializarMesaJogadores() {
                 evento.detail?.playerId;
 
 
-            if (playerId) {
+            if (
+                playerId !== undefined &&
+                playerId !== null
+            ) {
 
                 atualizarCardJogadorCompleto(
                     playerId
@@ -317,24 +287,42 @@ async function inicializarMesaJogadores() {
     );
 
 
-    /*
-        Caso o auth termine de carregar
-        a campanha depois da Mesa.
-    */
+    /* ========================================================
+       CAMPANHA ATUALIZADA
+    ======================================================== */
 
     document.addEventListener(
         "rpg:campanhaAtualizada",
-        () => {
+        evento => {
 
-            sincronizarPersonagensCampanha();
-
-            atualizarTodosOsCards();
+            const personagens =
+                evento.detail?.personagens;
 
 
             /*
-                Se o mesa.js já estiver disponível,
-                solicitamos uma leitura oficial
-                do Supabase.
+                Se o evento já trouxe os personagens,
+                usamos diretamente.
+
+                Isso evita uma consulta desnecessária.
+            */
+
+            if (
+                Array.isArray(
+                    personagens
+                )
+            ) {
+
+                sincronizarDadosRealtime(
+                    personagens,
+                    false
+                );
+
+            }
+
+
+            /*
+                Depois solicitamos a fonte oficial
+                somente se o MesaRPG estiver disponível.
             */
 
             solicitarCargaRealtime();
@@ -344,12 +332,77 @@ async function inicializarMesaJogadores() {
 
 
     /* ========================================================
-       PRIMEIRA CARGA OFICIAL
+       AUTENTICAÇÃO / CAMPANHA SINCRONIZADA
     ======================================================== */
 
+    document.addEventListener(
+        "rpgAuth:campanhaSincronizada",
+        () => {
+
+            const personagens =
+                window.rpgAuth &&
+                Array.isArray(
+                    window.rpgAuth.campaignCharacters
+                )
+                    ? window.rpgAuth.campaignCharacters
+                    : [];
+
+
+            if (
+                personagens.length > 0
+            ) {
+
+                sincronizarDadosRealtime(
+                    personagens,
+                    false
+                );
+
+            }
+
+
+            solicitarCargaRealtime();
+
+        }
+    );
+
+
+    /* ========================================================
+       MUDANÇA DE CAMPANHA
+    ======================================================== */
+
+    window.addEventListener(
+        "mesa:campanhaAlterada",
+        () => {
+
+            /*
+                Uma nova campanha significa
+                que o cache anterior não pode ser
+                considerado fonte oficial.
+
+                Zeramos somente o cache de campanha.
+            */
+
+            personagensMesaRealtime =
+                [];
+
+            personagensMesaRealtimeAtivo =
+                false;
+
+
+            sincronizarPersonagensCampanha();
+
+
+            atualizarTodosOsCards();
+
+
+            solicitarCargaRealtime();
+
+        }
+    );
+
+
     /*
-        Damos um pequeno intervalo para garantir
-        que mesa.js já tenha criado MesaRPG.
+        Primeira solicitação oficial.
     */
 
     setTimeout(
@@ -362,11 +415,17 @@ async function inicializarMesaJogadores() {
     );
 
 
-    /* ========================================================
-       TENTATIVAS DE SEGURANÇA
-    ======================================================== */
+    /*
+        Tentativas de segurança.
 
-    let tentativas = 0;
+        Isso é apenas para o caso de mesa.js
+        ainda não ter criado MesaRPG quando
+        este arquivo foi inicializado.
+    */
+
+    let tentativas =
+        0;
+
 
     const intervalo =
         setInterval(
@@ -374,12 +433,6 @@ async function inicializarMesaJogadores() {
 
                 tentativas++;
 
-
-                /*
-                    Se o Realtime já respondeu,
-                    não precisamos mais fazer
-                    tentativas.
-                */
 
                 if (
                     personagensMesaRealtimeAtivo
@@ -409,11 +462,6 @@ async function inicializarMesaJogadores() {
                 }
 
 
-                /*
-                    Tentamos novamente solicitar
-                    os dados oficiais.
-                */
-
                 solicitarCargaRealtime();
 
 
@@ -431,9 +479,81 @@ async function inicializarMesaJogadores() {
             250
         );
 
+}
 
-    console.log(
-        "👥 Sistema de jogadores inicializado."
+
+/* ============================================================
+   RECEBER EVENTO DO MESA.JS
+============================================================ */
+
+function receberPersonagensMesa(
+    evento
+) {
+
+    const personagens =
+        evento?.detail?.personagens;
+
+
+    if (
+        !Array.isArray(
+            personagens
+        )
+    ) {
+        return;
+    }
+
+
+    /*
+        IMPORTANTE:
+
+        Aqui NÃO emitimos
+        "mesa:jogadoresAtualizados".
+
+        Apenas recebemos os dados.
+
+        Isso quebra o ciclo:
+
+        mesa.js
+            ↓
+        mesa-jogadores.js
+            ↓
+        mesa.js
+            ↓
+        ...
+    */
+
+    sincronizarDadosRealtime(
+        personagens,
+        false
+    );
+
+}
+
+
+/* ============================================================
+   RECEBER EVENTO ESPECÍFICO DE REALTIME
+============================================================ */
+
+function receberPersonagensRealtime(
+    evento
+) {
+
+    const personagens =
+        evento?.detail?.personagens;
+
+
+    if (
+        !Array.isArray(
+            personagens
+        )
+    ) {
+        return;
+    }
+
+
+    sincronizarDadosRealtime(
+        personagens,
+        false
     );
 
 }
@@ -445,87 +565,101 @@ async function inicializarMesaJogadores() {
 
 function solicitarCargaRealtime() {
 
-    /*
-        O mesa.js possui a função oficial
-        que consulta characters no Supabase.
-    */
-
     if (
-        window.MesaRPG &&
-        typeof window.MesaRPG
-            .carregarJogadoresDaCampanha ===
-            "function"
+        carregamentoRealtimeEmAndamento
     ) {
 
-        try {
-
-            const resultado =
-                window.MesaRPG
-                    .carregarJogadoresDaCampanha();
-
-
-            /*
-                Não precisamos aguardar o resultado
-                para não bloquear a interface.
-
-                O próprio mesa.js disparará
-                os eventos quando terminar.
-            */
-
-            if (
-                resultado &&
-                typeof resultado.then ===
-                "function"
-            ) {
-
-                resultado.catch(
-                    erro => {
-
-                        console.warn(
-                            "⚠️ Falha ao carregar jogadores da campanha:",
-                            erro
-                        );
-
-                    }
-                );
-
-            }
-
-            return true;
-
-        } catch (erro) {
-
-            console.warn(
-                "⚠️ Erro solicitando jogadores ao MesaRPG:",
-                erro
-            );
-
-        }
+        return false;
 
     }
 
 
-    return false;
+    if (
+        !window.MesaRPG
+    ) {
+
+        return false;
+
+    }
+
+
+    if (
+        typeof window.MesaRPG
+            .carregarJogadoresDaCampanha !==
+        "function"
+    ) {
+
+        return false;
+
+    }
+
+
+    carregamentoRealtimeEmAndamento =
+        true;
+
+
+    try {
+
+        const resultado =
+            window.MesaRPG
+                .carregarJogadoresDaCampanha();
+
+
+        if (
+            resultado &&
+            typeof resultado.then ===
+            "function"
+        ) {
+
+            resultado
+                .catch(
+                    () => {}
+                )
+                .finally(
+                    () => {
+
+                        carregamentoRealtimeEmAndamento =
+                            false;
+
+                    }
+                );
+
+        }
+
+        else {
+
+            carregamentoRealtimeEmAndamento =
+                false;
+
+        }
+
+
+        return true;
+
+    }
+
+    catch (
+        erro
+    ) {
+
+        carregamentoRealtimeEmAndamento =
+            false;
+
+        return false;
+
+    }
 
 }
 
 
 /* ============================================================
-   EVENTOS
+   EVENTOS DOS CARDS
 ============================================================ */
 
 function registrarEventosJogadores() {
 
     MesaJogadoresUI.cards.forEach(
         card => {
-
-            /*
-                O mesa.js já possui o evento
-                principal de seleção do jogador.
-
-                Aqui não adicionamos outro clique
-                para evitar conflito.
-            */
 
             card.addEventListener(
                 "contextmenu",
@@ -538,6 +672,15 @@ function registrarEventosJogadores() {
                         Number(
                             card.dataset.player
                         );
+
+
+                    if (
+                        !Number.isInteger(
+                            playerId
+                        )
+                    ) {
+                        return;
+                    }
 
 
                     emitirEventoJogadores(
@@ -563,22 +706,33 @@ function registrarEventosJogadores() {
 function obterPersonagensCampanha() {
 
     /*
-        PRIMEIRA PRIORIDADE:
-        dados oficiais recebidos pelo Realtime.
+        PRIORIDADE 1:
+        carregamento oficial do Mesa/Reatime.
     */
 
     if (
         personagensMesaRealtimeAtivo
     ) {
 
-        return personagensMesaRealtime;
+        return Array.isArray(
+            personagensMesaRealtime
+        )
+            ? personagensMesaRealtime
+            : [];
 
     }
 
 
     /*
-        SEGUNDA PRIORIDADE:
-        dados carregados pelo auth.js.
+        PRIORIDADE 2:
+        personagens carregados pelo auth.js.
+
+        IMPORTANTE:
+
+        campaignCharacters representa
+        a campanha inteira.
+
+        NÃO filtramos pelo auth.uid().
     */
 
     if (
@@ -594,9 +748,8 @@ function obterPersonagensCampanha() {
 
 
     /*
-        TERCEIRA PRIORIDADE:
-        função global antiga,
-        caso outro arquivo ainda a forneça.
+        PRIORIDADE 3:
+        compatibilidade com sistemas antigos.
     */
 
     if (
@@ -612,25 +765,83 @@ function obterPersonagensCampanha() {
                 window.obterPersonagensCampanha();
 
 
-            return Array.isArray(
-                personagens
-            )
-                ? personagens
-                : [];
+            if (
+                Array.isArray(
+                    personagens
+                )
+            ) {
 
-        } catch (erro) {
+                return personagens;
 
-            console.warn(
-                "⚠️ Erro obtendo personagens da campanha:",
-                erro
-            );
+            }
 
         }
+
+        catch (
+            erro
+        ) {}
 
     }
 
 
     return [];
+
+}
+
+
+/* ============================================================
+   PERSONAGEM DO USUÁRIO ATUAL
+============================================================ */
+
+/*
+    Esta função é propositalmente separada
+    de obterPersonagensCampanha().
+
+    Ela procura somente o personagem do usuário
+    atual.
+
+    Isso permite:
+
+    Mestre sem personagem
+        +
+    personagens dos jogadores
+        =
+    Mesa funcionando normalmente.
+*/
+
+function obterPersonagemDoUsuarioAtual() {
+
+    const personagens =
+        obterPersonagensCampanha();
+
+
+    const userId =
+        window.rpgAuth?.user?.id ||
+        window.rpgAuth?.session?.user?.id ||
+        null;
+
+
+    if (
+        !userId
+    ) {
+
+        return null;
+
+    }
+
+
+    return (
+        personagens.find(
+            personagem =>
+                String(
+                    personagem?.user_id
+                ) ===
+                String(
+                    userId
+                )
+        ) ||
+        null
+    );
 
 }
 
@@ -654,7 +865,9 @@ function obterPersonagemPorSlot(
     if (
         !Number.isInteger(
             numeroSlot
-        )
+        ) ||
+        numeroSlot < 1 ||
+        numeroSlot > 8
     ) {
 
         return null;
@@ -689,7 +902,7 @@ function obterPersonagemPorSlot(
 
 
 /* ============================================================
-   CONVERTER PERSONAGEM → JOGADOR DA MESA
+   CONVERTER PERSONAGEM → JOGADOR
 ============================================================ */
 
 function converterPersonagemParaJogador(
@@ -706,10 +919,6 @@ function converterPersonagemParaJogador(
     }
 
 
-    /* ========================================================
-       HP / MP
-    ======================================================== */
-
     const hp =
         Number(
             personagem.hp
@@ -722,17 +931,10 @@ function converterPersonagemParaJogador(
         );
 
 
-    /*
-        Mantemos os valores máximos
-        já existentes no estado da Mesa
-        quando disponíveis.
-
-        Caso contrário usamos os valores
-        atuais do personagem como máximo.
-    */
-
     const hpMaximo =
-        jogadorBase?.hp?.maximo > 0
+        Number(
+            jogadorBase?.hp?.maximo
+        ) > 0
             ? Number(
                 jogadorBase.hp.maximo
             )
@@ -745,7 +947,9 @@ function converterPersonagemParaJogador(
 
 
     const manaMaximo =
-        jogadorBase?.mana?.maximo > 0
+        Number(
+            jogadorBase?.mana?.maximo
+        ) > 0
             ? Number(
                 jogadorBase.mana.maximo
             )
@@ -780,10 +984,6 @@ function converterPersonagemParaJogador(
             )
             : manaMaximo;
 
-
-    /* ========================================================
-       RECURSOS BÁSICOS
-    ======================================================== */
 
     const recursos =
         personagem.recursos ||
@@ -920,14 +1120,6 @@ function converterPersonagemParaJogador(
             },
 
 
-        /*
-            Recursos básicos utilizados
-            diretamente pelo card.
-
-            Mantemos os três nomes para
-            compatibilidade com sistemas existentes.
-        */
-
         recursos: {
 
             est:
@@ -949,14 +1141,6 @@ function converterPersonagemParaJogador(
         sanidade:
             sanidade,
 
-
-        /*
-            Mantemos o inventário do personagem
-            se ele existir no banco.
-
-            Caso não exista, preservamos
-            o inventário já existente na Mesa.
-        */
 
         inventario:
             Array.isArray(
@@ -1080,7 +1264,7 @@ function converterPersonagemParaJogador(
 
 
 /* ============================================================
-   OBTER RECURSO BÁSICO
+   RECURSO BÁSICO
 ============================================================ */
 
 function obterRecursoBasico(
@@ -1090,12 +1274,9 @@ function obterRecursoBasico(
     recursoAnterior
 ) {
 
-    let valor = null;
+    let valor =
+        null;
 
-
-    /*
-        Procura primeiro dentro de "recursos".
-    */
 
     for (
         const nome of nomes
@@ -1116,11 +1297,6 @@ function obterRecursoBasico(
 
     }
 
-
-    /*
-        Se não encontrou, procura diretamente
-        no personagem.
-    */
 
     if (
         valor === null
@@ -1148,11 +1324,6 @@ function obterRecursoBasico(
     }
 
 
-    /*
-        Se ainda não encontrou, mantém
-        o valor anterior da Mesa.
-    */
-
     if (
         valor === null &&
         recursoAnterior !== undefined &&
@@ -1164,15 +1335,6 @@ function obterRecursoBasico(
 
     }
 
-
-    /*
-        Recurso no formato:
-
-        {
-            atual: 80,
-            maximo: 100
-        }
-    */
 
     if (
         valor &&
@@ -1218,11 +1380,6 @@ function obterRecursoBasico(
     }
 
 
-    /*
-        Recurso armazenado simplesmente
-        como número.
-    */
-
     const numero =
         Number(
             valor
@@ -1230,7 +1387,9 @@ function obterRecursoBasico(
 
 
     if (
-        Number.isFinite(numero)
+        Number.isFinite(
+            numero
+        )
     ) {
 
         return {
@@ -1248,11 +1407,6 @@ function obterRecursoBasico(
 
     }
 
-
-    /*
-        Valor padrão para personagens
-        que ainda não possuem o recurso.
-    */
 
     return {
 
@@ -1300,15 +1454,12 @@ function sincronizarPersonagensCampanha() {
 
 
     /*
-        IMPORTANTE:
+        Antes da primeira resposta oficial:
 
-        Se ainda não recebemos os dados oficiais
-        do Supabase e não há personagens locais,
-        NÃO destruímos os jogadores existentes.
+        não apagamos os jogadores.
 
-        Isso evita que a primeira sincronização
-        transforme os 8 slots em vazios antes
-        do Realtime terminar.
+        Isso evita que a Mesa apareça vazia durante
+        a inicialização.
     */
 
     if (
@@ -1320,10 +1471,6 @@ function sincronizarPersonagensCampanha() {
 
     }
 
-
-    /*
-        Criamos um mapa dos personagens por slot.
-    */
 
     const personagensPorSlot =
         new Map();
@@ -1356,14 +1503,17 @@ function sincronizarPersonagensCampanha() {
 
 
     /*
-        Os 8 jogadores continuam existindo
-        no estado da Mesa.
+        IMPORTANTE:
 
-        Os slots ocupados recebem
-        os personagens reais.
+        Os slots são definidos pelo banco.
 
-        Os slots sem personagem ficam
-        realmente livres.
+        Não usamos a posição do array.
+
+        Exemplo:
+
+        slot 1 → card 1
+        slot 2 → card 2
+        slot 5 → card 5
     */
 
     for (
@@ -1403,10 +1553,7 @@ function sincronizarPersonagensCampanha() {
         else {
 
             /*
-                Slot vazio.
-
-                Mantemos somente os dados estruturais
-                necessários para o funcionamento do sistema.
+                Slot realmente livre.
             */
 
             estado.jogadores[indice] = {
@@ -1455,10 +1602,8 @@ function sincronizarPersonagensCampanha() {
     emitirEventoJogadores(
         "personagensSincronizados",
         {
-
             quantidade:
                 personagens.length
-
         }
     );
 
@@ -1469,7 +1614,7 @@ function sincronizarPersonagensCampanha() {
 
 
 /* ============================================================
-   OBTER JOGADOR
+   OBTER JOGADOR LOCAL
 ============================================================ */
 
 function obterJogadorLocal(
@@ -1487,13 +1632,24 @@ function obterJogadorLocal(
     }
 
 
+    if (
+        !Array.isArray(
+            estado.jogadores
+        )
+    ) {
+
+        return null;
+
+    }
+
+
     return estado.jogadores.find(
         jogador =>
             Number(
                 jogador.id
             ) ===
             Number(playerId)
-    );
+    ) || null;
 
 }
 
@@ -1515,12 +1671,30 @@ function atualizarTodosOsCards() {
     }
 
 
+    if (
+        !Array.isArray(
+            estado.jogadores
+        )
+    ) {
+
+        return;
+
+    }
+
+
     estado.jogadores.forEach(
         jogador => {
 
-            atualizarCardJogadorCompleto(
-                jogador.id
-            );
+            if (
+                jogador &&
+                jogador.id !== undefined
+            ) {
+
+                atualizarCardJogadorCompleto(
+                    jogador.id
+                );
+
+            }
 
         }
     );
@@ -1529,7 +1703,7 @@ function atualizarTodosOsCards() {
 
 
 /* ============================================================
-   ATUALIZAR CARD COMPLETO
+   ATUALIZAR CARD
 ============================================================ */
 
 function atualizarCardJogadorCompleto(
@@ -1568,11 +1742,6 @@ function atualizarCardJogadorCompleto(
         );
 
 
-    /*
-        Identificamos visualmente se o slot
-        está ocupado.
-    */
-
     card.dataset.ocupado =
         possuiPersonagem
             ? "true"
@@ -1594,9 +1763,9 @@ function atualizarCardJogadorCompleto(
         playerId;
 
 
-    /* -----------------------------------------
+    /* ========================================================
        IDENTIDADE
-    ----------------------------------------- */
+    ======================================================== */
 
     const nome =
         card.querySelector(
@@ -1653,16 +1822,13 @@ function atualizarCardJogadorCompleto(
         }
 
 
-        /*
-            Avatar
-        */
-
         if (
             avatar &&
             jogador.avatar
         ) {
 
             avatar.innerHTML = "";
+
 
             const imagem =
                 document.createElement(
@@ -1693,6 +1859,8 @@ function atualizarCardJogadorCompleto(
             avatar
         ) {
 
+            avatar.innerHTML = "";
+
             avatar.textContent =
                 "👤";
 
@@ -1701,10 +1869,6 @@ function atualizarCardJogadorCompleto(
     }
 
     else {
-
-        /*
-            SLOT VAZIO
-        */
 
         if (nome) {
 
@@ -1742,9 +1906,9 @@ function atualizarCardJogadorCompleto(
     }
 
 
-    /* -----------------------------------------
+    /* ========================================================
        HP
-    ----------------------------------------- */
+    ======================================================== */
 
     atualizarRecursoCard(
         card,
@@ -1754,9 +1918,9 @@ function atualizarCardJogadorCompleto(
     );
 
 
-    /* -----------------------------------------
+    /* ========================================================
        MANA
-    ----------------------------------------- */
+    ======================================================== */
 
     atualizarRecursoCard(
         card,
@@ -1766,19 +1930,11 @@ function atualizarCardJogadorCompleto(
     );
 
 
-    /* -----------------------------------------
-       ATRIBUTOS BÁSICOS
-    ----------------------------------------- */
-
     renderizarAtributosBasicosCard(
         card,
         jogador
     );
 
-
-    /* -----------------------------------------
-       ESTADOS
-    ----------------------------------------- */
 
     card.dataset.conectado =
         jogador.conectado
@@ -1799,7 +1955,7 @@ function atualizarCardJogadorCompleto(
 
 
 /* ============================================================
-   RENDERIZAR ATRIBUTOS BÁSICOS DO CARD
+   ATRIBUTOS BÁSICOS
 ============================================================ */
 
 function renderizarAtributosBasicosCard(
@@ -1820,10 +1976,6 @@ function renderizarAtributosBasicosCard(
         );
 
 
-    /*
-        Cria o container apenas uma vez.
-    */
-
     if (!container) {
 
         container =
@@ -1835,11 +1987,6 @@ function renderizarAtributosBasicosCard(
         container.className =
             "player-basic-attributes";
 
-
-        /*
-            Coloca os atributos no final
-            do conteúdo do card.
-        */
 
         const conteudo =
             card.querySelector(
@@ -1980,7 +2127,7 @@ function renderizarAtributosBasicosCard(
 
 
 /* ============================================================
-   NORMALIZAR RECURSO DO CARD
+   NORMALIZAR RECURSO
 ============================================================ */
 
 function normalizarRecursoCard(
@@ -2065,7 +2212,7 @@ function normalizarRecursoCard(
 
 
 /* ============================================================
-   FORMATAR RECURSO DO CARD
+   FORMATAR RECURSO
 ============================================================ */
 
 function formatarRecursoCard(
@@ -2097,7 +2244,7 @@ function formatarRecursoCard(
 
 
 /* ============================================================
-   ATUALIZAR RECURSO
+   ATUALIZAR RECURSO CARD
 ============================================================ */
 
 function atualizarRecursoCard(
@@ -2148,15 +2295,11 @@ function atualizarRecursoCard(
 
     if (barra) {
 
-        const porcentagem =
-            calcularPorcentagemJogador(
+        barra.style.width =
+            `${calcularPorcentagemJogador(
                 atual,
                 maximo
-            );
-
-
-        barra.style.width =
-            `${porcentagem}%`;
+            )}%`;
 
     }
 
@@ -2173,12 +2316,8 @@ function calcularPorcentagemJogador(
 ) {
 
     if (
-        !Number.isFinite(
-            atual
-        ) ||
-        !Number.isFinite(
-            maximo
-        ) ||
+        !Number.isFinite(atual) ||
+        !Number.isFinite(maximo) ||
         maximo <= 0
     ) {
 
@@ -2227,9 +2366,7 @@ function alterarHP(
 
 
     if (
-        !Number.isFinite(
-            valor
-        )
+        !Number.isFinite(valor)
     ) {
 
         return false;
@@ -2239,8 +2376,7 @@ function alterarHP(
 
     jogador.hp.atual =
         limitarRecurso(
-            jogador.hp.atual +
-            valor,
+            jogador.hp.atual + valor,
             jogador.hp.maximo
         );
 
@@ -2253,19 +2389,10 @@ function alterarHP(
     emitirEventoJogadores(
         "hpAlterado",
         {
-
-            playerId:
-                jogador.id,
-
-            hpAtual:
-                jogador.hp.atual,
-
-            hpMaximo:
-                jogador.hp.maximo,
-
-            alteracao:
-                valor
-
+            playerId: jogador.id,
+            hpAtual: jogador.hp.atual,
+            hpMaximo: jogador.hp.maximo,
+            alteracao: valor
         }
     );
 
@@ -2279,10 +2406,6 @@ function alterarHP(
 
 }
 
-
-/* ============================================================
-   DEFINIR HP
-============================================================ */
 
 function definirHP(
     playerId,
@@ -2309,9 +2432,7 @@ function definirHP(
 
 
     if (
-        !Number.isFinite(
-            novoValor
-        )
+        !Number.isFinite(novoValor)
     ) {
 
         return false;
@@ -2334,16 +2455,9 @@ function definirHP(
     emitirEventoJogadores(
         "hpAlterado",
         {
-
-            playerId:
-                jogador.id,
-
-            hpAtual:
-                jogador.hp.atual,
-
-            hpMaximo:
-                jogador.hp.maximo
-
+            playerId: jogador.id,
+            hpAtual: jogador.hp.atual,
+            hpMaximo: jogador.hp.maximo
         }
     );
 
@@ -2387,9 +2501,7 @@ function alterarMana(
 
 
     if (
-        !Number.isFinite(
-            valor
-        )
+        !Number.isFinite(valor)
     ) {
 
         return false;
@@ -2399,8 +2511,7 @@ function alterarMana(
 
     jogador.mana.atual =
         limitarRecurso(
-            jogador.mana.atual +
-            valor,
+            jogador.mana.atual + valor,
             jogador.mana.maximo
         );
 
@@ -2413,19 +2524,10 @@ function alterarMana(
     emitirEventoJogadores(
         "manaAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            manaAtual:
-                jogador.mana.atual,
-
-            manaMaximo:
-                jogador.mana.maximo,
-
-            alteracao:
-                valor
-
+            playerId: jogador.id,
+            manaAtual: jogador.mana.atual,
+            manaMaximo: jogador.mana.maximo,
+            alteracao: valor
         }
     );
 
@@ -2439,10 +2541,6 @@ function alterarMana(
 
 }
 
-
-/* ============================================================
-   DEFINIR MANA
-============================================================ */
 
 function definirMana(
     playerId,
@@ -2469,9 +2567,7 @@ function definirMana(
 
 
     if (
-        !Number.isFinite(
-            novoValor
-        )
+        !Number.isFinite(novoValor)
     ) {
 
         return false;
@@ -2494,16 +2590,9 @@ function definirMana(
     emitirEventoJogadores(
         "manaAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            manaAtual:
-                jogador.mana.atual,
-
-            manaMaximo:
-                jogador.mana.maximo
-
+            playerId: jogador.id,
+            manaAtual: jogador.mana.atual,
+            manaMaximo: jogador.mana.maximo
         }
     );
 
@@ -2519,7 +2608,7 @@ function definirMana(
 
 
 /* ============================================================
-   ALTERAR MÁXIMO DE HP
+   MÁXIMOS
 ============================================================ */
 
 function definirMaximoHP(
@@ -2547,9 +2636,7 @@ function definirMaximoHP(
 
 
     if (
-        !Number.isFinite(
-            valor
-        ) ||
+        !Number.isFinite(valor) ||
         valor <= 0
     ) {
 
@@ -2584,10 +2671,6 @@ function definirMaximoHP(
 }
 
 
-/* ============================================================
-   ALTERAR MÁXIMO DE MANA
-============================================================ */
-
 function definirMaximoMana(
     playerId,
     novoMaximo
@@ -2613,9 +2696,7 @@ function definirMaximoMana(
 
 
     if (
-        !Number.isFinite(
-            valor
-        ) ||
+        !Number.isFinite(valor) ||
         valor <= 0
     ) {
 
@@ -2650,10 +2731,6 @@ function definirMaximoMana(
 }
 
 
-/* ============================================================
-   RECURSOS
-============================================================ */
-
 function limitarRecurso(
     valor,
     maximo
@@ -2685,14 +2762,8 @@ function adicionarStatus(
         );
 
 
-    if (!jogador) {
-
-        return false;
-
-    }
-
-
     if (
+        !jogador ||
         !status
     ) {
 
@@ -2701,17 +2772,21 @@ function adicionarStatus(
     }
 
 
+    if (
+        !Array.isArray(
+            jogador.status
+        )
+    ) {
+
+        jogador.status = [];
+
+    }
+
+
     const novoStatus =
-        typeof status ===
-        "string"
-
-            ? {
-                nome: status
-            }
-
-            : {
-                ...status
-            };
+        typeof status === "string"
+            ? { nome: status }
+            : { ...status };
 
 
     if (
@@ -2731,13 +2806,8 @@ function adicionarStatus(
     emitirEventoJogadores(
         "statusAdicionado",
         {
-
-            playerId:
-                jogador.id,
-
-            status:
-                novoStatus
-
+            playerId: jogador.id,
+            status: novoStatus
         }
     );
 
@@ -2751,10 +2821,6 @@ function adicionarStatus(
 
 }
 
-
-/* ============================================================
-   REMOVER STATUS
-============================================================ */
 
 function removerStatus(
     playerId,
@@ -2774,6 +2840,17 @@ function removerStatus(
     }
 
 
+    if (
+        !Array.isArray(
+            jogador.status
+        )
+    ) {
+
+        jogador.status = [];
+
+    }
+
+
     const tamanhoAnterior =
         jogador.status.length;
 
@@ -2783,12 +2860,9 @@ function removerStatus(
             status => {
 
                 const nome =
-                    typeof status ===
-                    "string"
-
+                    typeof status === "string"
                         ? status
-
-                        : status.nome;
+                        : status?.nome;
 
                 return nome !==
                     nomeStatus;
@@ -2802,18 +2876,15 @@ function removerStatus(
         tamanhoAnterior;
 
 
-    if (removido) {
+    if (
+        removido
+    ) {
 
         emitirEventoJogadores(
             "statusRemovido",
             {
-
-                playerId:
-                    jogador.id,
-
-                status:
-                    nomeStatus
-
+                playerId: jogador.id,
+                status: nomeStatus
             }
         );
 
@@ -2829,10 +2900,6 @@ function removerStatus(
 
 }
 
-
-/* ============================================================
-   LIMPAR STATUS
-============================================================ */
 
 function limparStatus(
     playerId
@@ -2857,10 +2924,7 @@ function limparStatus(
     emitirEventoJogadores(
         "statusLimpos",
         {
-
-            playerId:
-                jogador.id
-
+            playerId: jogador.id
         }
     );
 
@@ -2876,7 +2940,7 @@ function limparStatus(
 
 
 /* ============================================================
-   FOME
+   FOME / SEDE
 ============================================================ */
 
 function alterarFome(
@@ -2904,9 +2968,7 @@ function alterarFome(
 
 
     if (
-        !Number.isFinite(
-            valor
-        )
+        !Number.isFinite(valor)
     ) {
 
         return false;
@@ -2916,8 +2978,7 @@ function alterarFome(
 
     jogador.fome =
         limitarRecurso(
-            jogador.fome +
-            valor,
+            jogador.fome + valor,
             100
         );
 
@@ -2925,16 +2986,9 @@ function alterarFome(
     emitirEventoJogadores(
         "fomeAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            fome:
-                jogador.fome,
-
-            alteracao:
-                valor
-
+            playerId: jogador.id,
+            fome: jogador.fome,
+            alteracao: valor
         }
     );
 
@@ -2948,10 +3002,6 @@ function alterarFome(
 
 }
 
-
-/* ============================================================
-   SEDE
-============================================================ */
 
 function alterarSede(
     playerId,
@@ -2978,9 +3028,7 @@ function alterarSede(
 
 
     if (
-        !Number.isFinite(
-            valor
-        )
+        !Number.isFinite(valor)
     ) {
 
         return false;
@@ -2990,8 +3038,7 @@ function alterarSede(
 
     jogador.sede =
         limitarRecurso(
-            jogador.sede +
-            valor,
+            jogador.sede + valor,
             100
         );
 
@@ -2999,16 +3046,9 @@ function alterarSede(
     emitirEventoJogadores(
         "sedeAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            sede:
-                jogador.sede,
-
-            alteracao:
-                valor
-
+            playerId: jogador.id,
+            sede: jogador.sede,
+            alteracao: valor
         }
     );
 
@@ -3022,10 +3062,6 @@ function alterarSede(
 
 }
 
-
-/* ============================================================
-   DEFINIR FOME
-============================================================ */
 
 function definirFome(
     playerId,
@@ -3052,9 +3088,7 @@ function definirFome(
 
 
     if (
-        !Number.isFinite(
-            novoValor
-        )
+        !Number.isFinite(novoValor)
     ) {
 
         return false;
@@ -3072,13 +3106,8 @@ function definirFome(
     emitirEventoJogadores(
         "fomeAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            fome:
-                jogador.fome
-
+            playerId: jogador.id,
+            fome: jogador.fome
         }
     );
 
@@ -3092,10 +3121,6 @@ function definirFome(
 
 }
 
-
-/* ============================================================
-   DEFINIR SEDE
-============================================================ */
 
 function definirSede(
     playerId,
@@ -3122,9 +3147,7 @@ function definirSede(
 
 
     if (
-        !Number.isFinite(
-            novoValor
-        )
+        !Number.isFinite(novoValor)
     ) {
 
         return false;
@@ -3142,13 +3165,8 @@ function definirSede(
     emitirEventoJogadores(
         "sedeAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            sede:
-                jogador.sede
-
+            playerId: jogador.id,
+            sede: jogador.sede
         }
     );
 
@@ -3178,17 +3196,9 @@ function definirHabilidades(
         );
 
 
-    if (!jogador) {
-
-        return false;
-
-    }
-
-
     if (
-        !Array.isArray(
-            habilidades
-        )
+        !jogador ||
+        !Array.isArray(habilidades)
     ) {
 
         return false;
@@ -3196,24 +3206,18 @@ function definirHabilidades(
     }
 
 
-    jogador.habilidades =
-        [
-            habilidades[0] ?? null,
-            habilidades[1] ?? null,
-            habilidades[2] ?? null
-        ];
+    jogador.habilidades = [
+        habilidades[0] ?? null,
+        habilidades[1] ?? null,
+        habilidades[2] ?? null
+    ];
 
 
     emitirEventoJogadores(
         "habilidadesAlteradas",
         {
-
-            playerId:
-                jogador.id,
-
-            habilidades:
-                jogador.habilidades
-
+            playerId: jogador.id,
+            habilidades: jogador.habilidades
         }
     );
 
@@ -3227,10 +3231,6 @@ function definirHabilidades(
 
 }
 
-
-/* ============================================================
-   ALTERAR UMA HABILIDADE
-============================================================ */
 
 function definirHabilidade(
     playerId,
@@ -3256,9 +3256,7 @@ function definirHabilidade(
 
 
     if (
-        !Number.isInteger(
-            indice
-        ) ||
+        !Number.isInteger(indice) ||
         indice < 0 ||
         indice > 2
     ) {
@@ -3268,9 +3266,19 @@ function definirHabilidade(
     }
 
 
+    if (
+        !Array.isArray(
+            jogador.habilidades
+        )
+    ) {
+
+        jogador.habilidades = [];
+
+    }
+
+
     while (
-        jogador.habilidades.length <
-        3
+        jogador.habilidades.length < 3
     ) {
 
         jogador.habilidades.push(
@@ -3287,15 +3295,9 @@ function definirHabilidade(
     emitirEventoJogadores(
         "habilidadeAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            slot:
-                indice,
-
+            playerId: jogador.id,
+            slot: indice,
             habilidade
-
         }
     );
 
@@ -3311,7 +3313,7 @@ function definirHabilidade(
 
 
 /* ============================================================
-   PASSIVA
+   PASSIVAS
 ============================================================ */
 
 function definirPassiva(
@@ -3339,12 +3341,8 @@ function definirPassiva(
     emitirEventoJogadores(
         "passivaAlterada",
         {
-
-            playerId:
-                jogador.id,
-
+            playerId: jogador.id,
             passiva
-
         }
     );
 
@@ -3358,10 +3356,6 @@ function definirPassiva(
 
 }
 
-
-/* ============================================================
-   PASSIVA DE CLASSE
-============================================================ */
 
 function definirPassivaClasse(
     playerId,
@@ -3388,12 +3382,8 @@ function definirPassivaClasse(
     emitirEventoJogadores(
         "passivaClasseAlterada",
         {
-
-            playerId:
-                jogador.id,
-
+            playerId: jogador.id,
             passiva
-
         }
     );
 
@@ -3423,16 +3413,23 @@ function adicionarItem(
         );
 
 
-    if (!jogador) {
+    if (
+        !jogador ||
+        !item
+    ) {
 
         return false;
 
     }
 
 
-    if (!item) {
+    if (
+        !Array.isArray(
+            jogador.inventario
+        )
+    ) {
 
-        return false;
+        jogador.inventario = [];
 
     }
 
@@ -3445,12 +3442,8 @@ function adicionarItem(
     emitirEventoJogadores(
         "itemAdicionado",
         {
-
-            playerId:
-                jogador.id,
-
+            playerId: jogador.id,
             item
-
         }
     );
 
@@ -3464,10 +3457,6 @@ function adicionarItem(
 
 }
 
-
-/* ============================================================
-   REMOVER ITEM
-============================================================ */
 
 function removerItem(
     playerId,
@@ -3513,13 +3502,8 @@ function removerItem(
     emitirEventoJogadores(
         "itemRemovido",
         {
-
-            playerId:
-                jogador.id,
-
-            item:
-                itemRemovido
-
+            playerId: jogador.id,
+            item: itemRemovido
         }
     );
 
@@ -3533,10 +3517,6 @@ function removerItem(
 
 }
 
-
-/* ============================================================
-   ENTREGAR ITEM
-============================================================ */
 
 function entregarItem(
     jogadorOrigem,
@@ -3562,6 +3542,24 @@ function entregarItem(
     ) {
 
         return false;
+
+    }
+
+
+    if (
+        !Array.isArray(origem.inventario)
+    ) {
+
+        origem.inventario = [];
+
+    }
+
+
+    if (
+        !Array.isArray(destino.inventario)
+    ) {
+
+        destino.inventario = [];
 
     }
 
@@ -3597,16 +3595,9 @@ function entregarItem(
     emitirEventoJogadores(
         "itemEntregue",
         {
-
-            origem:
-                origem.id,
-
-            destino:
-                destino.id,
-
-            item:
-                itemEntregue
-
+            origem: origem.id,
+            destino: destino.id,
+            item: itemEntregue
         }
     );
 
@@ -3626,19 +3617,13 @@ function entregarItem(
 }
 
 
-/* ============================================================
-   ENCONTRAR ITEM
-============================================================ */
-
 function encontrarItem(
     inventario,
     identificador
 ) {
 
     if (
-        !Array.isArray(
-            inventario
-        )
+        !Array.isArray(inventario)
     ) {
 
         return -1;
@@ -3660,8 +3645,7 @@ function encontrarItem(
 
 
             if (
-                typeof item ===
-                "string"
+                typeof item === "string"
             ) {
 
                 return (
@@ -3673,16 +3657,13 @@ function encontrarItem(
 
 
             if (
-                typeof item ===
-                "object" &&
+                typeof item === "object" &&
                 item !== null
             ) {
 
                 return (
-                    item.id ===
-                    identificador ||
-                    item.nome ===
-                    identificador
+                    item.id === identificador ||
+                    item.nome === identificador
                 );
 
             }
@@ -3697,7 +3678,7 @@ function encontrarItem(
 
 
 /* ============================================================
-   TROCA ENTRE JOGADORES
+   TROCAS
 ============================================================ */
 
 function trocarItens(
@@ -3729,17 +3710,28 @@ function trocarItens(
     }
 
 
+    if (
+        !Array.isArray(a.inventario)
+    ) {
+
+        a.inventario = [];
+
+    }
+
+
+    if (
+        !Array.isArray(b.inventario)
+    ) {
+
+        b.inventario = [];
+
+    }
+
+
     const indiceA =
         encontrarItem(
             a.inventario,
             itemA
-        );
-
-
-    const indiceB =
-        encontrarItem(
-            b.inventario,
-            itemB
         );
 
 
@@ -3754,8 +3746,7 @@ function trocarItens(
 
     if (
         itemB === null ||
-        typeof itemB ===
-        "undefined"
+        itemB === undefined
     ) {
 
         const itemEntregue =
@@ -3772,6 +3763,13 @@ function trocarItens(
     }
 
     else {
+
+        const indiceB =
+            encontrarItem(
+                b.inventario,
+                itemB
+            );
+
 
         if (
             indiceB === -1
@@ -3811,17 +3809,10 @@ function trocarItens(
     emitirEventoJogadores(
         "trocaRealizada",
         {
-
-            jogadorA:
-                a.id,
-
-            jogadorB:
-                b.id,
-
+            jogadorA: a.id,
+            jogadorB: b.id,
             itemA,
-
             itemB
-
         }
     );
 
@@ -3877,13 +3868,8 @@ function definirConexaoJogador(
     emitirEventoJogadores(
         "conexaoAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            conectado:
-                jogador.conectado
-
+            playerId: jogador.id,
+            conectado: jogador.conectado
         }
     );
 
@@ -3921,8 +3907,7 @@ function definirIdentidadeJogador(
 
 
     if (
-        typeof dados.nome ===
-        "string" &&
+        typeof dados.nome === "string" &&
         dados.nome.trim()
     ) {
 
@@ -3933,8 +3918,7 @@ function definirIdentidadeJogador(
 
 
     if (
-        typeof dados.raca ===
-        "string"
+        typeof dados.raca === "string"
     ) {
 
         jogador.raca =
@@ -3944,8 +3928,7 @@ function definirIdentidadeJogador(
 
 
     if (
-        typeof dados.classe ===
-        "string"
+        typeof dados.classe === "string"
     ) {
 
         jogador.classe =
@@ -3955,8 +3938,7 @@ function definirIdentidadeJogador(
 
 
     if (
-        dados.avatar !==
-        undefined
+        dados.avatar !== undefined
     ) {
 
         jogador.avatar =
@@ -3973,27 +3955,13 @@ function definirIdentidadeJogador(
     emitirEventoJogadores(
         "identidadeAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            dados:
-                {
-
-                    nome:
-                        jogador.nome,
-
-                    raca:
-                        jogador.raca,
-
-                    classe:
-                        jogador.classe,
-
-                    avatar:
-                        jogador.avatar
-
-                }
-
+            playerId: jogador.id,
+            dados: {
+                nome: jogador.nome,
+                raca: jogador.raca,
+                classe: jogador.classe,
+                avatar: jogador.avatar
+            }
         }
     );
 
@@ -4044,13 +4012,8 @@ function definirParticipacaoBatalha(
     emitirEventoJogadores(
         "participacaoBatalhaAlterada",
         {
-
-            playerId:
-                jogador.id,
-
-            participando:
-                jogador.emBatalha
-
+            playerId: jogador.id,
+            participando: jogador.emBatalha
         }
     );
 
@@ -4086,26 +4049,29 @@ function resetarJogador(
     }
 
 
-    jogador.hp.atual =
-        jogador.hp.maximo;
+    if (
+        jogador.hp
+    ) {
+
+        jogador.hp.atual =
+            jogador.hp.maximo;
+
+    }
 
 
-    jogador.mana.atual =
-        jogador.mana.maximo;
+    if (
+        jogador.mana
+    ) {
 
+        jogador.mana.atual =
+            jogador.mana.maximo;
 
-    /*
-        Se Estamina e Sanidade forem recursos
-        estruturados, restauramos para o máximo.
+    }
 
-        Isso não interfere em personagens que
-        ainda não possuam esses recursos.
-    */
 
     if (
         jogador.estamina &&
-        typeof jogador.estamina ===
-        "object"
+        typeof jogador.estamina === "object"
     ) {
 
         jogador.estamina.atual =
@@ -4116,8 +4082,7 @@ function resetarJogador(
 
     if (
         jogador.sanidade &&
-        typeof jogador.sanidade ===
-        "object"
+        typeof jogador.sanidade === "object"
     ) {
 
         jogador.sanidade.atual =
@@ -4128,8 +4093,7 @@ function resetarJogador(
 
     if (
         jogador.recursos?.estamina &&
-        typeof jogador.recursos.estamina ===
-        "object"
+        typeof jogador.recursos.estamina === "object"
     ) {
 
         jogador.recursos.estamina.atual =
@@ -4140,8 +4104,7 @@ function resetarJogador(
 
     if (
         jogador.recursos?.sanidade &&
-        typeof jogador.recursos.sanidade ===
-        "object"
+        typeof jogador.recursos.sanidade === "object"
     ) {
 
         jogador.recursos.sanidade.atual =
@@ -4174,10 +4137,7 @@ function resetarJogador(
     emitirEventoJogadores(
         "jogadorResetado",
         {
-
-            playerId:
-                jogador.id
-
+            playerId: jogador.id
         }
     );
 
@@ -4214,12 +4174,6 @@ function emitirEventoJogadores(
 }
 
 
-/*
-    Evento genérico para sincronização.
-
-    Enviamos apenas o ID do jogador.
-*/
-
 function emitirAtualizacaoJogador(
     playerId
 ) {
@@ -4228,13 +4182,9 @@ function emitirAtualizacaoJogador(
         new CustomEvent(
             "mesa:jogadorAtualizado",
             {
-
                 detail: {
-
                     playerId
-
                 }
-
             }
         )
     );
@@ -4247,10 +4197,6 @@ function emitirAtualizacaoJogador(
 ============================================================ */
 
 window.MesaJogadores = {
-
-    /* -----------------------------------------
-       JOGADORES
-    ----------------------------------------- */
 
     obter(
         playerId
@@ -4269,16 +4215,19 @@ window.MesaJogadores = {
             obterEstadoMesa();
 
 
-        return estado
-            ? estado.jogadores
-            : [];
+        return estado &&
+            Array.isArray(
+                estado.jogadores
+            )
+                ? estado.jogadores
+                : [];
 
     },
 
 
     atualizarCards() {
 
-        sincronizarPersonagensCampanha();
+        return sincronizarPersonagensCampanha();
 
     },
 
@@ -4294,8 +4243,9 @@ window.MesaJogadores = {
         personagens
     ) {
 
-        sincronizarDadosRealtime(
-            personagens
+        return sincronizarDadosRealtime(
+            personagens,
+            false
         );
 
     },
@@ -4319,9 +4269,19 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       IDENTIDADE
-    ----------------------------------------- */
+    personagemUsuarioAtual() {
+
+        return obterPersonagemDoUsuarioAtual();
+
+    },
+
+
+    solicitarCargaRealtime() {
+
+        return solicitarCargaRealtime();
+
+    },
+
 
     identidade: {
 
@@ -4340,10 +4300,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       CONEXÃO
-    ----------------------------------------- */
-
     conexao: {
 
         definir(
@@ -4360,10 +4316,6 @@ window.MesaJogadores = {
 
     },
 
-
-    /* -----------------------------------------
-       HP
-    ----------------------------------------- */
 
     hp: {
 
@@ -4408,10 +4360,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       MANA
-    ----------------------------------------- */
-
     mana: {
 
         alterar(
@@ -4455,10 +4403,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       STATUS
-    ----------------------------------------- */
-
     status: {
 
         adicionar(
@@ -4500,10 +4444,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       FOME
-    ----------------------------------------- */
-
     fome: {
 
         alterar(
@@ -4534,10 +4474,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       SEDE
-    ----------------------------------------- */
-
     sede: {
 
         alterar(
@@ -4567,10 +4503,6 @@ window.MesaJogadores = {
 
     },
 
-
-    /* -----------------------------------------
-       HABILIDADES
-    ----------------------------------------- */
 
     habilidades: {
 
@@ -4604,10 +4536,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       PASSIVAS
-    ----------------------------------------- */
-
     passivas: {
 
         definir(
@@ -4637,10 +4565,6 @@ window.MesaJogadores = {
 
     },
 
-
-    /* -----------------------------------------
-       INVENTÁRIO
-    ----------------------------------------- */
 
     inventario: {
 
@@ -4687,10 +4611,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       TROCAS
-    ----------------------------------------- */
-
     troca: {
 
         realizar(
@@ -4712,10 +4632,6 @@ window.MesaJogadores = {
     },
 
 
-    /* -----------------------------------------
-       BATALHA
-    ----------------------------------------- */
-
     batalha: {
 
         participar(
@@ -4732,10 +4648,6 @@ window.MesaJogadores = {
 
     },
 
-
-    /* -----------------------------------------
-       RESET
-    ----------------------------------------- */
 
     resetar(
         playerId
@@ -4776,6 +4688,17 @@ window.obterPersonagensCampanhaMesa =
 
 window.sincronizarPersonagensRealtimeMesa =
     sincronizarDadosRealtime;
+
+
+/*
+    Função adicional para sistemas que realmente
+    precisam do personagem pertencente ao usuário atual.
+
+    NÃO deve ser usada para montar os cards da Mesa.
+*/
+
+window.obterPersonagemUsuarioAtualMesa =
+    obterPersonagemDoUsuarioAtual;
 
 
 /* ============================================================
