@@ -1014,24 +1014,49 @@
         }
 
 
+        /*
+         * Membros e personagens são carregados
+         * separadamente.
+         *
+         * O carregamento de characters NÃO depende
+         * do carregamento de campaign_members.
+         *
+         * Isso é importante porque o usuário pode
+         * possuir permissão para visualizar os
+         * personagens mesmo que a consulta de
+         * campaign_members falhe.
+         */
+
         const membrosCarregados =
             await carregarMembrosCampanha(
                 campaignId
             );
 
 
-        if (!membrosCarregados) {
+        const personagensCarregados =
+            await carregarPersonagensCampanha(
+                campaignId
+            );
 
-            return false;
-        }
 
+        /*
+         * Consideramos o carregamento concluído
+         * quando pelo menos uma das duas consultas
+         * foi executada com sucesso.
+         *
+         * Principalmente:
+         *
+         * personagensCarregados
+         *
+         * não depende mais de:
+         *
+         * membrosCarregados
+         */
 
-        await carregarPersonagensCampanha(
-            campaignId
+        return (
+            membrosCarregados ||
+            personagensCarregados
         );
-
-
-        return true;
 
     }
 
