@@ -24,14 +24,6 @@
 
 
     /* =====================================================
-       CONSTANTES
-    ===================================================== */
-
-    const STORAGE_KEY_MESA =
-        "rpg_mesa_ativa";
-
-
-    /* =====================================================
        NORMALIZAÇÃO
     ===================================================== */
 
@@ -51,98 +43,17 @@
 
     function obterSupabase() {
 
+        /*
+         * O auth.js utiliza supabaseClient.
+         *
+         * Mantemos window.supabase como compatibilidade
+         * caso algum arquivo antigo ainda o utilize.
+         */
+
         return (
             window.supabaseClient ||
             window.supabase ||
             null
-        );
-
-    }
-
-
-    /* =====================================================
-       CONTEXTO DA MESA SALVO
-    ===================================================== */
-
-    function obterContextoMesaSalvo() {
-
-        try {
-
-            const salvo =
-                localStorage.getItem(
-                    STORAGE_KEY_MESA
-                );
-
-
-            if (!salvo) {
-
-                return null;
-
-            }
-
-
-            const contexto =
-                JSON.parse(salvo);
-
-
-            if (
-                !contexto ||
-                typeof contexto !== "object"
-            ) {
-
-                return null;
-
-            }
-
-
-            return contexto;
-
-        }
-
-        catch (erro) {
-
-            console.warn(
-                "[Campaign] Não foi possível ler rpg_mesa_ativa:",
-                erro
-            );
-
-
-            return null;
-
-        }
-
-    }
-
-
-    /* =====================================================
-       ID DA CAMPANHA SALVA
-    ===================================================== */
-
-    function obterCampaignIdSalvo() {
-
-        const contexto =
-            obterContextoMesaSalvo();
-
-
-        if (!contexto) {
-
-            return null;
-
-        }
-
-
-        return (
-
-            contexto.campaignId ||
-
-            contexto.campanhaId ||
-
-            contexto.campaign?.id ||
-
-            contexto.campanha?.id ||
-
-            null
-
         );
 
     }
@@ -162,11 +73,9 @@
                     "mesa:campanhaAlterada",
                     {
                         detail: {
-
                             campanha:
                                 window.rpgCampaign
                                     .activeCampaign
-
                         }
                     }
                 )
@@ -183,143 +92,6 @@
             );
 
         }
-
-    }
-
-
-    /* =====================================================
-       SINCRONIZAÇÃO COM AUTH
-    ===================================================== */
-
-    function sincronizarCampanhaAuth() {
-
-        if (!window.rpgAuth) {
-
-            return;
-
-        }
-
-
-        const campanha =
-            window.rpgCampaign
-                .activeCampaign ||
-            null;
-
-
-        window.rpgAuth.campaign =
-            campanha;
-
-
-        window.rpgAuth.campaigns =
-            window.rpgCampaign
-                .campaigns || [];
-
-
-        /*
-         * Atualiza o status de mestre.
-         */
-
-        if (
-            window.rpgAuth.user &&
-            campanha &&
-            campanha.master_id
-        ) {
-
-            window.rpgAuth.isMaster =
-
-                String(
-                    window.rpgAuth.user.id
-                ) ===
-
-                String(
-                    campanha.master_id
-                );
-
-        }
-
-        else {
-
-            window.rpgAuth.isMaster =
-                false;
-
-        }
-
-    }
-
-
-    /* =====================================================
-       CAMPANHA SALVA
-       RESTAURA A CAMPANHA QUE ESTAVA SENDO UTILIZADA
-    ===================================================== */
-
-    function restaurarCampanhaSalva() {
-
-        const campaignIdSalvo =
-            obterCampaignIdSalvo();
-
-
-        if (!campaignIdSalvo) {
-
-            console.log(
-                "[Campaign] Nenhuma campanha salva em rpg_mesa_ativa."
-            );
-
-
-            return null;
-
-        }
-
-
-        const campanhaEncontrada =
-            encontrarCampanhaPorId(
-                campaignIdSalvo
-            );
-
-
-        if (!campanhaEncontrada) {
-
-            console.warn(
-                "[Campaign] A campanha salva não está entre as campanhas disponíveis:",
-                campaignIdSalvo
-            );
-
-
-            /*
-             * Não escolhemos outra campanha.
-             */
-
-            window.rpgCampaign
-                .activeCampaign =
-                null;
-
-
-            sincronizarCampanhaAuth();
-
-
-            return null;
-
-        }
-
-
-        /*
-         * Restaura exatamente a campanha salva.
-         */
-
-        window.rpgCampaign
-            .activeCampaign =
-            campanhaEncontrada;
-
-
-        sincronizarCampanhaAuth();
-
-
-        console.log(
-            "[Campaign] Campanha restaurada de rpg_mesa_ativa:",
-            campanhaEncontrada
-        );
-
-
-        return campanhaEncontrada;
 
     }
 
@@ -343,7 +115,6 @@
             console.warn(
                 "[Campaign] Usuário ou Supabase ainda não disponível."
             );
-
 
             return [];
 
@@ -544,7 +315,7 @@
 
 
             /* =============================================
-               RESTAURAR CAMPANHA ATIVA
+               VALIDAR CAMPANHA QUE JÁ ESTAVA ATIVA
             ============================================= */
 
             const campanhaAnterior =
@@ -558,12 +329,23 @@
             ) {
 
                 const campanhaEncontrada =
-                    encontrarCampanhaPorId(
-                        campanhaAnterior.id
+                    campanhas.find(
+                        campanha =>
+                            String(
+                                campanha.id
+                            ) ===
+                            String(
+                                campanhaAnterior.id
+                            )
                     );
 
 
                 if (campanhaEncontrada) {
+
+                    /*
+                     * Atualizamos os dados da campanha
+                     * sem selecionar outra automaticamente.
+                     */
 
                     window.rpgCampaign
                         .activeCampaign =
@@ -572,6 +354,11 @@
                 }
 
                 else {
+
+                    /*
+                     * A campanha ativa anterior não
+                     * pertence mais ao usuário.
+                     */
 
                     window.rpgCampaign
                         .activeCampaign =
@@ -583,32 +370,18 @@
 
 
             /*
-             * Se ainda não existe uma campanha ativa,
-             * tentamos restaurar a campanha que estava
-             * salva em rpg_mesa_ativa.
+             * IMPORTANTE:
              *
-             * NÃO selecionamos campaigns[0].
+             * Se não havia campanha ativa,
+             * continuamos com null.
+             *
+             * NUNCA fazemos:
+             *
+             * campaigns[0]
              */
 
-            if (
-                !window.rpgCampaign
-                    .activeCampaign
-            ) {
+            sincronizarCampanhaAuth();
 
-                restaurarCampanhaSalva();
-
-            }
-
-            else {
-
-                sincronizarCampanhaAuth();
-
-            }
-
-
-            /* =============================================
-               LOG
-            ============================================= */
 
             console.log(
                 "[Campaign] Campanhas carregadas:",
@@ -621,24 +394,6 @@
                 window.rpgCampaign
                     .activeCampaign
             );
-
-
-            /*
-             * Se uma campanha foi restaurada,
-             * avisamos o restante do sistema.
-             *
-             * Isso permite que auth.js carregue
-             * membros e personagens.
-             */
-
-            if (
-                window.rpgCampaign
-                    .activeCampaign
-            ) {
-
-                dispararEventoCampanha();
-
-            }
 
 
             return campanhas;
@@ -770,6 +525,9 @@
 
         /*
          * Informa o restante do sistema.
+         *
+         * O auth.js escuta este evento e carrega
+         * membros/personagens da campanha.
          */
 
         dispararEventoCampanha();
@@ -911,6 +669,71 @@
 
 
             return null;
+
+        }
+
+    }
+
+
+    /* =====================================================
+       SINCRONIZAÇÃO COM AUTH
+    ===================================================== */
+
+    function sincronizarCampanhaAuth() {
+
+        if (!window.rpgAuth) {
+
+            return;
+
+        }
+
+
+        const campanha =
+            window.rpgCampaign
+                .activeCampaign ||
+            null;
+
+
+        window.rpgAuth.campaign =
+            campanha;
+
+
+        window.rpgAuth.campaigns =
+            window.rpgCampaign
+                .campaigns || [];
+
+
+        /*
+         * Atualiza o status de mestre.
+         *
+         * Não fazemos aqui a consulta de membros.
+         *
+         * O auth.js já possui o listener de
+         * mesa:campanhaAlterada que faz isso.
+         */
+
+        if (
+            window.rpgAuth.user &&
+            campanha &&
+            campanha.master_id
+        ) {
+
+            window.rpgAuth.isMaster =
+
+                String(
+                    window.rpgAuth.user.id
+                ) ===
+
+                String(
+                    campanha.master_id
+                );
+
+        }
+
+        else {
+
+            window.rpgAuth.isMaster =
+                false;
 
         }
 
